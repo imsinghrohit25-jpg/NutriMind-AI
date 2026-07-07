@@ -45,7 +45,7 @@ export async function explainHealthScore(
 
   const prompt = buildUserPrompt(productName, score, language);
 
-  const raw = await gateway.route({
+  const raw = await gateway.complete({
     tier: 'parse_assist',  // low-cost tier; no vision needed
     messages: [{ role: 'user', content: prompt }],
     systemPrompt: SYSTEM_PROMPT,
