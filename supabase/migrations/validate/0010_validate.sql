@@ -35,5 +35,23 @@ BEGIN
     WHERE n.nspname='public' AND p.proname='is_service_role') = 1,
     'is_service_role function missing';
 
+  -- service_role has SELECT on products (spot-check grants applied)
+  ASSERT (SELECT COUNT(*) FROM information_schema.role_table_grants
+    WHERE grantee='service_role' AND table_schema='public'
+      AND table_name='products' AND privilege_type='SELECT') = 1,
+    'service_role missing SELECT on products — GRANT ALL not applied';
+
+  -- authenticated has SELECT on products
+  ASSERT (SELECT COUNT(*) FROM information_schema.role_table_grants
+    WHERE grantee='authenticated' AND table_schema='public'
+      AND table_name='products' AND privilege_type='SELECT') = 1,
+    'authenticated missing SELECT on products';
+
+  -- authenticated has INSERT on scans (user-owned)
+  ASSERT (SELECT COUNT(*) FROM information_schema.role_table_grants
+    WHERE grantee='authenticated' AND table_schema='public'
+      AND table_name='scans' AND privilege_type='INSERT') = 1,
+    'authenticated missing INSERT on scans';
+
   RAISE NOTICE 'validate/0010: OK — RLS enabled on all % tables', array_length(tables, 1);
 END $$;

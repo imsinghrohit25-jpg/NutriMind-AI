@@ -425,3 +425,47 @@ ALTER TABLE public.curation_queue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "curation_queue: service_role only"
   ON public.curation_queue FOR ALL
   USING (public.is_service_role()) WITH CHECK (public.is_service_role());
+
+-- ============================================================================
+-- Table-level GRANT statements
+-- The postgres role owns the tables (migrations run as postgres), so the
+-- supabase_admin default privileges don't apply. Explicit grants are required.
+-- ============================================================================
+
+-- service_role: full access to all public tables (BYPASSRLS + DML needed)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+-- authenticated: DML on user-owned tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  public.users_profiles,
+  public.household_members,
+  public.user_consents,
+  public.scans,
+  public.scan_images,
+  public.meal_logs,
+  public.grocery_cart_sessions,
+  public.grocery_cart_items,
+  public.weekly_reports,
+  public.recommendations,
+  public.copilot_conversations,
+  public.copilot_messages,
+  public.user_history_embeddings
+TO authenticated;
+
+-- authenticated: SELECT on canonical / public-read tables
+GRANT SELECT ON
+  public.data_sources,
+  public.allergen_taxonomy,
+  public.products,
+  public.product_nutrition,
+  public.product_ingredients,
+  public.product_ingredient_items,
+  public.ingredients,
+  public.health_scores,
+  public.ingredient_assessments,
+  public.knowledge_documents,
+  public.knowledge_chunks,
+  public.product_embeddings,
+  public.feature_flags
+TO authenticated;
