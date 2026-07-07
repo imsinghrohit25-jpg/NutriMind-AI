@@ -14,7 +14,7 @@
 --   session may not have reloaded it. SET LOCAL ensures extensions is reachable for both
 --   DDL validation and SQL function body parsing within this migration file.
 
-SET LOCAL search_path TO extensions, public;
+SET search_path TO extensions, public;
 
 -- ---------------------------------------------------------------------------
 -- knowledge_documents  (regulatory corpus: ICMR-NIN, WHO, FSSAI, EFSA, JECFA)
