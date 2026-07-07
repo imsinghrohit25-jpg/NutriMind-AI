@@ -1,0 +1,61 @@
+{
+  "title": "NutriMind LLM Cost Monitor",
+  "uid": "nutrimind-llm-costs",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "1m",
+  "panels": [
+    {
+      "id": 1,
+      "title": "LLM Cost (USD) per Hour",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(nutrimind_llm_cost_usd_total[1h])) by (provider, model)",
+          "legendFormat": "{{provider}}/{{model}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "LLM Requests per Minute by Tier",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(nutrimind_llm_requests_total[1m])) by (task_tier)",
+          "legendFormat": "{{task_tier}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "id": 3,
+      "title": "P95 LLM Latency (ms) by Provider",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nutrimind_llm_latency_ms_bucket[5m])) by (le, provider))",
+          "legendFormat": "p95 {{provider}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "id": 4,
+      "title": "Circuit Breaker States",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "nutrimind_circuit_breaker_state",
+          "legendFormat": "{{provider}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "apiVersion": 1,
+  "providers": [
+    {
+      "name": "NutriMind Dashboards",
+      "orgId": 1,
+      "folder": "NutriMind",
+      "type": "file",
+      "disableDeletion": true,
+      "options": {
+        "path": "/etc/grafana/provisioning/dashboards"
+      }
+    }
+  ]
+}

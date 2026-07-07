@@ -1,0 +1,44 @@
+{
+  "parse_assist": {
+    "primary": { "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
+    "fallbacks": [
+      { "provider": "openai", "model": "gpt-4o-mini" },
+      { "provider": "gemini", "model": "gemini-1.5-flash" }
+    ],
+    "maxRetries": 3,
+    "timeoutMs": 15000
+  },
+  "vision_analysis": {
+    "primary": { "provider": "anthropic", "model": "claude-sonnet-4-6" },
+    "fallbacks": [
+      { "provider": "openai", "model": "gpt-4o" }
+    ],
+    "maxRetries": 2,
+    "timeoutMs": 30000
+  },
+  "copilot_reasoning": {
+    "primary": { "provider": "anthropic", "model": "claude-sonnet-4-6" },
+    "fallbacks": [
+      { "provider": "openai", "model": "gpt-4o" },
+      { "provider": "gemini", "model": "gemini-1.5-pro" }
+    ],
+    "maxRetries": 2,
+    "timeoutMs": 60000
+  },
+  "report_generation": {
+    "primary": { "provider": "anthropic", "model": "claude-sonnet-4-6" },
+    "fallbacks": [
+      { "provider": "openai", "model": "gpt-4o" }
+    ],
+    "maxRetries": 2,
+    "timeoutMs": 120000
+  },
+  "embeddings": {
+    "primary": { "provider": "openai", "model": "text-embedding-3-small" },
+    "fallbacks": [
+      { "provider": "gemini", "model": "text-embedding-004" }
+    ],
+    "maxRetries": 3,
+    "timeoutMs": 10000
+  }
+}
