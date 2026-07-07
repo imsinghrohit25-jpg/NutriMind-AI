@@ -1,0 +1,66 @@
+{
+  "corpusVersion": "1.0.0",
+  "lastUpdated": "2026-07-07",
+  "documents": [
+    {
+      "docId": "who-sodium-2023",
+      "title": "WHO Guideline: Sodium intake for adults and children",
+      "source": "World Health Organization",
+      "year": 2023,
+      "file": "who_sodium_guideline_2023.txt",
+      "status": "placeholder",
+      "notes": "Full text pending license clearance. Summarised thresholds embedded in engines/score/thresholds.ts."
+    },
+    {
+      "docId": "who-sugar-2015",
+      "title": "WHO Guideline: Sugars intake for adults and children",
+      "source": "World Health Organization",
+      "year": 2015,
+      "file": "who_sugar_guideline_2015.txt",
+      "status": "placeholder"
+    },
+    {
+      "docId": "icmr-nin-2020",
+      "title": "Nutrient Requirements for Indians — ICMR-NIN RDA 2020",
+      "source": "Indian Council of Medical Research / National Institute of Nutrition",
+      "year": 2020,
+      "file": "icmr_nin_rda_2020_summary.txt",
+      "status": "placeholder",
+      "notes": "Full book requires ICMR-NIN purchase. Relevant thresholds embedded in engines/. Risk R-01 (same as IFCT)."
+    },
+    {
+      "docId": "fssai-labelling-2022",
+      "title": "Food Safety and Standards (Labelling and Display) Regulations 2022",
+      "source": "Food Safety and Standards Authority of India",
+      "year": 2022,
+      "file": "fssai_labelling_2022.txt",
+      "status": "placeholder",
+      "notes": "Publicly available from FSSAI website. Thresholds embedded in engines/score/thresholds.ts."
+    },
+    {
+      "docId": "who-hypertension-2021",
+      "title": "WHO Global Report on Hypertension: The Race Against a Silent Killer",
+      "source": "World Health Organization",
+      "year": 2021,
+      "file": "who_hypertension_2021.txt",
+      "status": "placeholder"
+    },
+    {
+      "docId": "icmr-diabetes-2018",
+      "title": "RSSDI-ESI Clinical Practice Recommendations for T2DM in India 2018",
+      "source": "Research Society for Study of Diabetes in India / Endocrine Society of India",
+      "year": 2018,
+      "file": "rssdi_esi_diabetes_2018_summary.txt",
+      "status": "placeholder"
+    },
+    {
+      "docId": "nova-2019",
+      "title": "Ultra-processed foods: what they are and how to identify them",
+      "source": "Public Health Nutrition — Monteiro CA et al.",
+      "year": 2019,
+      "file": "nova_classification_2019.txt",
+      "status": "placeholder"
+    }
+  ],
+  "riskNote": "Knowledge corpus is currently placeholder (thresholds are embedded in code). Full RAG pipeline requires ingesting licensed regulatory documents. See docs/COPILOT_EVAL.md for eval methodology."
+}
