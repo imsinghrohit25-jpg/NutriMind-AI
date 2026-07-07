@@ -1,0 +1,25 @@
+# Secrets — never committed (CI secret-scan enforces)
+.env
+.env.*
+!.env.example
+*.p8
+*.keystore
+*service-account*.json
+
+# Licensed datasets — never committed (see docs/DATA_SOURCES.md)
+data/ifct2017/*
+!data/ifct2017/.gitkeep
+
+# Node / TypeScript
+node_modules/
+dist/
+coverage/
+
+# Flutter / Dart
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins*
+
+# OS / editor
+Thumbs.db
+.DS_Store
