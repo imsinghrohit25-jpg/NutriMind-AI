@@ -12,11 +12,17 @@ import { registerV1Routes } from './routes/v1/index.js';
 import { buildRouter, type GatewayRouter } from './gateway/router.js';
 import { CostLogger } from './gateway/cost-log.js';
 import { GatewayCache } from './gateway/cache.js';
+import { OpenFoodFactsClient } from './datasources/openfoodfacts/client.js';
+import { UsdaFdcClient } from './datasources/usda/client.js';
+import { IfctLoader } from './datasources/ifct/loader.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
     gateway: GatewayRouter | null;
     sql: postgres.Sql;
+    offClient: OpenFoodFactsClient;
+    usdaClient: UsdaFdcClient | null;
+    ifct: IfctLoader;
   }
 }
 
@@ -84,6 +90,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   }
   fastify.decorate('gateway', gateway);
+
+  // Phase 3 — datasource clients
+  const offClient = new OpenFoodFactsClient(env.OFF_BASE_URL, env.OFF_USER_AGENT);
+  fastify.decorate('offClient', offClient);
+
+  const usdaClient = env.USDA_FDC_API_KEY ? new UsdaFdcClient(env.USDA_FDC_API_KEY) : null;
+  fastify.decorate('usdaClient', usdaClient);
+
+  const ifct = new IfctLoader();
+  await ifct.load(env.IFCT_DATASET_PATH);
+  if (!ifct.isAvailable()) {
+    fastify.log.warn('[ifct] IFCT 2017 dataset not loaded — IFCT resolution step will be skipped');
+  } else {
+    fastify.log.info('[ifct] IFCT 2017 dataset loaded');
+  }
+  fastify.decorate('ifct', ifct);
 
   await registerV1Routes(fastify);
 

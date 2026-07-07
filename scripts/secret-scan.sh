@@ -31,6 +31,7 @@ for pattern in "${PATTERNS[@]}"; do
   matches=$(git grep -rl --extended-regexp "$pattern" -- \
     ':!*.env' ':!*.env.*' ':!node_modules' ':!dist' ':!.git' \
     ':!*.png' ':!*.jpg' ':!*.lock' ':!package-lock.json' \
+    ':!scripts/secret-scan.sh' \
     2>/dev/null || true)
 
   if [[ -n "$matches" ]]; then

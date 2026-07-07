@@ -21,6 +21,12 @@ const EnvSchema = z.object({
   LLM_ROUTING_CONFIG: z.string().default('config/routing.json'),
   LLM_MONTHLY_BUDGET_USD: z.coerce.number().positive().optional(),
 
+  USDA_FDC_API_KEY: z.string().optional(),
+  OFF_BASE_URL: z.string().url().default('https://world.openfoodfacts.org'),
+  OFF_USER_AGENT: z.string().default('NutriMindAI/0.1 (contact: imsinghrohit25@gmail.com)'),
+  OFF_CACHE_TTL_HOURS: z.coerce.number().int().positive().default(168),
+  IFCT_DATASET_PATH: z.string().default('data/ifct2017'),
+
   RATE_LIMIT_USER_PER_MIN: z.coerce.number().int().positive().default(60),
   CORS_ALLOWED_ORIGINS: z.string().default(''),
 
