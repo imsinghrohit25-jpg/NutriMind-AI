@@ -4,15 +4,22 @@
 --
 -- Design notes:
 --   All match_* functions require explicit scope parameters to prevent cross-user or
---   cross-document data leakage. match_user_history enforces user_id = p_user_id in SQL,
---   not just in application code, for defence-in-depth.
+--   cross-document data leakage. match_user_history enforces user_id = p_user_id in SQL.
 --   IVFFlat indexes are approximate; lists=100 is appropriate for expected corpus sizes.
 --   Rebuild indexes when corpus grows >1M rows (documented in OPERATIONS.md Phase 12).
+--
+-- Cloud compatibility note:
+--   The <=> vector operator lives in the extensions schema. Supabase's ALTER DATABASE
+--   search_path (migration 0001) takes effect on new connections but the current migration
+--   session may not have reloaded it. SET LOCAL ensures extensions is reachable for both
+--   DDL validation and SQL function body parsing within this migration file.
+
+SET LOCAL search_path TO extensions, public;
 
 -- ---------------------------------------------------------------------------
 -- knowledge_documents  (regulatory corpus: ICMR-NIN, WHO, FSSAI, EFSA, JECFA)
 -- ---------------------------------------------------------------------------
-CREATE TABLE public.knowledge_documents (
+CREATE TABLE IF NOT EXISTS public.knowledge_documents (
   id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   title                TEXT        NOT NULL,
   source_organization  TEXT        NOT NULL CHECK (source_organization IN ('ICMR-NIN','WHO','FSSAI','EFSA','JECFA','other')),
@@ -22,19 +29,18 @@ CREATE TABLE public.knowledge_documents (
   language             TEXT        NOT NULL DEFAULT 'en',
   license_class        TEXT        NOT NULL,
   attribution_text     TEXT        NOT NULL,
-  -- file_path: relative to data/knowledge/ (gitignored large files; manifest.json committed)
   file_path            TEXT,
   ingested_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   is_active            BOOLEAN     NOT NULL DEFAULT true
 );
 
-CREATE INDEX knowledge_documents_org_idx    ON public.knowledge_documents(source_organization);
-CREATE INDEX knowledge_documents_active_idx ON public.knowledge_documents(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS knowledge_documents_org_idx    ON public.knowledge_documents(source_organization);
+CREATE INDEX IF NOT EXISTS knowledge_documents_active_idx ON public.knowledge_documents(is_active) WHERE is_active = true;
 
 -- ---------------------------------------------------------------------------
 -- knowledge_chunks  (chunked text + embeddings for hybrid retrieval)
 -- ---------------------------------------------------------------------------
-CREATE TABLE public.knowledge_chunks (
+CREATE TABLE IF NOT EXISTS public.knowledge_chunks (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   document_id      UUID        NOT NULL REFERENCES public.knowledge_documents(id) ON DELETE CASCADE,
   chunk_index      INTEGER     NOT NULL CHECK (chunk_index >= 0),
@@ -50,19 +56,18 @@ CREATE TABLE public.knowledge_chunks (
   UNIQUE (document_id, chunk_index)
 );
 
-CREATE INDEX knowledge_chunks_doc_idx ON public.knowledge_chunks(document_id);
-CREATE INDEX knowledge_chunks_embedding_idx
+CREATE INDEX IF NOT EXISTS knowledge_chunks_doc_idx ON public.knowledge_chunks(document_id);
+CREATE INDEX IF NOT EXISTS knowledge_chunks_embedding_idx
   ON public.knowledge_chunks
   USING ivfflat (embedding extensions.vector_cosine_ops)
   WITH (lists = 100);
-
--- Full-text search fallback (keyword component of hybrid retrieval)
-CREATE INDEX knowledge_chunks_fts_idx ON public.knowledge_chunks USING GIN (to_tsvector('english', content));
+CREATE INDEX IF NOT EXISTS knowledge_chunks_fts_idx
+  ON public.knowledge_chunks USING GIN (to_tsvector('english', content));
 
 -- ---------------------------------------------------------------------------
 -- product_embeddings  (for similarity-based alternatives; Phase 10)
 -- ---------------------------------------------------------------------------
-CREATE TABLE public.product_embeddings (
+CREATE TABLE IF NOT EXISTS public.product_embeddings (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id       UUID        NOT NULL REFERENCES public.products(id) ON DELETE CASCADE UNIQUE,
   embedding        extensions.VECTOR(1536) NOT NULL,
@@ -71,7 +76,7 @@ CREATE TABLE public.product_embeddings (
   input_fields     TEXT[]      NOT NULL
 );
 
-CREATE INDEX product_embeddings_idx
+CREATE INDEX IF NOT EXISTS product_embeddings_idx
   ON public.product_embeddings
   USING ivfflat (embedding extensions.vector_cosine_ops)
   WITH (lists = 100);
@@ -79,7 +84,7 @@ CREATE INDEX product_embeddings_idx
 -- ---------------------------------------------------------------------------
 -- user_history_embeddings  (semantic memory for M12)
 -- ---------------------------------------------------------------------------
-CREATE TABLE public.user_history_embeddings (
+CREATE TABLE IF NOT EXISTS public.user_history_embeddings (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id          UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   source_type      TEXT        NOT NULL CHECK (source_type IN ('scan','meal_log','search_query','copilot_message')),
@@ -89,21 +94,21 @@ CREATE TABLE public.user_history_embeddings (
   embedded_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX user_history_embeddings_user_idx ON public.user_history_embeddings(user_id);
-CREATE INDEX user_history_embeddings_vec_idx
+CREATE INDEX IF NOT EXISTS user_history_embeddings_user_idx ON public.user_history_embeddings(user_id);
+CREATE INDEX IF NOT EXISTS user_history_embeddings_vec_idx
   ON public.user_history_embeddings
   USING ivfflat (embedding extensions.vector_cosine_ops)
   WITH (lists = 100);
 
 -- ---------------------------------------------------------------------------
 -- match_knowledge_chunks: knowledge-base RAG retrieval
--- scope_document_ids = NULL queries all active documents.
+-- SET search_path ensures the <=> operator resolves at both definition and call time.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.match_knowledge_chunks(
-  query_embedding  extensions.VECTOR(1536),
-  match_count      INTEGER DEFAULT 5,
-  min_similarity   FLOAT   DEFAULT 0.7,
-  scope_document_ids UUID[] DEFAULT NULL
+  query_embedding    vector(1536),
+  match_count        INTEGER DEFAULT 5,
+  min_similarity     FLOAT   DEFAULT 0.7,
+  scope_document_ids UUID[]  DEFAULT NULL
 )
 RETURNS TABLE (
   chunk_id       UUID,
@@ -114,6 +119,7 @@ RETURNS TABLE (
   section_title  TEXT
 )
 LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path TO extensions, public
 AS $$
   SELECT
     kc.id                                              AS chunk_id,
@@ -134,10 +140,9 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- match_products: product similarity search for alternatives
--- scope_category = NULL searches all categories.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.match_products(
-  query_embedding  extensions.VECTOR(1536),
+  query_embedding  vector(1536),
   match_count      INTEGER DEFAULT 10,
   min_similarity   FLOAT   DEFAULT 0.6,
   scope_category   TEXT    DEFAULT NULL
@@ -148,6 +153,7 @@ RETURNS TABLE (
   similarity    FLOAT
 )
 LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path TO extensions, public
 AS $$
   SELECT
     p.id                                               AS product_id,
@@ -167,7 +173,7 @@ $$;
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.match_user_history(
   p_user_id          UUID,
-  query_embedding    extensions.VECTOR(1536),
+  query_embedding    vector(1536),
   match_count        INTEGER DEFAULT 10,
   scope_source_type  TEXT    DEFAULT NULL
 )
@@ -178,6 +184,7 @@ RETURNS TABLE (
   embedded_at  TIMESTAMPTZ
 )
 LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path TO extensions, public
 AS $$
   SELECT
     uhe.source_type,
