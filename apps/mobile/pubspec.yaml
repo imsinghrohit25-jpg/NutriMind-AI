@@ -1,0 +1,71 @@
+name: nutrimind
+description: "NutriMind AI — India-first nutrition scanner"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Supabase (auth + realtime)
+  supabase_flutter: ^2.5.6
+
+  # HTTP client
+  dio: ^5.7.0
+
+  # Local SQLite database (offline-first)
+  drift: ^2.18.0
+  drift_flutter: ^0.2.4
+  sqlite3_flutter_libs: ^0.5.25
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # Scanner — on-device ML Kit (works offline)
+  google_mlkit_barcode_scanning: ^0.13.0
+  google_mlkit_text_recognition: ^0.14.0
+  camera: ^0.11.0
+
+  # Connectivity & offline
+  connectivity_plus: ^6.0.5
+
+  # Secure storage (tokens)
+  flutter_secure_storage: ^9.2.2
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Image compression (before upload)
+  flutter_image_compress: ^2.3.0
+
+  # Shared preferences (non-sensitive flags: consent, onboarding)
+  shared_preferences: ^2.3.3
+
+  # Logging
+  logging: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13
+  drift_dev: ^2.18.0
+  riverpod_generator: ^2.4.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
