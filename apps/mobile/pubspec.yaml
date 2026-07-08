@@ -59,6 +59,13 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
 
+  # Health data — HealthKit (iOS) + Health Connect (Android)
+  health: ^12.2.0
+
+  # OAuth PKCE browser launch + PKCE challenge crypto
+  url_launcher: ^6.3.0
+  crypto: ^3.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

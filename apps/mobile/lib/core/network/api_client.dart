@@ -33,6 +33,9 @@ class ApiClient {
 
   Future<Response<T>> post<T>(String path, {dynamic data}) =>
       _dio.post<T>(path, data: data);
+
+  Future<Response<T>> delete<T>(String path) =>
+      _dio.delete<T>(path);
 }
 
 // Attaches Supabase JWT to every request.

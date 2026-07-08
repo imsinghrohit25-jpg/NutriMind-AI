@@ -10,6 +10,14 @@ const SENSITIVE_ATTRIBUTE_PATTERNS = [
   /\bbmi\b/i,
   /user\.email/i,
   /user\.phone/i,
+  // Phase 13–14 additions — wearable, biomarker, and lab data
+  /blood_glucose/i,
+  /glucose_reading/i,
+  /health_metric/i,
+  /lab_result/i,
+  /biomarker/i,
+  /wearable_data/i,
+  /user\.weight/i,
 ];
 
 const REDACTED = '[redacted]';
