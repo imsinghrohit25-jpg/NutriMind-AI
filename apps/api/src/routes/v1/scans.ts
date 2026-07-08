@@ -1,6 +1,7 @@
 // POST /v1/scans/ocr    — parse raw OCR text from a nutrition label
-// POST /v1/scans/label  — parse a base64-encoded label image (server-side OCR not yet wired;
-//                          accepts pre-extracted OCR text from mobile in Phase 5)
+// POST /v1/scans/label  — parse a base64-encoded label image: uses pre-extracted on-device
+//                          OCR text when its script is ML-Kit-supported, otherwise falls back
+//                          to cloud vision OCR (Phase 6, ADR-0019)
 // POST /v1/scans/meal   — identify dishes in a meal photo + estimate portions
 
 import type { FastifyInstance } from 'fastify';
@@ -11,6 +12,8 @@ import { parseAssist } from '../../scan/parse-assist.js';
 import { analyseMealPhoto } from '../../scan/meal-photo/vision.js';
 import { estimatePortion } from '../../scan/meal-photo/portioning.js';
 import { resolveByName } from '../../resolution/waterfall.js';
+import { detectScript, needsCloudOcrFallback } from '../../scan/label-parser/script-detector.js';
+import { extractLabelViaCloudVision } from '../../scan/label-parser/cloud-ocr-fallback.js';
 import { ok, err } from '@nutrimind/shared';
 
 const OcrBodySchema = z.object({
@@ -25,6 +28,16 @@ const MealPhotoBodySchema = z.object({
   imageMediaType: z
     .enum(['image/jpeg', 'image/png', 'image/webp'])
     .default('image/jpeg'),
+  scanId: z.string().uuid().optional(),
+});
+
+const LabelImageBodySchema = z.object({
+  imageBase64: z.string().min(100),
+  imageMediaType: z
+    .enum(['image/jpeg', 'image/png', 'image/webp'])
+    .default('image/jpeg'),
+  // Pre-extracted on-device OCR text (ML Kit), when the client already attempted it.
+  onDeviceOcrText: z.string().max(8000).optional(),
   scanId: z.string().uuid().optional(),
 });
 
@@ -78,6 +91,64 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
         assistHints: assistResult?.hints ?? [],
         productNameGuess: assistResult?.productNameGuess ?? null,
         brandGuess: assistResult?.brandGuess ?? null,
+      }),
+    );
+  });
+
+  // POST /v1/scans/label
+  fastify.post<{ Body: unknown }>('/scans/label', async (request, reply) => {
+    const body = LabelImageBodySchema.safeParse(request.body);
+    if (!body.success) {
+      return reply.status(400).send(err('VALIDATION_ERROR', body.error.message));
+    }
+    const { imageBase64, imageMediaType, onDeviceOcrText } = body.data;
+    const traceId = (request as { id?: string }).id ?? crypto.randomUUID();
+
+    // Step 1: if the client already has on-device OCR text, check whether its script is one
+    // ML Kit handles natively. If so, the free deterministic path is strictly better than a
+    // cloud call — same text, zero cost, byte-identical to /scans/ocr's behavior.
+    const script = onDeviceOcrText ? detectScript(onDeviceOcrText) : null;
+    if (onDeviceOcrText && script && !needsCloudOcrFallback(script)) {
+      const parsed = parseLabelText(onDeviceOcrText);
+      return reply.send(
+        ok({
+          nutrition: parsed.nutrition,
+          fieldConfidence: parsed.fieldConfidence,
+          overallConfidence: parsed.overallConfidence,
+          wasPerServing: parsed.wasPerServing,
+          servingSizeG: parsed.servingSizeG,
+          lowConfidenceFields: parsed.lowConfidenceFields,
+          labelFormat: parsed.labelFormat,
+          needsUserConfirmation: parsed.overallConfidence < 0.5,
+          detectedScript: script,
+          usedCloudOcr: false,
+        }),
+      );
+    }
+
+    // Step 2: cloud OCR fallback — no usable on-device text, or its script isn't
+    // ML-Kit-supported (e.g. Arabic, Tamil, Telugu packaging).
+    if (!fastify.gateway) {
+      return reply
+        .status(503)
+        .send(err('GATEWAY_UNAVAILABLE', 'AI gateway not configured; set at least one LLM provider key'));
+    }
+    const cloudResult = await extractLabelViaCloudVision({
+      imageBase64, imageMediaType, gateway: fastify.gateway, traceId,
+    });
+
+    return reply.send(
+      ok({
+        nutrition: cloudResult.nutrition,
+        fieldConfidence: cloudResult.fieldConfidence,
+        overallConfidence: cloudResult.overallConfidence,
+        wasPerServing: cloudResult.wasPerServing,
+        servingSizeG: cloudResult.servingSizeG,
+        lowConfidenceFields: cloudResult.lowConfidenceFields,
+        labelFormat: cloudResult.labelFormat,
+        needsUserConfirmation: true, // cloud OCR result is always a suggestion, never auto-trusted
+        detectedScript: script,
+        usedCloudOcr: true,
       }),
     );
   });

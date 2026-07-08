@@ -6,12 +6,8 @@
 import type { NutritionPer100g } from '../../nutrition/canonical-model.js';
 import { estimateAddedSugar, fillEnergyFields } from '../../nutrition/derived.js';
 import { perServingToPer100g, parseServingSizeG } from '../../nutrition/units.js';
-import {
-  NUTRITION_PATTERNS,
-  SERVING_SIZE_PATTERNS,
-  PER_100G_PATTERN,
-  PER_SERVING_PATTERN,
-} from './patterns.js';
+import { resolveLabelFormat } from './label-formats/registry.js';
+import type { LabelFormatId } from './label-formats/types.js';
 
 export type ConfidenceLevel = 'high' | 'medium' | 'low' | 'absent';
 
@@ -34,21 +30,32 @@ export interface ParsedLabel {
   overallConfidence: number;
   // Fields that need LLM disambiguation
   lowConfidenceFields: string[];
+  // Detected/specified label format (Phase 6, ADR-0019)
+  labelFormat: LabelFormatId;
 }
 
-export function parseLabelText(rawText: string): ParsedLabel {
+/**
+ * `formatId` is optional and additive (ADR-0019, Phase 6, flag `global.p6.label_format_router`):
+ * when omitted, the format is auto-detected from `rawText` via `detectLabelFormat()`, which
+ * falls back to `'generic'` (the pre-Phase-6 pattern set, unchanged) unless a US Nutrition
+ * Facts Panel signal ("% Daily Value" / "Amount Per Serving") is present. Existing FSSAI-format
+ * fixtures — including ones that happen to say "Nutrition Facts per serving" — auto-detect as
+ * `'generic'` and parse identically to pre-Phase-6 behavior.
+ */
+export function parseLabelText(rawText: string, formatId?: LabelFormatId): ParsedLabel {
   const text = rawText.replace(/\r\n/g, '\n');
+  const format = resolveLabelFormat(text, formatId);
 
   // Detect context: per-100g vs per-serving
-  const hasPer100g  = PER_100G_PATTERN.test(text);
-  const hasPerServing = PER_SERVING_PATTERN.test(text);
+  const hasPer100g  = format.per100gPattern.test(text);
+  const hasPerServing = format.perServingPattern.test(text);
   // Reset lastIndex after RegExp.test
-  PER_100G_PATTERN.lastIndex = 0;
-  PER_SERVING_PATTERN.lastIndex = 0;
+  format.per100gPattern.lastIndex = 0;
+  format.perServingPattern.lastIndex = 0;
 
   // Detect serving size
   let servingSizeG: number | null = null;
-  for (const pattern of SERVING_SIZE_PATTERNS) {
+  for (const pattern of format.servingSizePatterns) {
     const match = pattern.exec(text);
     if (match) {
       const raw = `${match[1]} ${match[2]}`;
@@ -60,7 +67,7 @@ export function parseLabelText(rawText: string): ParsedLabel {
   // Extract per-field values
   const extracted: Record<string, FieldResult> = {};
 
-  for (const fp of NUTRITION_PATTERNS) {
+  for (const fp of format.nutritionPatterns) {
     let bestMatch: FieldResult = { value: null, confidence: 'absent', rawMatch: null };
 
     for (const pattern of fp.patterns) {
@@ -170,5 +177,6 @@ export function parseLabelText(rawText: string): ParsedLabel {
     wasPerServing,
     overallConfidence,
     lowConfidenceFields,
+    labelFormat: format.id,
   };
 }

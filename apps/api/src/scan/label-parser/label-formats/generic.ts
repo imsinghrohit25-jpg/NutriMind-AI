@@ -1,18 +1,13 @@
-// Regex patterns for extracting nutrition values from Indian label OCR text.
-// Indian FSSAI labels (Food Safety and Standards Act 2006) mandate specific fields.
-// All patterns are case-insensitive; values are in the label's declared unit.
+// Generic label format — exact port of the pre-Phase-6 patterns.ts (FSSAI-style, and
+// India/UK/EU-adjacent labels generally: "per 100g" tables with unit-suffixed values).
+// This is the default format; preserved verbatim so default (no-format-specified) behavior
+// is byte-identical.
 
-export interface FieldPattern {
-  field: string;
-  patterns: RegExp[];
-  unit: 'kcal' | 'kj' | 'g' | 'mg' | 'mcg' | 'iu' | 'percent';
-}
+import type { FieldPattern, LabelFormat } from './types.js';
 
-// Each pattern tries to match: field name variants → optional colon/space → numeric value.
-// Groups: (1) = value, (2) = optional decimal, (3) = optional unit
 const v = '([\\d]+(?:[.,][\\d]+)?)';  // numeric value capture group
 
-export const NUTRITION_PATTERNS: FieldPattern[] = [
+export const GENERIC_NUTRITION_PATTERNS: FieldPattern[] = [
   {
     field: 'energyKcal',
     unit: 'kcal',
@@ -123,13 +118,20 @@ export const NUTRITION_PATTERNS: FieldPattern[] = [
   },
 ];
 
-// Patterns to detect serving size declarations on the label.
-export const SERVING_SIZE_PATTERNS: RegExp[] = [
+export const GENERIC_SERVING_SIZE_PATTERNS: RegExp[] = [
   /serving\s+size\s*[:\-\s]\s*([\d,.]+)\s*(g|ml|oz|mL)/gi,
   /per\s+serving\s*\(?\s*([\d,.]+)\s*(g|ml|oz|mL)\s*\)?/gi,
   /per\s+serving\s+(?:of\s+)?([\d,.]+)\s*(g|ml|oz)/gi,
 ];
 
-// Patterns to detect "per 100g" vs "per serving" context.
-export const PER_100G_PATTERN = /per\s+100\s*g(?:ram)?/gi;
-export const PER_SERVING_PATTERN = /per\s+serving/gi;
+export const GENERIC_PER_100G_PATTERN = /per\s+100\s*g(?:ram)?/gi;
+export const GENERIC_PER_SERVING_PATTERN = /per\s+serving/gi;
+
+export const GENERIC_FORMAT: LabelFormat = {
+  id: 'generic',
+  displayName: 'Generic (FSSAI / per-100g table)',
+  nutritionPatterns: GENERIC_NUTRITION_PATTERNS,
+  servingSizePatterns: GENERIC_SERVING_SIZE_PATTERNS,
+  per100gPattern: GENERIC_PER_100G_PATTERN,
+  perServingPattern: GENERIC_PER_SERVING_PATTERN,
+};
