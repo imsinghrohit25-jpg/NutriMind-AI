@@ -1,0 +1,159 @@
+{
+  "@@locale": "bn",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "পণ্য স্ক্যান করুন",
+  "@scanProduct": {},
+
+  "healthScore": "স্বাস্থ্য স্কোর",
+  "@healthScore": {},
+
+  "excellent": "চমৎকার",
+  "@excellent": {},
+
+  "good": "ভালো",
+  "@good": {},
+
+  "fair": "মাঝারি",
+  "@fair": {},
+
+  "poor": "খারাপ",
+  "@poor": {},
+
+  "novaGroup": "NOVA গ্রুপ {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "উপাদান",
+  "@ingredients": {},
+
+  "allergenWarning": "অ্যালার্জেন সতর্কতা",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} রয়েছে",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen}-এর চিহ্ন থাকতে পারে",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "উপাদান তালিকা নির্ভরযোগ্যভাবে পড়া যায়নি। অ্যালার্জেন ম্যানুয়ালি পরীক্ষা করুন।",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "পুষ্টির তথ্য",
+  "@nutritionFacts": {},
+
+  "per100g": "প্রতি ১০০গ্রাম",
+  "@per100g": {},
+
+  "perServing": "প্রতি পরিবেশনে ({g}গ্রাম)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "শক্তি",
+  "@energyKcal": {},
+
+  "protein": "প্রোটিন",
+  "@protein": {},
+
+  "totalFat": "মোট চর্বি",
+  "@totalFat": {},
+
+  "saturatedFat": "স্যাচুরেটেড ফ্যাট",
+  "@saturatedFat": {},
+
+  "transFat": "ট্রান্স ফ্যাট",
+  "@transFat": {},
+
+  "carbohydrates": "কার্বোহাইড্রেট",
+  "@carbohydrates": {},
+
+  "totalSugars": "মোট চিনি",
+  "@totalSugars": {},
+
+  "addedSugars": "যোগ করা চিনি",
+  "@addedSugars": {},
+
+  "dietaryFibre": "খাদ্যতালিকাগত আঁশ",
+  "@dietaryFibre": {},
+
+  "sodium": "সোডিয়াম",
+  "@sodium": {},
+
+  "copilotTitle": "পুষ্টি কোপাইলট",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "চিকিৎসা বা ডায়েটেটিক পরামর্শের বিকল্প নয়।",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "এই পণ্য সম্পর্কে জিজ্ঞাসা করুন…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "সাপ্তাহিক রিপোর্ট",
+  "@weeklyReport": {},
+
+  "mealLog": "খাবার লগ",
+  "@mealLog": {},
+
+  "groceryCart": "মুদিখানার ঝুড়ি",
+  "@groceryCart": {},
+
+  "alternatives": "স্বাস্থ্যকর বিকল্প",
+  "@alternatives": {},
+
+  "budgetPickBadge": "বাজেট পছন্দ",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "এই বিভাগে আরও ভালো স্কোরের কোনো বিকল্প পাওয়া যায়নি।",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "বিজ্ঞপ্তি সেটিংস",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "সাপ্তাহিক পুষ্টি রিপোর্ট",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "অ্যালার্জেন সতর্কতা",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "সমালোচনামূলক নিরাপত্তা সতর্কতা — নিষ্ক্রিয় করা যাবে না",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "আপনার ডেটা",
+  "@dataRightsTitle": {},
+
+  "exportData": "আমার ডেটা রপ্তানি করুন",
+  "@exportData": {},
+
+  "deleteAccount": "আমার অ্যাকাউন্ট মুছুন",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "অ্যাকাউন্ট মুছবেন?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "এটি আপনার সমস্ত স্ক্যান, খাবার লগ এবং প্রোফাইল ডেটা স্থায়ীভাবে মুছে দেবে। এটি পূর্বাবস্থায় ফেরানো যাবে না।",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "স্থায়ীভাবে মুছুন",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "শিশু নিরাপত্তা মোড সক্রিয়",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "উচ্চ সোডিয়াম — উচ্চ রক্তচাপে সতর্কতা",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "উচ্চ চিনি — ডায়াবেটিসে সতর্কতা",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "অনুসন্ধানের ইতিহাস",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "যেমন: উচ্চ সোডিয়াম স্ন্যাকস, কম স্কোরের বিস্কুট",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "আনুমানিক",
+  "@estimatedValue": {},
+
+  "disclaimer": "শুধুমাত্র তথ্যগত উদ্দেশ্যে। পেশাদার পুষ্টি পরামর্শের বিকল্প নয়।",
+  "@disclaimer": {}
+}

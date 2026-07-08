@@ -1,0 +1,159 @@
+{
+  "@@locale": "ar",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "مسح منتج",
+  "@scanProduct": {},
+
+  "healthScore": "نقاط الصحة",
+  "@healthScore": {},
+
+  "excellent": "ممتاز",
+  "@excellent": {},
+
+  "good": "جيد",
+  "@good": {},
+
+  "fair": "مقبول",
+  "@fair": {},
+
+  "poor": "ضعيف",
+  "@poor": {},
+
+  "novaGroup": "مجموعة NOVA {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "المكونات",
+  "@ingredients": {},
+
+  "allergenWarning": "تحذير من مسببات الحساسية",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "يحتوي على {allergen}",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "قد يحتوي على آثار من {allergen}",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "لم نتمكن من قراءة قائمة المكونات بشكل موثوق. تحقق من مسببات الحساسية يدوياً.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "القيم الغذائية",
+  "@nutritionFacts": {},
+
+  "per100g": "لكل 100غ",
+  "@per100g": {},
+
+  "perServing": "لكل حصة ({g}غ)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "الطاقة",
+  "@energyKcal": {},
+
+  "protein": "البروتين",
+  "@protein": {},
+
+  "totalFat": "الدهون الكلية",
+  "@totalFat": {},
+
+  "saturatedFat": "الدهون المشبعة",
+  "@saturatedFat": {},
+
+  "transFat": "الدهون المتحولة",
+  "@transFat": {},
+
+  "carbohydrates": "الكربوهيدرات",
+  "@carbohydrates": {},
+
+  "totalSugars": "إجمالي السكريات",
+  "@totalSugars": {},
+
+  "addedSugars": "السكريات المضافة",
+  "@addedSugars": {},
+
+  "dietaryFibre": "الألياف الغذائية",
+  "@dietaryFibre": {},
+
+  "sodium": "الصوديوم",
+  "@sodium": {},
+
+  "copilotTitle": "مساعد التغذية",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "ليس بديلاً عن المشورة الطبية أو الغذائية.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "اسأل عن هذا المنتج…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "التقرير الأسبوعي",
+  "@weeklyReport": {},
+
+  "mealLog": "سجل الوجبات",
+  "@mealLog": {},
+
+  "groceryCart": "عربة التسوق",
+  "@groceryCart": {},
+
+  "alternatives": "بدائل أكثر صحة",
+  "@alternatives": {},
+
+  "budgetPickBadge": "خيار اقتصادي",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "لم يتم العثور على بدائل بتقييم أفضل في هذه الفئة.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "إعدادات الإشعارات",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "التقرير الغذائي الأسبوعي",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "تنبيهات مسببات الحساسية",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "تنبيهات الأمان الحيوية — لا يمكن تعطيلها",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "بياناتك",
+  "@dataRightsTitle": {},
+
+  "exportData": "تصدير بياناتي",
+  "@exportData": {},
+
+  "deleteAccount": "حذف حسابي",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "حذف الحساب؟",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "سيؤدي هذا إلى حذف جميع عمليات المسح وسجلات الوجبات وبيانات الملف الشخصي نهائياً. لا يمكن التراجع عن هذا.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "حذف نهائياً",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "وضع سلامة الأطفال مفعّل",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "صوديوم مرتفع — احتياط لمرضى ارتفاع ضغط الدم",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "سكر مرتفع — احتياط لمرضى السكري",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "سجل البحث",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "مثال: وجبات خفيفة عالية الصوديوم، بسكويت بتقييم منخفض",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "مُقدَّر",
+  "@estimatedValue": {},
+
+  "disclaimer": "لأغراض المعلومات فقط. ليس بديلاً عن المشورة الغذائية المهنية.",
+  "@disclaimer": {}
+}

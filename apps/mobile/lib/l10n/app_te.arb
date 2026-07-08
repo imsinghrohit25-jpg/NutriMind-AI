@@ -1,0 +1,159 @@
+{
+  "@@locale": "te",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "ఉత్పత్తిని స్కాన్ చేయండి",
+  "@scanProduct": {},
+
+  "healthScore": "ఆరోగ్య స్కోరు",
+  "@healthScore": {},
+
+  "excellent": "అద్భుతం",
+  "@excellent": {},
+
+  "good": "మంచిది",
+  "@good": {},
+
+  "fair": "సాధారణ",
+  "@fair": {},
+
+  "poor": "చెడ్డది",
+  "@poor": {},
+
+  "novaGroup": "NOVA సమూహం {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "పదార్థాలు",
+  "@ingredients": {},
+
+  "allergenWarning": "అలర్జీ హెచ్చరిక",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} ఉంది",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen} జాడలు ఉండవచ్చు",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "పదార్థాల జాబితాను విశ్వసనీయంగా చదవడం సాధ్యం కాలేదు. అలర్జీలను మాన్యువల్‌గా తనిఖీ చేయండి.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "పోషక వివరాలు",
+  "@nutritionFacts": {},
+
+  "per100g": "100గ్రా కు",
+  "@per100g": {},
+
+  "perServing": "ప్రతి వడ్డింపుకు ({g}గ్రా)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "శక్తి",
+  "@energyKcal": {},
+
+  "protein": "ప్రోటీన్",
+  "@protein": {},
+
+  "totalFat": "మొత్తం కొవ్వు",
+  "@totalFat": {},
+
+  "saturatedFat": "సంతృప్త కొవ్వు",
+  "@saturatedFat": {},
+
+  "transFat": "ట్రాన్స్ కొవ్వు",
+  "@transFat": {},
+
+  "carbohydrates": "కార్బోహైడ్రేట్లు",
+  "@carbohydrates": {},
+
+  "totalSugars": "మొత్తం చక్కెర",
+  "@totalSugars": {},
+
+  "addedSugars": "జోడించిన చక్కెర",
+  "@addedSugars": {},
+
+  "dietaryFibre": "ఆహార పీచు",
+  "@dietaryFibre": {},
+
+  "sodium": "సోడియం",
+  "@sodium": {},
+
+  "copilotTitle": "పోషణ కో-పైలట్",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "వైద్య లేదా ఆహార నిపుణుల సలహాకు ప్రత్యామ్నాయం కాదు.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "ఈ ఉత్పత్తి గురించి అడగండి…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "వారపు నివేదిక",
+  "@weeklyReport": {},
+
+  "mealLog": "భోజన లాగ్",
+  "@mealLog": {},
+
+  "groceryCart": "కిరాణా బుట్ట",
+  "@groceryCart": {},
+
+  "alternatives": "ఆరోగ్యకరమైన ప్రత్యామ్నాయాలు",
+  "@alternatives": {},
+
+  "budgetPickBadge": "బడ్జెట్ ఎంపిక",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "ఈ వర్గంలో అధిక స్కోరు ఉన్న ప్రత్యామ్నాయాలు ఏవీ కనుగొనబడలేదు.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "నోటిఫికేషన్ సెట్టింగ్‌లు",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "వారపు పోషణ నివేదిక",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "అలర్జీ హెచ్చరికలు",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "క్లిష్టమైన భద్రతా హెచ్చరికలు — నిలిపివేయలేరు",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "మీ డేటా",
+  "@dataRightsTitle": {},
+
+  "exportData": "నా డేటాను ఎగుమతి చేయండి",
+  "@exportData": {},
+
+  "deleteAccount": "నా ఖాతాను తొలగించండి",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "ఖాతాను తొలగించాలా?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "ఇది మీ అన్ని స్కాన్‌లు, భోజన లాగ్‌లు మరియు ప్రొఫైల్ డేటాను శాశ్వతంగా తొలగిస్తుంది. ఇది రద్దు చేయలేరు.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "శాశ్వతంగా తొలగించండి",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "పిల్లల భద్రతా మోడ్ సక్రియంగా ఉంది",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "అధిక సోడియం — రక్తపోటు ఉన్నవారికి జాగ్రత్త",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "అధిక చక్కెర — మధుమేహానికి జాగ్రత్త",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "శోధన చరిత్ర",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "ఉదా. అధిక సోడియం స్నాక్స్, తక్కువ స్కోరు బిస్కెట్లు",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "అంచనా",
+  "@estimatedValue": {},
+
+  "disclaimer": "సమాచార ప్రయోజనాలకు మాత్రమే. వృత్తిపర పోషణ సలహాకు ప్రత్యామ్నాయం కాదు.",
+  "@disclaimer": {}
+}

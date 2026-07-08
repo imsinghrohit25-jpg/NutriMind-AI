@@ -1,0 +1,159 @@
+{
+  "@@locale": "ta",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "தயாரிப்பை ஸ்கேன் செய்யவும்",
+  "@scanProduct": {},
+
+  "healthScore": "சுகாதார மதிப்பெண்",
+  "@healthScore": {},
+
+  "excellent": "சிறந்தது",
+  "@excellent": {},
+
+  "good": "நல்லது",
+  "@good": {},
+
+  "fair": "சராசரி",
+  "@fair": {},
+
+  "poor": "மோசமான",
+  "@poor": {},
+
+  "novaGroup": "NOVA குழு {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "பொருட்கள்",
+  "@ingredients": {},
+
+  "allergenWarning": "அலர்ஜி எச்சரிக்கை",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} உள்ளது",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen} சுவடுகள் இருக்கலாம்",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "பொருட்கள் பட்டியலை நம்பகத்தன்மையுடன் படிக்க முடியவில்லை. அலர்ஜிகளை கைமுறையாக சரிபார்க்கவும்.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "ஊட்டச்சத்து விவரங்கள்",
+  "@nutritionFacts": {},
+
+  "per100g": "100கி-க்கு",
+  "@per100g": {},
+
+  "perServing": "ஒரு பரிமாறலுக்கு ({g}கி)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "ஆற்றல்",
+  "@energyKcal": {},
+
+  "protein": "புரதம்",
+  "@protein": {},
+
+  "totalFat": "மொத்த கொழுப்பு",
+  "@totalFat": {},
+
+  "saturatedFat": "நிறைவுற்ற கொழுப்பு",
+  "@saturatedFat": {},
+
+  "transFat": "டிரான்ஸ் கொழுப்பு",
+  "@transFat": {},
+
+  "carbohydrates": "கார்போஹைட்ரேட்",
+  "@carbohydrates": {},
+
+  "totalSugars": "மொத்த சர்க்கரை",
+  "@totalSugars": {},
+
+  "addedSugars": "சேர்க்கப்பட்ட சர்க்கரை",
+  "@addedSugars": {},
+
+  "dietaryFibre": "உணவு நார்ச்சத்து",
+  "@dietaryFibre": {},
+
+  "sodium": "சோடியம்",
+  "@sodium": {},
+
+  "copilotTitle": "ஊட்டச்சத்து துணைவர்",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "மருத்துவ அல்லது உணவியல் ஆலோசனையின் மாற்றாக அல்ல.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "இந்த தயாரிப்பு பற்றி கேளுங்கள்…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "வாராந்திர அறிக்கை",
+  "@weeklyReport": {},
+
+  "mealLog": "உணவு பதிவு",
+  "@mealLog": {},
+
+  "groceryCart": "மளிகை கூடை",
+  "@groceryCart": {},
+
+  "alternatives": "ஆரோக்கியமான மாற்றுகள்",
+  "@alternatives": {},
+
+  "budgetPickBadge": "பட்ஜெட் தேர்வு",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "இந்த வகையில் சிறந்த மதிப்பெண் கொண்ட மாற்றுகள் எதுவும் கிடைக்கவில்லை.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "அறிவிப்பு அமைப்புகள்",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "வாராந்திர ஊட்டச்சத்து அறிக்கை",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "அலர்ஜி எச்சரிக்கைகள்",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "முக்கியமான பாதுகாப்பு எச்சரிக்கைகள் — முடக்க முடியாது",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "உங்கள் தரவு",
+  "@dataRightsTitle": {},
+
+  "exportData": "என் தரவை ஏற்றுமதி செய்",
+  "@exportData": {},
+
+  "deleteAccount": "என் கணக்கை நீக்கு",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "கணக்கை நீக்கவா?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "உங்கள் அனைத்து ஸ்கேன்கள், உணவு பதிவுகள் மற்றும் சுயவிவர தரவு நிரந்தரமாக அழிக்கப்படும். இதை மீண்டும் செயல்தவிர்க்க முடியாது.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "நிரந்தரமாக நீக்கு",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "குழந்தை பாதுகாப்பு முறை செயலில் உள்ளது",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "அதிக சோடியம் — உயர் இரத்த அழுத்தத்திற்கு எச்சரிக்கை",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "அதிக சர்க்கரை — நீரிழிவுக்கு எச்சரிக்கை",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "தேடல் வரலாறு",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "எ.கா. அதிக சோடியம் தின்பண்டங்கள், குறைந்த மதிப்பெண் பிஸ்கட்",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "மதிப்பீடு",
+  "@estimatedValue": {},
+
+  "disclaimer": "தகவல் நோக்கங்களுக்கு மட்டுமே. தொழில்முறை ஊட்டச்சத்து ஆலோசனையின் மாற்றாக அல்ல.",
+  "@disclaimer": {}
+}

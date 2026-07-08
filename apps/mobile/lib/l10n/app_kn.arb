@@ -1,0 +1,159 @@
+{
+  "@@locale": "kn",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "ಉತ್ಪನ್ನವನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ",
+  "@scanProduct": {},
+
+  "healthScore": "ಆರೋಗ್ಯ ಸ್ಕೋರ್",
+  "@healthScore": {},
+
+  "excellent": "ಅತ್ಯುತ್ತಮ",
+  "@excellent": {},
+
+  "good": "ಉತ್ತಮ",
+  "@good": {},
+
+  "fair": "ಸಾಧಾರಣ",
+  "@fair": {},
+
+  "poor": "ಕಳಪೆ",
+  "@poor": {},
+
+  "novaGroup": "NOVA ಗುಂಪು {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "ಪದಾರ್ಥಗಳು",
+  "@ingredients": {},
+
+  "allergenWarning": "ಅಲರ್ಜಿ ಎಚ್ಚರಿಕೆ",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} ಇದೆ",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen} ಅಂಶಗಳಿರಬಹುದು",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "ಪದಾರ್ಥಗಳ ಪಟ್ಟಿಯನ್ನು ವಿಶ್ವಾಸಾರ್ಹವಾಗಿ ಓದಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಅಲರ್ಜಿಗಳನ್ನು ಕೈಯಾರೆ ಪರಿಶೀಲಿಸಿ.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "ಪೋಷಣಾ ಮಾಹಿತಿ",
+  "@nutritionFacts": {},
+
+  "per100g": "100ಗ್ರಾಂ ಗೆ",
+  "@per100g": {},
+
+  "perServing": "ಪ್ರತಿ ಸಲಕ್ಕೆ ({g}ಗ್ರಾಂ)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "ಶಕ್ತಿ",
+  "@energyKcal": {},
+
+  "protein": "ಪ್ರೋಟೀನ್",
+  "@protein": {},
+
+  "totalFat": "ಒಟ್ಟು ಕೊಬ್ಬು",
+  "@totalFat": {},
+
+  "saturatedFat": "ಸ್ಯಾಚುರೇಟೆಡ್ ಕೊಬ್ಬು",
+  "@saturatedFat": {},
+
+  "transFat": "ಟ್ರಾನ್ಸ್ ಕೊಬ್ಬು",
+  "@transFat": {},
+
+  "carbohydrates": "ಕಾರ್ಬೋಹೈಡ್ರೇಟ್ಸ್",
+  "@carbohydrates": {},
+
+  "totalSugars": "ಒಟ್ಟು ಸಕ್ಕರೆ",
+  "@totalSugars": {},
+
+  "addedSugars": "ಸೇರಿಸಿದ ಸಕ್ಕರೆ",
+  "@addedSugars": {},
+
+  "dietaryFibre": "ಆಹಾರ ನಾರು",
+  "@dietaryFibre": {},
+
+  "sodium": "ಸೋಡಿಯಂ",
+  "@sodium": {},
+
+  "copilotTitle": "ಪೋಷಣಾ ಕೋ-ಪೈಲಟ್",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "ವೈದ್ಯಕೀಯ ಅಥವಾ ಆಹಾರ ತಜ್ಞರ ಸಲಹೆಗೆ ಬದಲಿಯಲ್ಲ.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "ಈ ಉತ್ಪನ್ನದ ಬಗ್ಗೆ ಕೇಳಿ…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "ವಾರದ ವರದಿ",
+  "@weeklyReport": {},
+
+  "mealLog": "ಊಟದ ದಾಖಲೆ",
+  "@mealLog": {},
+
+  "groceryCart": "ದಿನಸಿ ಬುಟ್ಟಿ",
+  "@groceryCart": {},
+
+  "alternatives": "ಆರೋಗ್ಯಕರ ಪರ್ಯಾಯಗಳು",
+  "@alternatives": {},
+
+  "budgetPickBadge": "ಬಜೆಟ್ ಆಯ್ಕೆ",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "ಈ ವರ್ಗದಲ್ಲಿ ಹೆಚ್ಚಿನ ಸ್ಕೋರ್ ಹೊಂದಿರುವ ಪರ್ಯಾಯಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "ಅಧಿಸೂಚನಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "ವಾರದ ಪೋಷಣಾ ವರದಿ",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "ಅಲರ್ಜಿ ಎಚ್ಚರಿಕೆಗಳು",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "ನಿರ್ಣಾಯಕ ಭದ್ರತಾ ಎಚ್ಚರಿಕೆಗಳು — ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "ನಿಮ್ಮ ಡೇಟಾ",
+  "@dataRightsTitle": {},
+
+  "exportData": "ನನ್ನ ಡೇಟಾ ರಫ್ತು ಮಾಡಿ",
+  "@exportData": {},
+
+  "deleteAccount": "ನನ್ನ ಖಾತೆ ಅಳಿಸಿ",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "ಖಾತೆ ಅಳಿಸಬೇಕೇ?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "ಇದು ನಿಮ್ಮ ಎಲ್ಲಾ ಸ್ಕ್ಯಾನ್‌ಗಳು, ಊಟದ ದಾಖಲೆಗಳು ಮತ್ತು ಪ್ರೊಫೈಲ್ ಡೇಟಾವನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುತ್ತದೆ. ಇದನ್ನು ರದ್ದುಗೊಳಿಸಲಾಗುವುದಿಲ್ಲ.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "ಮಕ್ಕಳ ಸುರಕ್ಷತಾ ಮೋಡ್ ಸಕ್ರಿಯ",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "ಹೆಚ್ಚಿನ ಸೋಡಿಯಂ — ರಕ್ತದೊತ್ತಡಕ್ಕೆ ಎಚ್ಚರ",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "ಹೆಚ್ಚಿನ ಸಕ್ಕರೆ — ಮಧುಮೇಹಕ್ಕೆ ಎಚ್ಚರ",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "ಹುಡುಕಾಟ ಇತಿಹಾಸ",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "ಉದಾ. ಹೆಚ್ಚಿನ ಸೋಡಿಯಂ ತಿಂಡಿ, ಕಡಿಮೆ ಸ್ಕೋರ್ ಬಿಸ್ಕಿಟ್",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "ಅಂದಾಜು",
+  "@estimatedValue": {},
+
+  "disclaimer": "ಮಾಹಿತಿ ಉದ್ದೇಶಗಳಿಗಾಗಿ ಮಾತ್ರ. ವೃತ್ತಿಪರ ಪೋಷಣಾ ಸಲಹೆಗೆ ಬದಲಿಯಲ್ಲ.",
+  "@disclaimer": {}
+}

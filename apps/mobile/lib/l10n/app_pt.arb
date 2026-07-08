@@ -1,0 +1,159 @@
+{
+  "@@locale": "pt",
+
+  "appName": "NutriMind IA",
+  "@appName": {},
+
+  "scanProduct": "Escanear um produto",
+  "@scanProduct": {},
+
+  "healthScore": "Pontuação de Saúde",
+  "@healthScore": {},
+
+  "excellent": "Excelente",
+  "@excellent": {},
+
+  "good": "Bom",
+  "@good": {},
+
+  "fair": "Regular",
+  "@fair": {},
+
+  "poor": "Ruim",
+  "@poor": {},
+
+  "novaGroup": "Grupo NOVA {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "Ingredientes",
+  "@ingredients": {},
+
+  "allergenWarning": "Aviso de Alérgeno",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "Contém {allergen}",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "Pode conter traços de {allergen}",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "Não conseguimos ler a lista de ingredientes de forma confiável. Verifique os alérgenos manualmente.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "Informações Nutricionais",
+  "@nutritionFacts": {},
+
+  "per100g": "por 100g",
+  "@per100g": {},
+
+  "perServing": "por porção ({g}g)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "Energia",
+  "@energyKcal": {},
+
+  "protein": "Proteínas",
+  "@protein": {},
+
+  "totalFat": "Gorduras Totais",
+  "@totalFat": {},
+
+  "saturatedFat": "Gorduras Saturadas",
+  "@saturatedFat": {},
+
+  "transFat": "Gorduras Trans",
+  "@transFat": {},
+
+  "carbohydrates": "Carboidratos",
+  "@carbohydrates": {},
+
+  "totalSugars": "Açúcares Totais",
+  "@totalSugars": {},
+
+  "addedSugars": "Açúcares Adicionados",
+  "@addedSugars": {},
+
+  "dietaryFibre": "Fibra Alimentar",
+  "@dietaryFibre": {},
+
+  "sodium": "Sódio",
+  "@sodium": {},
+
+  "copilotTitle": "Copiloto de Nutrição",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "Não substitui aconselhamento médico ou dietético.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "Pergunte sobre este produto…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "Relatório Semanal",
+  "@weeklyReport": {},
+
+  "mealLog": "Registro de Refeições",
+  "@mealLog": {},
+
+  "groceryCart": "Carrinho de Compras",
+  "@groceryCart": {},
+
+  "alternatives": "Alternativas Mais Saudáveis",
+  "@alternatives": {},
+
+  "budgetPickBadge": "Escolha econômica",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "Nenhuma alternativa com pontuação melhor encontrada nesta categoria.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "Configurações de Notificações",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "Relatório nutricional semanal",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "Alertas de alérgenos",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "Alertas de segurança críticos — não podem ser desativados",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "Seus Dados",
+  "@dataRightsTitle": {},
+
+  "exportData": "Exportar meus dados",
+  "@exportData": {},
+
+  "deleteAccount": "Excluir minha conta",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "Excluir conta?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "Isso apagará permanentemente todos os seus scans, registros de refeições e dados de perfil. Esta ação não pode ser desfeita.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "Excluir permanentemente",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "Modo Segurança Infantil Ativo",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "Alto em sódio — cuidado para hipertensão",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "Alto em açúcar — cuidado para diabetes",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "Histórico de Pesquisa",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "ex. snacks com alto sódio, biscoitos com baixa pontuação",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "Estimado",
+  "@estimatedValue": {},
+
+  "disclaimer": "Apenas para fins informativos. Não substitui aconselhamento nutricional profissional.",
+  "@disclaimer": {}
+}

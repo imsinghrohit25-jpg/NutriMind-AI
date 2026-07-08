@@ -1,0 +1,159 @@
+{
+  "@@locale": "de",
+
+  "appName": "NutriMind KI",
+  "@appName": {},
+
+  "scanProduct": "Produkt scannen",
+  "@scanProduct": {},
+
+  "healthScore": "Gesundheitswert",
+  "@healthScore": {},
+
+  "excellent": "Ausgezeichnet",
+  "@excellent": {},
+
+  "good": "Gut",
+  "@good": {},
+
+  "fair": "Mäßig",
+  "@fair": {},
+
+  "poor": "Schlecht",
+  "@poor": {},
+
+  "novaGroup": "NOVA-Gruppe {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "Zutaten",
+  "@ingredients": {},
+
+  "allergenWarning": "Allergenwarnung",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "Enthält {allergen}",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "Kann Spuren von {allergen} enthalten",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "Die Zutatenliste konnte nicht zuverlässig gelesen werden. Bitte prüfen Sie Allergene manuell.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "Nährwertangaben",
+  "@nutritionFacts": {},
+
+  "per100g": "pro 100g",
+  "@per100g": {},
+
+  "perServing": "pro Portion ({g}g)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "Energie",
+  "@energyKcal": {},
+
+  "protein": "Eiweiß",
+  "@protein": {},
+
+  "totalFat": "Fett gesamt",
+  "@totalFat": {},
+
+  "saturatedFat": "Gesättigte Fettsäuren",
+  "@saturatedFat": {},
+
+  "transFat": "Transfettsäuren",
+  "@transFat": {},
+
+  "carbohydrates": "Kohlenhydrate",
+  "@carbohydrates": {},
+
+  "totalSugars": "Zucker gesamt",
+  "@totalSugars": {},
+
+  "addedSugars": "Zugesetzter Zucker",
+  "@addedSugars": {},
+
+  "dietaryFibre": "Ballaststoffe",
+  "@dietaryFibre": {},
+
+  "sodium": "Natrium",
+  "@sodium": {},
+
+  "copilotTitle": "Ernährungs-Copilot",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "Kein Ersatz für ärztlichen oder diätetischen Rat.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "Fragen Sie zu diesem Produkt…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "Wochenbericht",
+  "@weeklyReport": {},
+
+  "mealLog": "Mahlzeitenprotokoll",
+  "@mealLog": {},
+
+  "groceryCart": "Einkaufswagen",
+  "@groceryCart": {},
+
+  "alternatives": "Gesündere Alternativen",
+  "@alternatives": {},
+
+  "budgetPickBadge": "Preis-Leistungs-Tipp",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "Keine besser bewerteten Alternativen in dieser Kategorie gefunden.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "Benachrichtigungseinstellungen",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "Wöchentlicher Ernährungsbericht",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "Allergen-Warnungen",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "Kritische Sicherheitswarnungen — können nicht deaktiviert werden",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "Ihre Daten",
+  "@dataRightsTitle": {},
+
+  "exportData": "Meine Daten exportieren",
+  "@exportData": {},
+
+  "deleteAccount": "Mein Konto löschen",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "Konto löschen?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "Dadurch werden alle Ihre Scans, Mahlzeitenprotokolle und Profildaten dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "Dauerhaft löschen",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "Kindersicherungsmodus aktiv",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "Viel Natrium — Vorsicht bei Bluthochdruck",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "Viel Zucker — Vorsicht bei Diabetes",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "Suchverlauf",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "z.B. natriumreiche Snacks, Kekse mit niedrigem Score",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "Geschätzt",
+  "@estimatedValue": {},
+
+  "disclaimer": "Nur zu Informationszwecken. Kein Ersatz für professionelle Ernährungsberatung.",
+  "@disclaimer": {}
+}

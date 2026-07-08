@@ -1,0 +1,159 @@
+{
+  "@@locale": "ml",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "ഉൽപ്പന്നം സ്കാൻ ചെയ്യുക",
+  "@scanProduct": {},
+
+  "healthScore": "ആരോഗ്യ സ്കോർ",
+  "@healthScore": {},
+
+  "excellent": "മികച്ചത്",
+  "@excellent": {},
+
+  "good": "നല്ലത്",
+  "@good": {},
+
+  "fair": "ശരാശരി",
+  "@fair": {},
+
+  "poor": "മോശം",
+  "@poor": {},
+
+  "novaGroup": "NOVA ഗ്രൂപ്പ് {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "ചേരുവകൾ",
+  "@ingredients": {},
+
+  "allergenWarning": "അലർജൻ മുന്നറിയിപ്പ്",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} അടങ്ങിയിരിക്കുന്നു",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen}-ന്റെ അംശം ഉണ്ടായിരിക്കാം",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "ചേരുവകളുടെ ലിസ്റ്റ് വിശ്വസനീയമായി വായിക്കാൻ കഴിഞ്ഞില്ല. അലർജൻ മാനുവലായി പരിശോധിക്കുക.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "പോഷക വിവരങ്ങൾ",
+  "@nutritionFacts": {},
+
+  "per100g": "100ഗ്രാം ന്",
+  "@per100g": {},
+
+  "perServing": "ഒരു സർവ്വിങ്ങിന് ({g}ഗ്രാം)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "ഊർജം",
+  "@energyKcal": {},
+
+  "protein": "പ്രോട്ടീൻ",
+  "@protein": {},
+
+  "totalFat": "ആകെ കൊഴുപ്പ്",
+  "@totalFat": {},
+
+  "saturatedFat": "സാച്ചുറേറ്റഡ് കൊഴുപ്പ്",
+  "@saturatedFat": {},
+
+  "transFat": "ട്രാൻസ് കൊഴുപ്പ്",
+  "@transFat": {},
+
+  "carbohydrates": "കാർബോഹൈഡ്രേറ്റ്",
+  "@carbohydrates": {},
+
+  "totalSugars": "ആകെ പഞ്ചസാര",
+  "@totalSugars": {},
+
+  "addedSugars": "ചേർത്ത പഞ്ചസാര",
+  "@addedSugars": {},
+
+  "dietaryFibre": "ഭക്ഷ്യ നാര്",
+  "@dietaryFibre": {},
+
+  "sodium": "സോഡിയം",
+  "@sodium": {},
+
+  "copilotTitle": "പോഷക കോ-പൈലറ്റ്",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "വൈദ്യ അല്ലെങ്കിൽ ഡയറ്ററ്റിക് ഉപദേശത്തിന് പകരമല്ല.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "ഈ ഉൽപ്പന്നത്തെ കുറിച്ച് ചോദിക്കുക…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "വാരാന്ത്യ റിപ്പോർട്ട്",
+  "@weeklyReport": {},
+
+  "mealLog": "ഭക്ഷണ ലോഗ്",
+  "@mealLog": {},
+
+  "groceryCart": "ഗ്രോസറി കാർട്ട്",
+  "@groceryCart": {},
+
+  "alternatives": "ആരോഗ്യകരമായ ബദലുകൾ",
+  "@alternatives": {},
+
+  "budgetPickBadge": "ബഡ്ജറ്റ് പിക്ക്",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "ഈ വിഭാഗത്തിൽ മികച്ച സ്കോർ ഉള്ള ബദലുകൾ ഒന്നും കണ്ടെത്തിയില്ല.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "അറിയിപ്പ് ക്രമീകരണങ്ങൾ",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "വാരാന്ത്യ പോഷക റിപ്പോർട്ട്",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "അലർജൻ മുന്നറിയിപ്പുകൾ",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "നിർണ്ണായക സുരക്ഷാ മുന്നറിയിപ്പുകൾ — നിഷ്ക്രിയമാക്കാൻ കഴിയില്ല",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "നിങ്ങളുടെ ഡേറ്റ",
+  "@dataRightsTitle": {},
+
+  "exportData": "എന്റെ ഡേറ്റ എക്സ്പോർട്ട് ചെയ്യുക",
+  "@exportData": {},
+
+  "deleteAccount": "എന്റെ അക്കൗണ്ട് ഇല്ലാതാക്കുക",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "അക്കൗണ്ട് ഇല്ലാതാക്കണോ?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "ഇത് നിങ്ങളുടെ എല്ലാ സ്കാനുകളും ഭക്ഷണ ലോഗുകളും പ്രൊഫൈൽ ഡേറ്റയും സ്ഥിരമായി ഇല്ലാതാക്കും. ഇത് പഴയപടിയാക്കാൻ കഴിയില്ല.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "സ്ഥിരമായി ഇല്ലാതാക്കുക",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "ശിശു സുരക്ഷാ മോഡ് സജീവം",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "ഉയർന്ന സോഡിയം — ഉയർന്ന രക്തസമ്മർദ്ദത്തിന് ശ്രദ്ധ",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "ഉയർന്ന പഞ്ചസാര — പ്രമേഹത്തിന് ശ്രദ്ധ",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "തിരയൽ ചരിത്രം",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "ഉദാ. ഉയർന്ന സോഡിയം സ്നാക്കുകൾ, കുറഞ്ഞ സ്കോർ ബിസ്ക്കറ്റ്",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "ഏകദേശ",
+  "@estimatedValue": {},
+
+  "disclaimer": "വിവര ആവശ്യങ്ങൾക്ക് മാത്രം. പ്രൊഫഷണൽ പോഷക ഉപദേശത്തിന് പകരമല്ല.",
+  "@disclaimer": {}
+}

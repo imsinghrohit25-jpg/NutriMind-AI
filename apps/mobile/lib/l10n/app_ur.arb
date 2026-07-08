@@ -1,0 +1,159 @@
+{
+  "@@locale": "ur",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "پروڈکٹ اسکین کریں",
+  "@scanProduct": {},
+
+  "healthScore": "صحت کا اسکور",
+  "@healthScore": {},
+
+  "excellent": "بہترین",
+  "@excellent": {},
+
+  "good": "اچھا",
+  "@good": {},
+
+  "fair": "ٹھیک",
+  "@fair": {},
+
+  "poor": "ناقص",
+  "@poor": {},
+
+  "novaGroup": "NOVA گروپ {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "اجزاء",
+  "@ingredients": {},
+
+  "allergenWarning": "الرجی کی تنبیہ",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} موجود ہے",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen} کے آثار ہو سکتے ہیں",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "اجزاء کی فہرست قابل اعتماد طریقے سے نہیں پڑھی جا سکی۔ الرجینز کو دستی طور پر جانچیں۔",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "غذائی حقائق",
+  "@nutritionFacts": {},
+
+  "per100g": "فی 100گ",
+  "@per100g": {},
+
+  "perServing": "فی خوراک ({g}گ)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "توانائی",
+  "@energyKcal": {},
+
+  "protein": "پروٹین",
+  "@protein": {},
+
+  "totalFat": "کل چکنائی",
+  "@totalFat": {},
+
+  "saturatedFat": "سیچوریٹڈ چکنائی",
+  "@saturatedFat": {},
+
+  "transFat": "ٹرانس چکنائی",
+  "@transFat": {},
+
+  "carbohydrates": "کاربوہائیڈریٹس",
+  "@carbohydrates": {},
+
+  "totalSugars": "کل شکر",
+  "@totalSugars": {},
+
+  "addedSugars": "اضافی شکر",
+  "@addedSugars": {},
+
+  "dietaryFibre": "غذائی ریشہ",
+  "@dietaryFibre": {},
+
+  "sodium": "سوڈیم",
+  "@sodium": {},
+
+  "copilotTitle": "غذائیت کو-پائلٹ",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "طبی یا غذائی مشورے کا متبادل نہیں۔",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "اس پروڈکٹ کے بارے میں پوچھیں…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "ہفتہ وار رپورٹ",
+  "@weeklyReport": {},
+
+  "mealLog": "کھانے کا لاگ",
+  "@mealLog": {},
+
+  "groceryCart": "گروسری کارٹ",
+  "@groceryCart": {},
+
+  "alternatives": "صحت مند متبادلات",
+  "@alternatives": {},
+
+  "budgetPickBadge": "بجٹ انتخاب",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "اس زمرے میں بہتر اسکور والے کوئی متبادل نہیں ملے۔",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "اطلاع کی ترتیبات",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "ہفتہ وار غذائیت رپورٹ",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "الرجی کی تنبیہات",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "اہم حفاظتی تنبیہات — غیر فعال نہیں کی جا سکتیں",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "آپ کا ڈیٹا",
+  "@dataRightsTitle": {},
+
+  "exportData": "میرا ڈیٹا برآمد کریں",
+  "@exportData": {},
+
+  "deleteAccount": "میرا اکاؤنٹ حذف کریں",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "اکاؤنٹ حذف کریں؟",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "اس سے آپ کے تمام اسکینز، کھانے کے لاگز اور پروفائل ڈیٹا مستقل طور پر مٹ جائیں گے۔ یہ واپس نہیں لیا جا سکتا۔",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "مستقل طور پر حذف کریں",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "بچوں کی حفاظتی موڈ فعال",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "زیادہ سوڈیم — ہائی بلڈ پریشر کے لیے احتیاط",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "زیادہ شکر — ذیابیطس کے لیے احتیاط",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "تلاش کی تاریخ",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "مثلاً زیادہ سوڈیم اسنیکس، کم اسکور بسکٹ",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "تخمینہ",
+  "@estimatedValue": {},
+
+  "disclaimer": "صرف معلوماتی مقاصد کے لیے۔ پیشہ ور غذائی مشورے کا متبادل نہیں۔",
+  "@disclaimer": {}
+}

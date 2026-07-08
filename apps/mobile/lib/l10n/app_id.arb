@@ -1,0 +1,159 @@
+{
+  "@@locale": "id",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "Pindai produk",
+  "@scanProduct": {},
+
+  "healthScore": "Skor Kesehatan",
+  "@healthScore": {},
+
+  "excellent": "Sangat Baik",
+  "@excellent": {},
+
+  "good": "Baik",
+  "@good": {},
+
+  "fair": "Cukup",
+  "@fair": {},
+
+  "poor": "Buruk",
+  "@poor": {},
+
+  "novaGroup": "Kelompok NOVA {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "Bahan-bahan",
+  "@ingredients": {},
+
+  "allergenWarning": "Peringatan Alergen",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "Mengandung {allergen}",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "Mungkin mengandung jejak {allergen}",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "Kami tidak dapat membaca daftar bahan dengan andal. Periksa alergen secara manual.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "Informasi Gizi",
+  "@nutritionFacts": {},
+
+  "per100g": "per 100g",
+  "@per100g": {},
+
+  "perServing": "per sajian ({g}g)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "Energi",
+  "@energyKcal": {},
+
+  "protein": "Protein",
+  "@protein": {},
+
+  "totalFat": "Total Lemak",
+  "@totalFat": {},
+
+  "saturatedFat": "Lemak Jenuh",
+  "@saturatedFat": {},
+
+  "transFat": "Lemak Trans",
+  "@transFat": {},
+
+  "carbohydrates": "Karbohidrat",
+  "@carbohydrates": {},
+
+  "totalSugars": "Total Gula",
+  "@totalSugars": {},
+
+  "addedSugars": "Gula Tambahan",
+  "@addedSugars": {},
+
+  "dietaryFibre": "Serat Pangan",
+  "@dietaryFibre": {},
+
+  "sodium": "Natrium",
+  "@sodium": {},
+
+  "copilotTitle": "Kopilot Gizi",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "Bukan pengganti saran medis atau diet.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "Tanyakan tentang produk ini…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "Laporan Mingguan",
+  "@weeklyReport": {},
+
+  "mealLog": "Catatan Makan",
+  "@mealLog": {},
+
+  "groceryCart": "Keranjang Belanja",
+  "@groceryCart": {},
+
+  "alternatives": "Alternatif Lebih Sehat",
+  "@alternatives": {},
+
+  "budgetPickBadge": "Pilihan hemat",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "Tidak ditemukan alternatif dengan skor lebih baik di kategori ini.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "Pengaturan Notifikasi",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "Laporan gizi mingguan",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "Peringatan alergen",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "Peringatan keamanan kritis — tidak dapat dinonaktifkan",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "Data Anda",
+  "@dataRightsTitle": {},
+
+  "exportData": "Ekspor data saya",
+  "@exportData": {},
+
+  "deleteAccount": "Hapus akun saya",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "Hapus akun?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "Ini akan menghapus secara permanen semua pindaian, catatan makan, dan data profil Anda. Tindakan ini tidak dapat dibatalkan.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "Hapus permanen",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "Mode Keamanan Anak Aktif",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "Natrium tinggi — perhatian untuk hipertensi",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "Gula tinggi — perhatian untuk diabetes",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "Riwayat Pencarian",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "mis. camilan natrium tinggi, biskuit skor rendah",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "Perkiraan",
+  "@estimatedValue": {},
+
+  "disclaimer": "Hanya untuk tujuan informasi. Bukan pengganti saran gizi profesional.",
+  "@disclaimer": {}
+}

@@ -1,0 +1,159 @@
+{
+  "@@locale": "pa",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "ਉਤਪਾਦ ਸਕੈਨ ਕਰੋ",
+  "@scanProduct": {},
+
+  "healthScore": "ਸਿਹਤ ਸਕੋਰ",
+  "@healthScore": {},
+
+  "excellent": "ਉੱਤਮ",
+  "@excellent": {},
+
+  "good": "ਚੰਗਾ",
+  "@good": {},
+
+  "fair": "ਔਸਤ",
+  "@fair": {},
+
+  "poor": "ਮਾੜਾ",
+  "@poor": {},
+
+  "novaGroup": "NOVA ਸਮੂਹ {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "ਸਮੱਗਰੀ",
+  "@ingredients": {},
+
+  "allergenWarning": "ਐਲਰਜਨ ਚੇਤਾਵਨੀ",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} ਸ਼ਾਮਲ ਹੈ",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen} ਦੇ ਨਿਸ਼ਾਨ ਹੋ ਸਕਦੇ ਹਨ",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "ਸਮੱਗਰੀ ਸੂਚੀ ਭਰੋਸੇਯੋਗ ਤਰੀਕੇ ਨਾਲ ਨਹੀਂ ਪੜ੍ਹੀ ਜਾ ਸਕੀ। ਐਲਰਜਨ ਦੀ ਦਸਤੀ ਜਾਂਚ ਕਰੋ।",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "ਪੋਸ਼ਣ ਤੱਥ",
+  "@nutritionFacts": {},
+
+  "per100g": "ਪ੍ਰਤੀ 100ਗ੍ਰਾ",
+  "@per100g": {},
+
+  "perServing": "ਪ੍ਰਤੀ ਪਰੋਸਣ ({g}ਗ੍ਰਾ)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "ਊਰਜਾ",
+  "@energyKcal": {},
+
+  "protein": "ਪ੍ਰੋਟੀਨ",
+  "@protein": {},
+
+  "totalFat": "ਕੁੱਲ ਚਰਬੀ",
+  "@totalFat": {},
+
+  "saturatedFat": "ਸੰਤ੍ਰਿਪਤ ਚਰਬੀ",
+  "@saturatedFat": {},
+
+  "transFat": "ਟ੍ਰਾਂਸ ਚਰਬੀ",
+  "@transFat": {},
+
+  "carbohydrates": "ਕਾਰਬੋਹਾਈਡ੍ਰੇਟ",
+  "@carbohydrates": {},
+
+  "totalSugars": "ਕੁੱਲ ਸ਼ੱਕਰ",
+  "@totalSugars": {},
+
+  "addedSugars": "ਜੋੜੀ ਗਈ ਸ਼ੱਕਰ",
+  "@addedSugars": {},
+
+  "dietaryFibre": "ਖੁਰਾਕੀ ਫਾਈਬਰ",
+  "@dietaryFibre": {},
+
+  "sodium": "ਸੋਡੀਅਮ",
+  "@sodium": {},
+
+  "copilotTitle": "ਪੋਸ਼ਣ ਕੋਪਾਇਲਟ",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "ਡਾਕਟਰੀ ਜਾਂ ਖੁਰਾਕ ਸੰਬੰਧੀ ਸਲਾਹ ਦਾ ਬਦਲ ਨਹੀਂ।",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "ਇਸ ਉਤਪਾਦ ਬਾਰੇ ਪੁੱਛੋ…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "ਹਫ਼ਤਾਵਾਰੀ ਰਿਪੋਰਟ",
+  "@weeklyReport": {},
+
+  "mealLog": "ਭੋਜਨ ਲੌਗ",
+  "@mealLog": {},
+
+  "groceryCart": "ਖਰੀਦਾਰੀ ਟੋਕਰੀ",
+  "@groceryCart": {},
+
+  "alternatives": "ਵਧੇਰੇ ਸਿਹਤਮੰਦ ਵਿਕਲਪ",
+  "@alternatives": {},
+
+  "budgetPickBadge": "ਬਜਟ ਪਿਕ",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "ਇਸ ਸ਼੍ਰੇਣੀ ਵਿੱਚ ਬਿਹਤਰ ਸਕੋਰ ਵਾਲੇ ਕੋਈ ਵਿਕਲਪ ਨਹੀਂ ਮਿਲੇ।",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "ਸੂਚਨਾ ਸੈੱਟਿੰਗਾਂ",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "ਹਫ਼ਤਾਵਾਰੀ ਪੋਸ਼ਣ ਰਿਪੋਰਟ",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "ਐਲਰਜਨ ਚੇਤਾਵਨੀਆਂ",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "ਨਾਜ਼ੁਕ ਸੁਰੱਖਿਆ ਚੇਤਾਵਨੀਆਂ — ਅਯੋਗ ਨਹੀਂ ਕੀਤੀਆਂ ਜਾ ਸਕਦੀਆਂ",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "ਤੁਹਾਡਾ ਡੇਟਾ",
+  "@dataRightsTitle": {},
+
+  "exportData": "ਮੇਰਾ ਡੇਟਾ ਨਿਰਯਾਤ ਕਰੋ",
+  "@exportData": {},
+
+  "deleteAccount": "ਮੇਰਾ ਖਾਤਾ ਮਿਟਾਓ",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "ਖਾਤਾ ਮਿਟਾਓ?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "ਇਹ ਤੁਹਾਡੇ ਸਾਰੇ ਸਕੈਨ, ਭੋਜਨ ਲੌਗ ਅਤੇ ਪ੍ਰੋਫਾਈਲ ਡੇਟਾ ਨੂੰ ਸਥਾਈ ਤੌਰ 'ਤੇ ਮਿਟਾ ਦੇਵੇਗਾ। ਇਹ ਵਾਪਸ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ।",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "ਸਥਾਈ ਤੌਰ 'ਤੇ ਮਿਟਾਓ",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "ਬੱਚੇ ਦੀ ਸੁਰੱਖਿਆ ਮੋਡ ਸਕਿਰਿਆ",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "ਉੱਚ ਸੋਡੀਅਮ — ਹਾਈਪਰਟੈਨਸ਼ਨ ਲਈ ਸਾਵਧਾਨੀ",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "ਉੱਚ ਸ਼ੱਕਰ — ਡਾਇਬਿਟੀਜ਼ ਲਈ ਸਾਵਧਾਨੀ",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "ਖੋਜ ਇਤਿਹਾਸ",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "ਜਿਵੇਂ: ਉੱਚ ਸੋਡੀਅਮ ਸਨੈਕਸ, ਘੱਟ ਸਕੋਰ ਬਿਸਕੁਟ",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "ਅਨੁਮਾਨਿਤ",
+  "@estimatedValue": {},
+
+  "disclaimer": "ਸਿਰਫ਼ ਜਾਣਕਾਰੀ ਦੇ ਉਦੇਸ਼ਾਂ ਲਈ। ਪੇਸ਼ੇਵਰ ਪੋਸ਼ਣ ਸਲਾਹ ਦਾ ਬਦਲ ਨਹੀਂ।",
+  "@disclaimer": {}
+}

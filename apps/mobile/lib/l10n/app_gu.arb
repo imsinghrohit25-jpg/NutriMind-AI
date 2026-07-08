@@ -1,0 +1,159 @@
+{
+  "@@locale": "gu",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "ઉત્પાદ સ્કૅન કરો",
+  "@scanProduct": {},
+
+  "healthScore": "આરોગ્ય સ્કોર",
+  "@healthScore": {},
+
+  "excellent": "ઉત્તમ",
+  "@excellent": {},
+
+  "good": "સારું",
+  "@good": {},
+
+  "fair": "સાધારણ",
+  "@fair": {},
+
+  "poor": "ખરાબ",
+  "@poor": {},
+
+  "novaGroup": "NOVA જૂથ {group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "સામગ્રી",
+  "@ingredients": {},
+
+  "allergenWarning": "એલર્જન ચેતવણી",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen} ધરાવે છે",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen}ના અંશ હોઈ શકે છે",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "સામગ્રીની સૂચિ વિશ્વસનીય રીતે વાંચી શકાઈ નથી. એલર્જન હાથથી તપાસો.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "પોષણ તથ્યો",
+  "@nutritionFacts": {},
+
+  "per100g": "દર 100ગ્રા",
+  "@per100g": {},
+
+  "perServing": "દર પિરસવાથી ({g}ગ્રા)",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "ઊર્જા",
+  "@energyKcal": {},
+
+  "protein": "પ્રોટીન",
+  "@protein": {},
+
+  "totalFat": "કુલ ચરબી",
+  "@totalFat": {},
+
+  "saturatedFat": "સંતૃપ્ત ચરબી",
+  "@saturatedFat": {},
+
+  "transFat": "ટ્રાન્સ ચરબી",
+  "@transFat": {},
+
+  "carbohydrates": "કાર્બોહાઇડ્રેટ",
+  "@carbohydrates": {},
+
+  "totalSugars": "કુલ ખાંડ",
+  "@totalSugars": {},
+
+  "addedSugars": "ઉમેરાયેલ ખાંડ",
+  "@addedSugars": {},
+
+  "dietaryFibre": "આહાર ફાઇબર",
+  "@dietaryFibre": {},
+
+  "sodium": "સોડિયમ",
+  "@sodium": {},
+
+  "copilotTitle": "પોષણ કોપાઇલટ",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "તબીબી અથવા આહારવિજ્ઞાન સલાહ માટે અવેજી નથી.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "આ ઉત્પાદ વિશે પૂછો…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "સાપ્તાહિક અહેવાલ",
+  "@weeklyReport": {},
+
+  "mealLog": "ભોજન નોંધ",
+  "@mealLog": {},
+
+  "groceryCart": "ખરીદારી ટોપલી",
+  "@groceryCart": {},
+
+  "alternatives": "આરોગ્યકર વિકલ્પો",
+  "@alternatives": {},
+
+  "budgetPickBadge": "બજેટ પસંદ",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "આ શ્રેણીમાં વધુ સ્કોર સાથેના કોઈ વિકલ્પ મળ્યા નહીં.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "સૂચના સેટિંગ્સ",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "સાપ્તાહિક પોષણ અહેવાલ",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "એલર્જન ચેતવણીઓ",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "જટિલ સુરક્ષા ચેતવણીઓ — અક્ષમ કરી શકાશે નહીં",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "તમારો ડેટા",
+  "@dataRightsTitle": {},
+
+  "exportData": "મારો ડેટા નિકાસ કરો",
+  "@exportData": {},
+
+  "deleteAccount": "મારું ખાતું ભૂંસો",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "ખાતું ભૂંસો?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "આ તમારા તમામ સ્કૅન, ભોજન નોંધ અને પ્રોફાઇલ ડેટા કાયમ માટે ભૂંસી નાખશે. આ ઊલ્ટાવી શકાશે નહીં.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "કાયમ માટે ભૂંસો",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "બાળ સુરક્ષા મોડ સક્રિય",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "ઉચ્ચ સોડિયમ — હાઈ બ્લડ પ્રેશર માટે સાવધાની",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "ઉચ્ચ ખાંડ — ડાયાબિટીસ માટે સાવધાની",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "શોધ ઇતિહાસ",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "દા.ત. ઉચ્ચ સોડિયમ નાસ્તો, ઓછા સ્કોરના બિસ્કિટ",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "અંદાજ",
+  "@estimatedValue": {},
+
+  "disclaimer": "ફક્ત માહિતી હેતુ માટે. વ્યાવસાયિક પોષણ સલાહ માટે અવેજી નથી.",
+  "@disclaimer": {}
+}

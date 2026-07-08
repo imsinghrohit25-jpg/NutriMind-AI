@@ -1,0 +1,159 @@
+{
+  "@@locale": "ja",
+
+  "appName": "NutriMind AI",
+  "@appName": {},
+
+  "scanProduct": "商品をスキャン",
+  "@scanProduct": {},
+
+  "healthScore": "健康スコア",
+  "@healthScore": {},
+
+  "excellent": "優秀",
+  "@excellent": {},
+
+  "good": "良い",
+  "@good": {},
+
+  "fair": "普通",
+  "@fair": {},
+
+  "poor": "不良",
+  "@poor": {},
+
+  "novaGroup": "NOVAグループ{group}",
+  "@novaGroup": { "placeholders": { "group": { "type": "int" } } },
+
+  "ingredients": "原材料",
+  "@ingredients": {},
+
+  "allergenWarning": "アレルゲン警告",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "{allergen}を含む",
+  "@allergenDeclared": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenTrace": "{allergen}の痕跡が含まれる場合があります",
+  "@allergenTrace": { "placeholders": { "allergen": { "type": "String" } } },
+
+  "allergenFailSafe": "成分表を確実に読み取ることができませんでした。アレルゲンを手動でご確認ください。",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "栄養成分表",
+  "@nutritionFacts": {},
+
+  "per100g": "100gあたり",
+  "@per100g": {},
+
+  "perServing": "1食分({g}g)あたり",
+  "@perServing": { "placeholders": { "g": { "type": "num", "format": "decimalPattern" } } },
+
+  "energyKcal": "エネルギー",
+  "@energyKcal": {},
+
+  "protein": "たんぱく質",
+  "@protein": {},
+
+  "totalFat": "脂質",
+  "@totalFat": {},
+
+  "saturatedFat": "飽和脂肪酸",
+  "@saturatedFat": {},
+
+  "transFat": "トランス脂肪酸",
+  "@transFat": {},
+
+  "carbohydrates": "炭水化物",
+  "@carbohydrates": {},
+
+  "totalSugars": "糖質",
+  "@totalSugars": {},
+
+  "addedSugars": "添加糖",
+  "@addedSugars": {},
+
+  "dietaryFibre": "食物繊維",
+  "@dietaryFibre": {},
+
+  "sodium": "ナトリウム",
+  "@sodium": {},
+
+  "copilotTitle": "栄養コパイロット",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "医療または栄養士のアドバイスの代替ではありません。",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "この商品についてお聞きします…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "週次レポート",
+  "@weeklyReport": {},
+
+  "mealLog": "食事ログ",
+  "@mealLog": {},
+
+  "groceryCart": "買い物かご",
+  "@groceryCart": {},
+
+  "alternatives": "より健康的な代替品",
+  "@alternatives": {},
+
+  "budgetPickBadge": "コスパ優秀",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "このカテゴリでより高いスコアの代替品は見つかりませんでした。",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "通知設定",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "週次栄養レポート",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "アレルゲンアラート",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "重要な安全アラート — 無効にできません",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "あなたのデータ",
+  "@dataRightsTitle": {},
+
+  "exportData": "データをエクスポート",
+  "@exportData": {},
+
+  "deleteAccount": "アカウントを削除",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "アカウントを削除しますか？",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "これにより、すべてのスキャン、食事ログ、プロフィールデータが完全に削除されます。この操作は元に戻せません。",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "完全に削除",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "子どもの安全モード有効",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "塩分が多い — 高血圧の方は注意",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "糖分が多い — 糖尿病の方は注意",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "検索履歴",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "例：塩分の多いスナック、低スコアのビスケット",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "推定値",
+  "@estimatedValue": {},
+
+  "disclaimer": "情報提供のみを目的としています。専門的な栄養アドバイスの代替ではありません。",
+  "@disclaimer": {}
+}
