@@ -27,6 +27,7 @@ import { z } from 'zod';
 import { requireAuth } from '../../plugins/auth.js';
 import { privacyRegimeFor, consentRequirementsFor } from '../../privacy/regime.js';
 import { requestRestriction, liftRestriction, getRestrictionStatus } from '../../privacy/restriction-service.js';
+import { recordEventBestEffort } from '../../memory/events.js';
 import { ok, err } from '@nutrimind/shared';
 
 interface UserTableRef {
@@ -50,6 +51,13 @@ const USER_DATA_TABLES: readonly UserTableRef[] = [
   { table: 'scans', column: 'user_id' },
   { table: 'health_scores', column: 'user_id' },
   { table: 'weekly_reports', column: 'user_id' },
+  // Phase 11 (AI Memory System, ADR-0025) — `user_events` is RANGE-partitioned (migration
+  // 0023) but a DELETE against the partitioned parent with a WHERE clause routes correctly to
+  // every child partition automatically; no per-partition enumeration needed.
+  { table: 'user_events', column: 'user_id' },
+  { table: 'user_memory_facts', column: 'user_id' },
+  { table: 'user_memory_embeddings', column: 'user_id' },
+  { table: 'recommendation_feedback', column: 'user_id' },
   { table: 'household_members', column: 'owner_id' },
   { table: 'users_profiles', column: 'id' },
 ] as const;
@@ -176,6 +184,13 @@ export default async function dataRightsRoutes(fastify: FastifyInstance): Promis
     if (error) {
       return reply.status(500).send(err('RECTIFY_FAILED', error.message));
     }
+
+    // Phase 11 (AI Memory System, Layer 1) — a goal change is a real memory-worthy signal;
+    // best-effort, never blocks the response.
+    if (body.data.goal) {
+      recordEventBestEffort(supabase, request.user.id, 'goal_set', { goal: body.data.goal });
+    }
+
     return reply.send(ok({ updated: true, profile: data }));
   });
 

@@ -5,19 +5,44 @@
 
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS feature_flags (
+-- Fixed (Phase 11 migration-chain verification, ADR-0025): two real, previously-undetected
+-- defects, found by actually applying every migration 0001-0023 in order against a real local
+-- Postgres for the first time this build track:
+--   1. `PRIMARY KEY (key, COALESCE(country_code, ''))` is not valid PostgreSQL — a PRIMARY KEY
+--      constraint can only reference actual columns, never an expression.
+--   2. Migration 0009 (original 19-phase build) already created a DIFFERENT `feature_flags`
+--      table (`id, name, is_enabled, rollout_percent, description, updated_at`) for that build's
+--      own, much simpler flagging needs. This migration's `CREATE TABLE IF NOT EXISTS
+--      feature_flags` therefore silently no-op'd against any real database that had run
+--      migrations in order — the OLD, incompatible schema won, and every one of this entire
+--      build track's `global.pN.*` flag reads/writes (`country/plugin.ts`, `routes/v1/flags.ts`,
+--      every phase's flag-key comment) would have failed with "column does not exist."
+-- Fixed by dropping the superseded 0009 table (confirmed zero references anywhere in this
+-- codebase to its `name`/`is_enabled`/`rollout_percent` columns — dead, pre-launch, no
+-- production data to preserve, same rationale as ADR-0018's `estimated_rs` rename) and creating
+-- the real one fresh, with a surrogate `id` primary key plus a UNIQUE INDEX on the COALESCE
+-- expression (indexes, unlike PRIMARY KEY/UNIQUE table constraints, support expressions) —
+-- preserving the intended semantics exactly: one row per key when country_code IS NULL
+-- (global), one row per (key, country_code) otherwise.
+DROP TABLE IF EXISTS feature_flags CASCADE;
+
+CREATE TABLE feature_flags (
+  id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   key          text        NOT NULL,
   enabled      boolean     NOT NULL DEFAULT false,
   country_code text        NULL,             -- NULL = all countries; 'IN' = India only
   rollout_pct  integer     NOT NULL DEFAULT 100 CHECK (rollout_pct BETWEEN 0 AND 100),
   description  text        NULL,
   updated_at   timestamptz NOT NULL DEFAULT now(),
-  updated_by   uuid        NULL REFERENCES auth.users(id),
-  PRIMARY KEY (key, COALESCE(country_code, ''))
+  updated_by   uuid        NULL REFERENCES auth.users(id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS feature_flags_key_country_uidx
+  ON feature_flags (key, COALESCE(country_code, ''));
+
 COMMENT ON TABLE feature_flags IS
-  'Remote-controlled feature flags. key+country_code is the unique gate. '
+  'Remote-controlled feature flags. key+country_code is the unique gate (enforced by '
+  'feature_flags_key_country_uidx, not the primary key — see comment above). '
   'NULL country_code = applies to all countries. '
   'Global Enterprise Edition flags are namespaced global.pN.*';
 
@@ -83,7 +108,10 @@ INSERT INTO feature_flags (key, enabled, country_code, description) VALUES
   ('global.p9.deferred_components',       false, NULL, 'Flutter deferred component loading (Phase 9)'),
 
   -- Phase 10 — Onboarding
-  ('global.p10.country_onboarding_v2', false, NULL, 'Global country onboarding flow v2 (Phase 10)')
+  ('global.p10.country_onboarding_v2', false, NULL, 'Global country onboarding flow v2 (Phase 10)'),
+
+  -- Phase 11 — AI Memory System
+  ('global.p11.ai_memory_system', false, NULL, 'AI Memory System — episodic/derived/semantic/working memory (Phase 11)')
 
 ON CONFLICT DO NOTHING;
 

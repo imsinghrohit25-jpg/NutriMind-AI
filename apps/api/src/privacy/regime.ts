@@ -22,8 +22,11 @@ export function privacyRegimeFor(isoCode: string): PrivacyRegime {
   return 'GENERIC';
 }
 
-// Mirrors `user_consents.consent_type`'s documented values (migration 0002).
-export type ConsentType = 'tos' | 'privacy' | 'health_data' | 'disclaimer' | 'marketing';
+// Mirrors `user_consents.consent_type`'s documented values (migration 0002; `ai_personalization`
+// added Phase 11, §12.1 — memory is personal data subject to consent like any other purpose,
+// and it's optional/independently withdrawable, never bundled with mandatory ToS/privacy
+// consent — turning it off must not degrade core app functionality, only personalization).
+export type ConsentType = 'tos' | 'privacy' | 'health_data' | 'disclaimer' | 'marketing' | 'ai_personalization';
 
 export interface ConsentRequirement {
   consentType: ConsentType;
@@ -41,6 +44,7 @@ const GDPR_REQUIREMENTS: readonly ConsentRequirement[] = [
   { consentType: 'disclaimer', mandatory: true, granular: false, citation: 'Health-information duty of care' },
   { consentType: 'health_data', mandatory: true, granular: true, citation: 'Special category data — GDPR Art. 9(2)(a), explicit consent required' },
   { consentType: 'marketing', mandatory: false, granular: true, citation: 'GDPR Art. 6(1)(a) + ePrivacy Directive Art. 13' },
+  { consentType: 'ai_personalization', mandatory: false, granular: true, citation: 'Profiling — GDPR Art. 22 / Art. 6(1)(a), explicit opt-in required for the AI Memory System' },
 ];
 
 const DPDP_REQUIREMENTS: readonly ConsentRequirement[] = [
@@ -49,6 +53,7 @@ const DPDP_REQUIREMENTS: readonly ConsentRequirement[] = [
   { consentType: 'disclaimer', mandatory: true, granular: false, citation: 'Health-information duty of care' },
   { consentType: 'health_data', mandatory: true, granular: true, citation: 'Free, specific, informed consent — DPDP Act 2023 Sec. 6' },
   { consentType: 'marketing', mandatory: false, granular: true, citation: 'Purpose limitation — DPDP Act 2023 Sec. 6(1)' },
+  { consentType: 'ai_personalization', mandatory: false, granular: true, citation: 'Free, specific, informed consent for the AI Memory System — DPDP Act 2023 Sec. 6' },
 ];
 
 const GENERIC_REQUIREMENTS: readonly ConsentRequirement[] = [
@@ -57,6 +62,7 @@ const GENERIC_REQUIREMENTS: readonly ConsentRequirement[] = [
   { consentType: 'disclaimer', mandatory: true, granular: false, citation: 'Health-information duty of care' },
   { consentType: 'health_data', mandatory: false, granular: true, citation: 'Baseline opt-in for personalized health processing' },
   { consentType: 'marketing', mandatory: false, granular: true, citation: 'Baseline opt-in' },
+  { consentType: 'ai_personalization', mandatory: false, granular: true, citation: 'Baseline opt-in for the AI Memory System' },
 ];
 
 export function consentRequirementsFor(regime: PrivacyRegime): readonly ConsentRequirement[] {
@@ -67,4 +73,4 @@ export function consentRequirementsFor(regime: PrivacyRegime): readonly ConsentR
   }
 }
 
-export const ALL_CONSENT_TYPES: readonly ConsentType[] = ['tos', 'privacy', 'health_data', 'disclaimer', 'marketing'];
+export const ALL_CONSENT_TYPES: readonly ConsentType[] = ['tos', 'privacy', 'health_data', 'disclaimer', 'marketing', 'ai_personalization'];

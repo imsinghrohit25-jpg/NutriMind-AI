@@ -16,4 +16,6 @@ abstract final class AppRoutes {
   static const scanner   = '/scanner';
   static const household = '/household';
   static const profile   = '/profile';
+  // Phase 11 (`global.p11.ai_memory_system`)
+  static const memory     = '/settings/memory';
 }

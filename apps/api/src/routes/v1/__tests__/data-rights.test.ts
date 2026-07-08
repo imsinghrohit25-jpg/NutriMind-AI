@@ -109,6 +109,13 @@ describe('DSR routes (data-rights.ts)', () => {
       expect(supabase.from).not.toHaveBeenCalledWith('user_profiles');
       expect(supabase.from).not.toHaveBeenCalledWith('scan_history');
 
+      // Phase 11 (AI Memory System) — the DSR export cascade must cover the new memory tables;
+      // omitting one here would mean a real export never surfaced a user's own memory data.
+      expect(supabase.from).toHaveBeenCalledWith('user_events');
+      expect(supabase.from).toHaveBeenCalledWith('user_memory_facts');
+      expect(supabase.from).toHaveBeenCalledWith('user_memory_embeddings');
+      expect(supabase.from).toHaveBeenCalledWith('recommendation_feedback');
+
       // The export endpoint sends a raw JSON payload (not the ok()/err() API envelope) since it
       // sets Content-Disposition: attachment for a file download.
       const body = JSON.parse(resp.body);
@@ -135,6 +142,14 @@ describe('DSR routes (data-rights.ts)', () => {
       expect(body.data.deleted).toBe(true);
       expect(body.data.remainingRows).toBe(0);
       expect(supabase.auth.admin.deleteUser).toHaveBeenCalledWith('user-1');
+
+      // Phase 11 (AI Memory System) — erasure must cascade to memory, not just the original
+      // Phase 0-8 tables (§14 Phase 11 acceptance gate: "DSR erasure cascade tests").
+      expect(supabase.from).toHaveBeenCalledWith('user_events');
+      expect(supabase.from).toHaveBeenCalledWith('user_memory_facts');
+      expect(supabase.from).toHaveBeenCalledWith('user_memory_embeddings');
+      expect(supabase.from).toHaveBeenCalledWith('recommendation_feedback');
+
       await app.close();
     });
 

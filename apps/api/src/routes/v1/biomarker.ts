@@ -21,6 +21,7 @@ import { parseAndPersistLabReport } from '../../biomarker/lab-ocr-parser.js';
 import { exchangeDexcomCode, computeTimeInRange } from '../../biomarker/dexcom.js';
 import { flagLabResults } from '../../biomarker/flag-engine.js';
 import type { BiomarkerType } from '../../biomarker/types.js';
+import { recordEventBestEffort } from '../../memory/events.js';
 
 export default async function biomarkerRoutes(fastify: FastifyInstance): Promise<void> {
 
@@ -187,6 +188,14 @@ export default async function biomarkerRoutes(fastify: FastifyInstance): Promise
       .single();
 
     if (error) return reply.code(500).send({ error: error.message });
+
+    // Phase 11 (AI Memory System, Layer 1) — best-effort, never blocks the response.
+    recordEventBestEffort(fastify.supabase, userId, 'biomarker_reading', {
+      biomarkerType: body.biomarkerType,
+      value: body.value,
+      unit: body.unit,
+    });
+
     return reply.code(201).send({ id: data?.id });
   });
 

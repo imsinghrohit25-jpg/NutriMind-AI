@@ -91,6 +91,10 @@ describe('registerV1Routes — full route tree', () => {
     { method: 'GET', url: '/v1/health/consents' },
     // voice.ts
     { method: 'POST', url: '/v1/voice/parse' },
+    // memory.ts (Phase 11)
+    { method: 'GET', url: '/v1/memory' },
+    { method: 'DELETE', url: '/v1/memory/00000000-0000-0000-0000-000000000000' },
+    { method: 'POST', url: '/v1/memory/feedback' },
   ];
 
   it.each(authRequiredRoutes)('$method $url resolves to a real route (not 404)', async ({ method, url }) => {
@@ -110,6 +114,7 @@ describe('registerV1Routes — full route tree', () => {
       { method: 'GET' as const, url: '/v1/pantry/items' },
       { method: 'GET' as const, url: '/v1/biomarker/lab-results' },
       { method: 'GET' as const, url: '/v1/health/metrics' },
+      { method: 'GET' as const, url: '/v1/memory' },
     ]) {
       const resp = await app.inject({ method, url });
       expect(resp.statusCode).toBe(401);
@@ -125,6 +130,7 @@ describe('registerV1Routes — full route tree', () => {
       { method: 'GET' as const, url: '/v1/health/metrics' },
       { method: 'GET' as const, url: '/v1/health/consents' },
       { method: 'GET' as const, url: '/v1/biomarker/glucose/readings' },
+      { method: 'GET' as const, url: '/v1/memory' },
     ]) {
       const resp = await app.inject({ method, url, headers: { 'x-test-user': 'user-1' } });
       expect(resp.statusCode).toBe(200);

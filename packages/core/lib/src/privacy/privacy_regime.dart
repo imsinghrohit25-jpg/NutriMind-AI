@@ -16,13 +16,21 @@ PrivacyRegime privacyRegimeFor(String isoCode) {
   return PrivacyRegime.generic;
 }
 
-/// Mirrors the server's `user_consents.consent_type` documented values (migration 0002).
-enum ConsentType { tos, privacy, healthData, disclaimer, marketing }
+/// Mirrors the server's `user_consents.consent_type` documented values (migration 0002;
+/// `aiPersonalization` added Phase 11, §12.1 — see apps/api/src/privacy/regime.ts).
+enum ConsentType { tos, privacy, healthData, disclaimer, marketing, aiPersonalization }
 
+// Explicit mapping table, not `.name` — a bare `.name` fallback silently emits Dart's camelCase
+// identifier (e.g. 'aiPersonalization') instead of the server's real snake_case wire string
+// ('ai_personalization'), the exact bug found and fixed in country_profile.dart during Phase 10
+// (ADR-0024). `healthData` already needed its own case for the same reason; `aiPersonalization`
+// would have silently broken the same way if left on the `.name` fallback path.
 String consentTypeToApi(ConsentType type) {
   switch (type) {
     case ConsentType.healthData:
       return 'health_data';
+    case ConsentType.aiPersonalization:
+      return 'ai_personalization';
     default:
       return type.name;
   }
@@ -48,6 +56,7 @@ const _gdprRequirements = <ConsentRequirement>[
   ConsentRequirement(consentType: ConsentType.disclaimer, mandatory: true, granular: false, citation: 'Health-information duty of care'),
   ConsentRequirement(consentType: ConsentType.healthData, mandatory: true, granular: true, citation: 'Special category data — GDPR Art. 9(2)(a), explicit consent required'),
   ConsentRequirement(consentType: ConsentType.marketing, mandatory: false, granular: true, citation: 'GDPR Art. 6(1)(a) + ePrivacy Directive Art. 13'),
+  ConsentRequirement(consentType: ConsentType.aiPersonalization, mandatory: false, granular: true, citation: 'Profiling — GDPR Art. 22 / Art. 6(1)(a), explicit opt-in required for the AI Memory System'),
 ];
 
 const _dpdpRequirements = <ConsentRequirement>[
@@ -56,6 +65,7 @@ const _dpdpRequirements = <ConsentRequirement>[
   ConsentRequirement(consentType: ConsentType.disclaimer, mandatory: true, granular: false, citation: 'Health-information duty of care'),
   ConsentRequirement(consentType: ConsentType.healthData, mandatory: true, granular: true, citation: 'Free, specific, informed consent — DPDP Act 2023 Sec. 6'),
   ConsentRequirement(consentType: ConsentType.marketing, mandatory: false, granular: true, citation: 'Purpose limitation — DPDP Act 2023 Sec. 6(1)'),
+  ConsentRequirement(consentType: ConsentType.aiPersonalization, mandatory: false, granular: true, citation: 'Free, specific, informed consent for the AI Memory System — DPDP Act 2023 Sec. 6'),
 ];
 
 const _genericRequirements = <ConsentRequirement>[
@@ -64,6 +74,7 @@ const _genericRequirements = <ConsentRequirement>[
   ConsentRequirement(consentType: ConsentType.disclaimer, mandatory: true, granular: false, citation: 'Health-information duty of care'),
   ConsentRequirement(consentType: ConsentType.healthData, mandatory: false, granular: true, citation: 'Baseline opt-in for personalized health processing'),
   ConsentRequirement(consentType: ConsentType.marketing, mandatory: false, granular: true, citation: 'Baseline opt-in'),
+  ConsentRequirement(consentType: ConsentType.aiPersonalization, mandatory: false, granular: true, citation: 'Baseline opt-in for the AI Memory System'),
 ];
 
 List<ConsentRequirement> consentRequirementsFor(PrivacyRegime regime) {

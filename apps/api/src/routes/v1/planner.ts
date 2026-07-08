@@ -9,6 +9,7 @@ import { requireAuth } from '../../plugins/auth.js';
 import { generateAndSaveMealPlan } from '../../planner/meal-plan-generator.js';
 import { buildGroceryList, saveGroceryList } from '../../planner/grocery-optimizer.js';
 import type { GeneratedRecipe } from '../../restaurant/recipe-generator.js';
+import { recordEventBestEffort } from '../../memory/events.js';
 
 export default async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
 
@@ -45,6 +46,18 @@ export default async function plannerRoutes(fastify: FastifyInstance): Promise<v
       gateway:  fastify.gateway,
       supabase: fastify.supabase,
     });
+
+    // Phase 11 (AI Memory System, Layer 1) — one event per planned meal, best-effort.
+    for (const day of days) {
+      const meals = [day.breakfast, day.lunch, day.dinner, day.snack].filter((m) => m != null);
+      for (const meal of meals) {
+        recordEventBestEffort(fastify.supabase, request.user.id, 'meal_planned', {
+          planId,
+          mealType: meal.mealType,
+          recipeName: meal.recipeName,
+        });
+      }
+    }
 
     reply.status(201).send({ planId, days, warnings });
   });
@@ -94,10 +107,19 @@ export default async function plannerRoutes(fastify: FastifyInstance): Promise<v
       .update({ is_complete: true })
       .eq('id', request.params.itemId)
       .eq('user_id', request.user.id)
-      .select('id')
+      .select('id, recipe_name, meal_type')
       .single();
 
     if (error || !data) return reply.status(404).send({ error: 'Item not found' });
+
+    // Phase 11 (AI Memory System, Layer 1) — marking a planned meal complete is the real
+    // "this was actually cooked/eaten" signal; best-effort, never blocks the response.
+    const completed = data as { recipe_name: string; meal_type: string };
+    recordEventBestEffort(fastify.supabase, request.user.id, 'recipe_cooked', {
+      recipeName: completed.recipe_name,
+      mealType: completed.meal_type,
+    });
+
     reply.send({ ok: true });
   });
 
@@ -168,20 +190,33 @@ export default async function plannerRoutes(fastify: FastifyInstance): Promise<v
     requireAuth(request);
     const { data: existing } = await fastify.supabase
       .from('grocery_items')
-      .select('is_purchased')
+      .select('is_purchased, name, estimated_price, currency_code')
       .eq('id', request.params.itemId)
       .eq('user_id', request.user.id)
       .single();
 
     if (!existing) return reply.status(404).send({ error: 'Item not found' });
 
+    const nowPurchased = !(existing as any).is_purchased;
+
     // Repeat the ownership filter on the write itself (defense in depth — the preceding SELECT
     // already 404s for another user's item, but the UPDATE shouldn't rely on that alone).
     await fastify.supabase
       .from('grocery_items')
-      .update({ is_purchased: !(existing as any).is_purchased })
+      .update({ is_purchased: nowPurchased })
       .eq('id', request.params.itemId)
       .eq('user_id', request.user.id);
+
+    // Phase 11 (AI Memory System, Layer 1) — only the un-purchased→purchased transition is a
+    // real "grocery_purchase" event; toggling back off isn't an un-purchase in real life.
+    if (nowPurchased) {
+      const item = existing as { name: string; estimated_price: number | null; currency_code: string };
+      recordEventBestEffort(fastify.supabase, request.user.id, 'grocery_purchase', {
+        itemName: item.name,
+        estimatedPrice: item.estimated_price ?? undefined,
+        currencyCode: item.currency_code,
+      });
+    }
 
     reply.send({ ok: true });
   });

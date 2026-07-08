@@ -8,6 +8,7 @@ import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../plugins/auth.js';
 import { parseAndSavePantryItems } from '../../pantry/receipt-ocr.js';
 import { getExpiryAlerts } from '../../pantry/expiry-tracker.js';
+import { recordEventBestEffort } from '../../memory/events.js';
 
 export default async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
 
@@ -74,6 +75,15 @@ export default async function pantryRoutes(fastify: FastifyInstance): Promise<vo
       .single();
 
     if (error) return reply.status(500).send({ error: error.message });
+
+    // Phase 11 (AI Memory System, Layer 1) — best-effort, never blocks the response.
+    recordEventBestEffort(fastify.supabase, request.user.id, 'grocery_purchase', {
+      itemName: body.name,
+      category: body.category,
+      estimatedPrice: body.estimatedRs,
+      currencyCode: 'INR',
+    });
+
     reply.status(201).send({ item: data });
   });
 

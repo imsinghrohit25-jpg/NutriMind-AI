@@ -13,6 +13,7 @@ import '../../features/profile/screens/profile_setup_screen.dart';
 import '../../features/household/screens/household_screen.dart';
 import '../../features/scanner/screens/scanner_screen.dart' deferred as scanner_lib;
 import '../../features/home/home_screen.dart';
+import '../../features/memory/screens/memory_screen.dart';
 import 'deferred_route.dart';
 import 'routes.dart';
 
@@ -76,6 +77,11 @@ GoRouter router(Ref ref) {
       ),
       GoRoute(path: AppRoutes.household, builder: (_, __) => const HouseholdScreen()),
       GoRoute(path: AppRoutes.profile, builder: (_, __) => const ProfileSetupScreen()),
+      // Phase 11 (`global.p11.ai_memory_system`) — reachable via direct navigation; not yet
+      // linked from a settings/profile entry point (this app has no built settings shell yet —
+      // same gap as DataRightsScreen, ApiClient's lack of a DI seam, and most of
+      // features/ — tracked, not fabricated as solved here).
+      GoRoute(path: AppRoutes.memory, builder: (_, __) => const MemoryScreen()),
     ],
   );
 }

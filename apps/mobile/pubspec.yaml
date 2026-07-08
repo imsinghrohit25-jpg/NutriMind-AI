@@ -87,6 +87,11 @@ dependencies:
   nutrimind_localization_engine:
     path: ../../packages/localization_engine
 
+  # AI Memory System transparency screen (Phase 11, `global.p11.ai_memory_system`) needs
+  # MemoryFact — first real mobile use of this package (previously an empty stub).
+  nutrimind_ai_agent_layer:
+    path: ../../packages/ai_agent_layer
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

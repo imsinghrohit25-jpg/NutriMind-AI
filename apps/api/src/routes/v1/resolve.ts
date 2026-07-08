@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { resolveBarcode, resolveByName } from '../../resolution/waterfall.js';
 import { enqueueProductEmbedding } from '../../embeddings/product-pipeline.js';
 import { getBoss } from '../../jobs/boss.js';
+import { recordEventBestEffort } from '../../memory/events.js';
 import { ok, err } from '@nutrimind/shared';
 
 const BarcodeBodySchema = z.object({
@@ -57,6 +58,15 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
           message: 'Product not found. A curation entry has been created.',
         }),
       );
+    }
+
+    // Phase 11 (AI Memory System, Layer 1) — best-effort, never blocks the response.
+    if (userId) {
+      recordEventBestEffort(fastify.supabase, userId, 'barcode_scanned', {
+        barcode,
+        resolvedBy: result.resolvedBy,
+        productId: result.productId,
+      });
     }
 
     return reply.send(

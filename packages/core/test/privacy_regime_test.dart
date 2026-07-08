@@ -62,5 +62,23 @@ void main() {
       expect(consentTypeToApi(ConsentType.marketing), 'marketing');
       expect(consentTypeToApi(ConsentType.tos), 'tos');
     });
+
+    test('maps aiPersonalization to ai_personalization, not the bare camelCase .name', () {
+      // Regression test for the exact bug class found in country_profile.dart (ADR-0024): a
+      // `.name` fallback silently emits 'aiPersonalization' instead of the server's real
+      // snake_case wire string.
+      expect(consentTypeToApi(ConsentType.aiPersonalization), 'ai_personalization');
+      expect(consentTypeToApi(ConsentType.aiPersonalization), isNot('aiPersonalization'));
+    });
+  });
+
+  group('AI Memory System consent (Phase 11)', () {
+    test('aiPersonalization is never mandatory in any regime — opt-in only', () {
+      for (final regime in PrivacyRegime.values) {
+        final req = consentRequirementsFor(regime).firstWhere((r) => r.consentType == ConsentType.aiPersonalization);
+        expect(req.mandatory, false);
+        expect(req.granular, true);
+      }
+    });
   });
 }

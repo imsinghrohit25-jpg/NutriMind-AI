@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GatewayRouter } from '../gateway/router.js';
+import { recordEventBestEffort } from '../memory/events.js';
 
 export interface ParsedReceiptItem {
   name:          string;
@@ -198,6 +199,15 @@ export async function parseAndSavePantryItems(opts: {
       })),
     );
     if (itemsErr) throw new Error(`pantry_items insert: ${itemsErr.message}`);
+
+    // Phase 11 (AI Memory System, Layer 1) — one event per parsed item, best-effort.
+    for (const item of receipt.items) {
+      recordEventBestEffort(supabase, userId, 'grocery_purchase', {
+        itemName: item.name,
+        estimatedPrice: item.priceRs,
+        currencyCode: 'INR',
+      }, { source: 'receipt_ocr' });
+    }
   }
 
   return { receiptId: receiptRow.id as string, itemCount: receipt.items.length };

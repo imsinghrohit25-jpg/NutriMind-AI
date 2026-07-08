@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { requireAuth } from '../../plugins/auth.js';
 import { GLOBAL_PROFILE, type CountryProfile } from '../../country/types.js';
 import { getCountrySuggestion, setPreferredCountry, UnknownCountryError } from '../../onboarding/country-service.js';
+import { recordEventBestEffort } from '../../memory/events.js';
 import { ok, err } from '@nutrimind/shared';
 
 const CountryBodySchema = z.object({
@@ -30,12 +31,20 @@ export default async function onboardingRoutes(fastify: FastifyInstance): Promis
     }
 
     try {
+      const detectedIsoCode = resolvedCountry(request).isoCode;
       const profile = await setPreferredCountry(
         fastify.supabase,
         request.user.id,
         body.data.isoCode,
-        resolvedCountry(request).isoCode,
+        detectedIsoCode,
       );
+
+      // Phase 11 (AI Memory System, Layer 1) — best-effort, never blocks the response.
+      recordEventBestEffort(fastify.supabase, request.user.id, 'country_transition', {
+        fromIsoCode: detectedIsoCode,
+        toIsoCode: profile.isoCode,
+      });
+
       return reply.send(ok({ profile }));
     } catch (e) {
       if (e instanceof UnknownCountryError) {

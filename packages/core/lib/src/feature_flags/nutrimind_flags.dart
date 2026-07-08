@@ -50,6 +50,9 @@ abstract final class NutriMindFlagKeys {
   // Phase 10 — Country Onboarding v2
   static const kGlobalCountryOnboardingV2  = 'global.p10.country_onboarding_v2';
 
+  // Phase 11 — AI Memory System
+  static const kGlobalAIMemorySystem       = 'global.p11.ai_memory_system';
+
   /// All flag keys — used for FlagSnapshot.allEnabled() in tests.
   static const List<String> all = [
     kGlobalCountryEngine,
@@ -80,5 +83,6 @@ abstract final class NutriMindFlagKeys {
     kGlobalIncrementalSync,
     kGlobalDeferredComponents,
     kGlobalCountryOnboardingV2,
+    kGlobalAIMemorySystem,
   ];
 }

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { initTelemetry } from './telemetry/otel.js';
 import { env } from './env.js';
-import { startAllWorkers } from './jobs/registry.js';
+import { startAllWorkers, scheduleRecurringJobs } from './jobs/registry.js';
 import { getBoss, shutdownBoss } from './jobs/boss.js';
 
 initTelemetry({
@@ -14,6 +14,7 @@ console.log('[worker] Starting pg-boss workers...');
 
 await getBoss();
 await startAllWorkers();
+await scheduleRecurringJobs();
 
 console.log('[worker] All workers started. Waiting for jobs...');
 
