@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_riverpod: ^2.6.1
+  dio: ^5.7.0
   nutrimind_core:
     path: ../core
   nutrimind_country_engine:

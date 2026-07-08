@@ -57,4 +57,7 @@ export interface CanonicalProduct extends Provenance {
   thumbnailUrl: string | null;
   nutrition: NutritionPer100g | null;
   ingredientsRawText: string | null;
+  // Phase 3 — Unified Global Food Database (optional, backward compat)
+  countryCodes?: string[];      // ISO-3166 codes where this product is known to be sold
+  sourceRegion?: string | null; // ISO code of the data source's primary region (e.g. 'GB' for CoFID)
 }
