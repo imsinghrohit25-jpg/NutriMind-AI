@@ -1,0 +1,20 @@
+name: nutrimind_health_score
+description: EXISTING deterministic Health Score Engine — Dart port. Pure functions, no LLM, no side effects.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nutrimind_core:
+    path: ../core
+  nutrimind_nutrition_rules:
+    path: ../nutrition_rules
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

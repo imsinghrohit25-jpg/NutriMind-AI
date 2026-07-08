@@ -1,0 +1,22 @@
+name: nutrimind_ocr_engine
+description: Hybrid OCR router — ML Kit (on-device, Latin/Devanagari/CJK/Korean) + Cloud Vision fallback (Arabic, Tamil, Telugu, etc.).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_mlkit_text_recognition: ^0.14.0
+  dio: ^5.7.0
+  nutrimind_core:
+    path: ../core
+  nutrimind_country_engine:
+    path: ../country_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

@@ -1,0 +1,19 @@
+name: nutrimind_health_data
+description: Health Connect (Android) + HealthKit (iOS) integration. Consent management, dedup, energy adjustment.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  health: ^12.2.0
+  nutrimind_core:
+    path: ../core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

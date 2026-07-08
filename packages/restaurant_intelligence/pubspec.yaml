@@ -1,0 +1,22 @@
+name: nutrimind_restaurant_intelligence
+description: Restaurant chain data (USDA+OFF), menu OCR, AI estimation (labeled ESTIMATED with confidence).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nutrimind_core:
+    path: ../core
+  nutrimind_food_intelligence:
+    path: ../food_intelligence
+  nutrimind_ocr_engine:
+    path: ../ocr_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

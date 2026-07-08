@@ -1,0 +1,20 @@
+name: nutrimind_food_intelligence
+description: Unified food schema, resolvers, multilingual search, alias system.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nutrimind_core:
+    path: ../core
+  nutrimind_country_engine:
+    path: ../country_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

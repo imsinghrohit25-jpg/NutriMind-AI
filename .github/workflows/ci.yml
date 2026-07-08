@@ -38,6 +38,30 @@ jobs:
       - name: Run test suite
         run: npx vitest run --reporter=verbose
 
+      # ── REGRESSION GATE (BLOCKING) — §1 protected features ──────────────────
+      # This gate MUST pass on every PR. Failures block merge.
+      - name: "GATE: Regression suite — Health Score Engine"
+        run: npx vitest run src/engines/score/__tests__/engine.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Regression suite — Allergen detector"
+        run: npx vitest run src/engines/allergen/__tests__/detector.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Regression suite — Allergen fail-safe"
+        run: npx vitest run src/engines/allergen/__tests__/fail-safe.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Regression suite — Meal planner constraint validator"
+        run: npx vitest run src/planner/__tests__/constraint-validator.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Regression suite — Hinglish Voice NLU"
+        run: npx vitest run src/voice/__tests__/nlu.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Regression suite — Family Allergen Guardian"
+        run: npx vitest run src/family/__tests__/allergen-guardian.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Regression suite — Feature flags defaults"
+        run: npx vitest run src/routes/v1/__tests__/flags.regression.test.ts --reporter=verbose
+      # ── END REGRESSION GATE ──────────────────────────────────────────────────
+
       # Gate: deterministic score engine — no LLM writes to score
       - name: Score engine audit (no LLM calls in engine.ts)
         run: |
@@ -46,6 +70,15 @@ jobs:
             exit 1
           fi
           echo "PASS: score engine is deterministic"
+
+      # Gate: allergen engine — no LLM writes to allergen detection
+      - name: "GATE: Allergen engine LLM-write audit"
+        run: |
+          if grep -rn "gateway\|llm\|complete\|embed" src/engines/allergen/; then
+            echo "FAIL: LLM call found in allergen engine"
+            exit 1
+          fi
+          echo "PASS: allergen engine is deterministic"
 
       # Gate: injection strings inert
       - name: Prompt injection test
@@ -65,6 +98,12 @@ jobs:
           flutter-version: '3.24.x'
           channel: stable
           cache: true
+
+      - name: Install melos
+        run: dart pub global activate melos
+
+      - name: Melos bootstrap (link all packages)
+        run: melos bootstrap
 
       - name: Install dependencies
         working-directory: apps/mobile

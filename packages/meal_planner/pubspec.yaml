@@ -1,0 +1,22 @@
+name: nutrimind_meal_planner
+description: EXISTING 30-day meal planner — locale-aware upgrade with constraint validation.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nutrimind_core:
+    path: ../core
+  nutrimind_nutrition_rules:
+    path: ../nutrition_rules
+  nutrimind_recipe_engine:
+    path: ../recipe_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

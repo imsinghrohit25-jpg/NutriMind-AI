@@ -1,0 +1,21 @@
+name: nutrimind_grocery_providers
+description: GroceryProvider abstraction + real providers (OFF, USDA Branded, LocalCatalog) + PartnerGroceryAdapter contract.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.7.0
+  nutrimind_core:
+    path: ../core
+  nutrimind_food_intelligence:
+    path: ../food_intelligence
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

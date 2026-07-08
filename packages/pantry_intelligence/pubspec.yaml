@@ -1,0 +1,21 @@
+name: nutrimind_pantry_intelligence
+description: EXISTING receipt OCR + pantry tracking — multi-currency, multi-script, Indian date formats.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.1.2
+  nutrimind_core:
+    path: ../core
+  nutrimind_ocr_engine:
+    path: ../ocr_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

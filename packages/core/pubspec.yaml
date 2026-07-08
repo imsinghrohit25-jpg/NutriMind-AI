@@ -1,0 +1,19 @@
+name: nutrimind_core
+description: NutriMind AI shared kernel — Result types, errors, logging, DI contracts, feature flags.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.3.3
+  logging: ^1.2.0
+  dio: ^5.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

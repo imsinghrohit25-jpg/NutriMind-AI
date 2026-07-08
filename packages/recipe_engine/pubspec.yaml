@@ -1,0 +1,22 @@
+name: nutrimind_recipe_engine
+description: AI recipe generation + regional recipe corpus. Allergen safety gate post-LLM.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nutrimind_core:
+    path: ../core
+  nutrimind_allergen_guardian:
+    path: ../allergen_guardian
+  nutrimind_food_intelligence:
+    path: ../food_intelligence
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

@@ -1,0 +1,23 @@
+name: nutrimind_localization_engine
+description: i18n/l10n, fonts, RTL, numeral systems, code-switching handler.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  nutrimind_core:
+    path: ../core
+  nutrimind_country_engine:
+    path: ../country_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0

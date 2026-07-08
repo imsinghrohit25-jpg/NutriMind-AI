@@ -1,0 +1,63 @@
+name: nutrimind_workspace
+repository: https://github.com/imsinghrohit25-jpg/NutriMind-AI
+
+packages:
+  - apps/mobile
+  - packages/*
+
+sdkPath: auto
+
+command:
+  bootstrap:
+    # Run pub get in all packages
+    runPubGetOffline: false
+  version:
+    # Use Conventional Commits for automatic versioning
+    workspaceChangelog: true
+
+scripts:
+  analyze:
+    run: melos exec -- flutter analyze
+    description: Run flutter analyze in all packages
+    packageFilters:
+      flutter: true
+
+  test:
+    run: melos exec -- flutter test
+    description: Run flutter tests in all packages
+    packageFilters:
+      flutter: true
+      dirExists: test
+
+  test:dart:
+    run: melos exec -- dart test
+    description: Run dart tests in all non-Flutter packages
+    packageFilters:
+      flutter: false
+      dirExists: test
+
+  gen:
+    run: melos exec -- dart run build_runner build --delete-conflicting-outputs
+    description: Run build_runner in all packages
+    packageFilters:
+      dependsOn: build_runner
+
+  # Regression gate — runs before every CI step
+  regression:
+    run: melos exec -- flutter test test/regression/
+    description: Run regression golden tests for all §1 protected features
+    packageFilters:
+      flutter: true
+      dirExists: test/regression
+
+  lint:
+    run: melos exec -- dart analyze --fatal-infos
+    description: Strict lint check (fails on any info)
+    packageFilters:
+      flutter: false
+
+  # Feature flag: verify all new global flags are OFF by default
+  check:flags:
+    run: |
+      dart run tools/verify_default_flags.dart
+    description: Verify all global.* feature flags default to false
