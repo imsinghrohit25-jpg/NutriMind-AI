@@ -11,11 +11,13 @@ import { scoreSatFat, scoreTransFat, SatFatSubScore, TransFatSubScore } from './
 import { scoreFibre, FibreSubScore } from './subscores/fiber.js';
 import { scoreProtein, ProteinSubScore } from './subscores/protein.js';
 import { classifyNova, NovaResult, NovaGroup } from './nova.js';
+import type { CountryNutritionStandard, ScoringWeights } from './standards/types.js';
 
+// Default (India/ICMR-NIN) weights — used when no country standard is supplied.
 // Weights must sum to 1.0.
 // Indian adaptation: sodium and sugar each carry more weight than the WHO standard
 // because hypertension and type-2 diabetes prevalence in India is higher.
-const WEIGHTS = {
+const DEFAULT_WEIGHTS: ScoringWeights = {
   sodium:   0.20,  // ICMR-NIN prioritises sodium reduction for Indian diet
   sugar:    0.20,  // WHO free sugar guideline; India has high T2D burden
   satFat:   0.15,  // FSSAI CVD risk messaging
@@ -23,7 +25,7 @@ const WEIGHTS = {
   fibre:    0.15,  // Indian diets often low in fibre
   protein:  0.10,  // ICMR-NIN protein adequacy
   nova:     0.10,  // NOVA classification (ultra-processing signal)
-} as const;
+};
 
 export interface NutritionInput {
   // Per 100g values — all optional (null/undefined treated as unknown)
@@ -44,7 +46,7 @@ export interface HealthScoreResult {
   score: number;              // 0–100 final composite
   band: ScoreBand;
   algorithmVersion: string;
-  weights: typeof WEIGHTS;
+  weights: ScoringWeights;
   subscores: {
     sodium:   SodiumSubScore;
     sugar:    SugarSubScore;
@@ -56,17 +58,34 @@ export interface HealthScoreResult {
   };
 }
 
-export function computeHealthScore(input: NutritionInput): HealthScoreResult {
-  const sodium   = scoreSodium(input.sodiumMg);
+/**
+ * Compute the deterministic 0–100 health score.
+ *
+ * `standard` is optional and additive (ADR-0017, Phase 4, flag `global.p4.multi_standard_rules`):
+ * when omitted, this function is byte-identical to its pre-Phase-4 behavior (India/ICMR-NIN
+ * thresholds and weights, imported from `./thresholds.js`). When a `CountryNutritionStandard`
+ * is supplied, its thresholds and weights are used instead — callers are responsible for
+ * resolving the right standard (e.g. via `standards/registry.ts` + `request.country`) and for
+ * respecting the feature flag; this function itself has no flag or country awareness.
+ */
+export function computeHealthScore(
+  input: NutritionInput,
+  standard?: CountryNutritionStandard,
+): HealthScoreResult {
+  const weights = standard?.weights ?? DEFAULT_WEIGHTS;
+  const t = standard?.thresholds;
+
+  const sodium   = scoreSodium(input.sodiumMg, t?.sodium);
   const sugar    = scoreSugar(
     input.sugarsAddedG,
     input.sugarsG,
     input.sugarsAddedEstimated ?? false,
+    t?.sugar,
   );
-  const satFat   = scoreSatFat(input.fatSaturatedG);
-  const transFat = scoreTransFat(input.fatTransG);
-  const fibre    = scoreFibre(input.dietaryFiberG);
-  const protein  = scoreProtein(input.proteinG);
+  const satFat   = scoreSatFat(input.fatSaturatedG, t?.satFat);
+  const transFat = scoreTransFat(input.fatTransG, t?.transFat);
+  const fibre    = scoreFibre(input.dietaryFiberG, t?.fibre);
+  const protein  = scoreProtein(input.proteinG, t?.protein);
 
   const novaClassification = classifyNova(
     input.ingredientNames ?? [],
@@ -75,13 +94,13 @@ export function computeHealthScore(input: NutritionInput): HealthScoreResult {
   const novaScore = novaGroupToScore(novaClassification.group);
 
   const composite =
-    sodium.score   * WEIGHTS.sodium  +
-    sugar.score    * WEIGHTS.sugar   +
-    satFat.score   * WEIGHTS.satFat  +
-    transFat.score * WEIGHTS.transFat +
-    fibre.score    * WEIGHTS.fibre   +
-    protein.score  * WEIGHTS.protein +
-    novaScore      * WEIGHTS.nova;
+    sodium.score   * weights.sodium  +
+    sugar.score    * weights.sugar   +
+    satFat.score   * weights.satFat  +
+    transFat.score * weights.transFat +
+    fibre.score    * weights.fibre   +
+    protein.score  * weights.protein +
+    novaScore      * weights.nova;
 
   const score = Math.round(composite * 10) / 10;
 
@@ -89,7 +108,7 @@ export function computeHealthScore(input: NutritionInput): HealthScoreResult {
     score,
     band: scoreBand(score),
     algorithmVersion: SCORE_ALGORITHM_VERSION,
-    weights: WEIGHTS,
+    weights,
     subscores: {
       sodium,
       sugar,

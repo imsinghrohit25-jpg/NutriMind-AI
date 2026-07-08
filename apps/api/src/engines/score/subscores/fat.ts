@@ -3,6 +3,7 @@
 // Source: WHO Global Targets 2025 (trans fat elimination), FSSAI 2022.
 
 import { SAT_FAT_THRESHOLDS_G, TRANS_FAT_THRESHOLDS_G } from '../thresholds.js';
+import type { NegativeNutrientThresholds, TransFatThresholds } from '../standards/types.js';
 
 export interface SatFatSubScore {
   score: number;
@@ -18,12 +19,15 @@ export interface TransFatSubScore {
   notes: string;
 }
 
-export function scoreSatFat(satFatG: number | null | undefined): SatFatSubScore {
+export function scoreSatFat(
+  satFatG: number | null | undefined,
+  thresholds: NegativeNutrientThresholds = SAT_FAT_THRESHOLDS_G,
+): SatFatSubScore {
   if (satFatG === null || satFatG === undefined) {
     return { score: 50, satFatG: 0, level: 'moderate', notes: 'Saturated fat unknown; neutral score applied' };
   }
 
-  const t = SAT_FAT_THRESHOLDS_G;
+  const t = thresholds;
   let score: number;
   let level: SatFatSubScore['level'];
 
@@ -53,7 +57,10 @@ export function scoreSatFat(satFatG: number | null | undefined): SatFatSubScore 
   };
 }
 
-export function scoreTransFat(transFatG: number | null | undefined): TransFatSubScore {
+export function scoreTransFat(
+  transFatG: number | null | undefined,
+  thresholds: TransFatThresholds = TRANS_FAT_THRESHOLDS_G,
+): TransFatSubScore {
   if (transFatG === null || transFatG === undefined) {
     return {
       score: 70,  // slight penalty for unknown (safer assumption)
@@ -63,7 +70,7 @@ export function scoreTransFat(transFatG: number | null | undefined): TransFatSub
     };
   }
 
-  const t = TRANS_FAT_THRESHOLDS_G;
+  const t = thresholds;
   let score: number;
   let level: TransFatSubScore['level'];
 

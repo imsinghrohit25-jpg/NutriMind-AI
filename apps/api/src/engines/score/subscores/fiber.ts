@@ -3,6 +3,7 @@
 // Returns 0–100: 100 = high fibre (best), 0 = no fibre.
 
 import { FIBRE_THRESHOLDS_G } from '../thresholds.js';
+import type { PositiveNutrientThresholds } from '../standards/types.js';
 
 export interface FibreSubScore {
   score: number;
@@ -11,16 +12,19 @@ export interface FibreSubScore {
   notes: string;
 }
 
-export function scoreFibre(fibreG: number | null | undefined): FibreSubScore {
+export function scoreFibre(
+  fibreG: number | null | undefined,
+  thresholds: PositiveNutrientThresholds = FIBRE_THRESHOLDS_G,
+): FibreSubScore {
   if (fibreG === null || fibreG === undefined) {
     return { score: 30, fibreG: 0, level: 'none', notes: 'Fibre not declared; minimal score applied' };
   }
 
-  const t = FIBRE_THRESHOLDS_G;
+  const t = thresholds;
   let score: number;
   let level: FibreSubScore['level'];
 
-  if (fibreG <= t.none) {
+  if (fibreG <= t.veryLow) {
     score = 0; level = 'none';
   } else if (fibreG <= t.low) {
     score = (fibreG / t.low) * 20;

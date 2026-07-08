@@ -3,6 +3,7 @@
 // Returns 0–100: 100 = high protein (best), 0 = negligible protein.
 
 import { PROTEIN_THRESHOLDS_G } from '../thresholds.js';
+import type { PositiveNutrientThresholds } from '../standards/types.js';
 
 export interface ProteinSubScore {
   score: number;
@@ -11,19 +12,22 @@ export interface ProteinSubScore {
   notes: string;
 }
 
-export function scoreProtein(proteinG: number | null | undefined): ProteinSubScore {
+export function scoreProtein(
+  proteinG: number | null | undefined,
+  thresholds: PositiveNutrientThresholds = PROTEIN_THRESHOLDS_G,
+): ProteinSubScore {
   if (proteinG === null || proteinG === undefined) {
     return { score: 30, proteinG: 0, level: 'none', notes: 'Protein not declared; minimal score applied' };
   }
 
-  const t = PROTEIN_THRESHOLDS_G;
+  const t = thresholds;
   let score: number;
   let level: ProteinSubScore['level'];
 
-  if (proteinG <= t.none) {
+  if (proteinG <= t.veryLow) {
     score = 0; level = 'none';
   } else if (proteinG <= t.low) {
-    score = ((proteinG - t.none) / (t.low - t.none)) * 25;
+    score = ((proteinG - t.veryLow) / (t.low - t.veryLow)) * 25;
     level = 'low';
   } else if (proteinG <= t.moderate) {
     score = 25 + ((proteinG - t.low) / (t.moderate - t.low)) * 25;

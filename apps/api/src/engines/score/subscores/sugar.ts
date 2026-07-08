@@ -4,6 +4,7 @@
 // Returns 0–100: 100 = very low sugar (best), 0 = very high sugar (worst).
 
 import { SUGAR_THRESHOLDS_G } from '../thresholds.js';
+import type { NegativeNutrientThresholds } from '../standards/types.js';
 
 export interface SugarSubScore {
   score: number;
@@ -17,6 +18,7 @@ export function scoreSugar(
   sugarsAddedG: number | null | undefined,
   sugarsG: number | null | undefined,
   sugarsAddedEstimated: boolean,
+  thresholds: NegativeNutrientThresholds = SUGAR_THRESHOLDS_G,
 ): SugarSubScore {
   // Prefer added sugar if available; fall back to total sugars
   const value = sugarsAddedG ?? sugarsG;
@@ -32,7 +34,7 @@ export function scoreSugar(
     };
   }
 
-  const t = SUGAR_THRESHOLDS_G;
+  const t = thresholds;
 
   let score: number;
   let level: SugarSubScore['level'];

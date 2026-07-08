@@ -3,6 +3,7 @@
 // Returns 0–100: 100 = very low sodium (best), 0 = very high sodium (worst).
 
 import { SODIUM_THRESHOLDS_MG } from '../thresholds.js';
+import type { NegativeNutrientThresholds } from '../standards/types.js';
 
 export interface SodiumSubScore {
   score: number;       // 0–100
@@ -11,7 +12,10 @@ export interface SodiumSubScore {
   notes: string;
 }
 
-export function scoreSodium(sodiumMg: number | null | undefined): SodiumSubScore {
+export function scoreSodium(
+  sodiumMg: number | null | undefined,
+  thresholds: NegativeNutrientThresholds = SODIUM_THRESHOLDS_MG,
+): SodiumSubScore {
   if (sodiumMg === null || sodiumMg === undefined) {
     return {
       score: 50,  // neutral when unknown
@@ -21,7 +25,7 @@ export function scoreSodium(sodiumMg: number | null | undefined): SodiumSubScore
     };
   }
 
-  const t = SODIUM_THRESHOLDS_MG;
+  const t = thresholds;
 
   let score: number;
   let level: SodiumSubScore['level'];

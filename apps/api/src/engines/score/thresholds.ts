@@ -41,7 +41,7 @@ export const TRANS_FAT_THRESHOLDS_G = {
 // ── Positive nutrients (higher = better) ─────────────────────────────────────
 
 export const FIBRE_THRESHOLDS_G = {
-  none:   0.0,
+  veryLow:   0.0,
   low:    0.9,
   moderate: 3.0,
   high:   6.0,     // FSSAI "source of fibre"
@@ -49,7 +49,7 @@ export const FIBRE_THRESHOLDS_G = {
 };
 
 export const PROTEIN_THRESHOLDS_G = {
-  none:   1.6,
+  veryLow:   1.6,
   low:    3.2,
   moderate: 6.0,
   high:   12.0,
