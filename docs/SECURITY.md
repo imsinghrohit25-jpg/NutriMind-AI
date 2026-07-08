@@ -83,9 +83,11 @@ iOS: `view.isUserInteractionEnabled` screenshots blocked via `allowScreenCapture
 
 ## Data Rights & Privacy
 
-- Full export: `POST /api/v1/data-rights/export` — JSON of all PII
-- Full deletion: `POST /api/v1/data-rights/delete` — hard delete + server-side verification query (gate: row count = 0 after delete)
-- Regulation compliance: Digital Personal Data Protection Act 2023 (India), GDPR (EU users)
+- Full export: `POST /v1/data-rights/export` — JSON of all PII
+- Full deletion: `POST /v1/data-rights/delete` — hard delete + server-side verification query (gate: row count = 0 after delete)
+- Rectification: `PATCH /v1/data-rights/rectify`; restriction: `POST /v1/data-rights/restrict` (Phase 8, ADR-0021)
+- Consent (regime-aware): `GET /v1/privacy/regime`, `GET|POST /v1/privacy/consent`, `POST /v1/privacy/consent/withdraw` (Phase 8, ADR-0021)
+- Regulation compliance: Digital Personal Data Protection Act 2023 (India), GDPR (EU users) — see [GDPR_DPDP_CONSENT.md](GDPR_DPDP_CONSENT.md)
 - Retention: scan history purged after 365 days (pg-boss cron job)
 
 ---

@@ -8,6 +8,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'nutrimind_flags.dart';
+// Flag key constants — re-exported so callers only need `nutrimind_flags.dart`'s constants
+// via this file's import, not a second explicit import.
+export 'nutrimind_flags.dart';
+
 /// Resolved feature flag snapshot for this session.
 /// Immutable after resolution.
 @immutable
@@ -74,6 +79,3 @@ class FeatureFlagService {
     }
   }
 }
-
-/// Flag key constants — import NutriMindFlagKeys from nutrimind_flags.dart.
-export 'nutrimind_flags.dart';

@@ -10,8 +10,8 @@
 | WHO 2023 (Sodium, Sugar, Trans-fat) | Daily limits for at-risk nutrients | ✅ In `thresholds.ts` |
 | WHO 2021 (Hypertension) | Sodium guidance for hypertension | ✅ `disease/rules/hypertension.ts` |
 | AHA 2016 (Child sugar) | Sugar limits for children under 12 | ✅ `child-safety/engine.ts` |
-| Digital Personal Data Protection Act 2023 | Indian privacy law | ✅ Data rights export + deletion; consent screens |
-| GDPR (EU users) | Privacy rights | ✅ Same data rights pipeline; EU-compatible |
+| Digital Personal Data Protection Act 2023 | Indian privacy law | ✅ Data rights export/deletion/rectification/restriction; regime-aware consent (`GET /v1/privacy/regime`) — Phase 8, ADR-0021 |
+| GDPR (EU users) | Privacy rights | ✅ Same DSR pipeline; granular Art. 9 health-data consent — Phase 8, ADR-0021 |
 | MASVS v2.1.0 | Mobile security | ✅ `docs/SECURITY.md` checklist |
 
 ## Health Disclaimer Implementation

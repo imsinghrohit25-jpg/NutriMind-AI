@@ -1,6 +1,10 @@
 // Result type — avoids try/catch at every call site.
 // Every fallible operation returns Result<T, E extends NutriMindError>.
 
+import 'errors.dart';
+// Re-export base error type here so callers don't need two imports.
+export 'errors.dart';
+
 sealed class Result<T, E extends NutriMindError> {
   const Result();
 
@@ -66,6 +70,3 @@ final class Err<T, E extends NutriMindError> extends Result<T, E> {
   final E _error;
   @override String toString() => 'Err($_error)';
 }
-
-// Re-export base error type here so callers don't need two imports
-export 'errors.dart';
