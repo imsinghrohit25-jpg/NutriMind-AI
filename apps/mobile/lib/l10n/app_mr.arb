@@ -1,0 +1,107 @@
+{
+  "@@locale": "mr",
+
+  "appName": "NutriMind AI",
+
+  "scanProduct": "उत्पाद स्कॅन करा",
+
+  "healthScore": "आरोग्य गुण",
+
+  "excellent": "उत्कृष्ट",
+
+  "good": "चांगले",
+
+  "fair": "ठीक",
+
+  "poor": "वाईट",
+
+  "novaGroup": "NOVA गट {group}",
+
+  "ingredients": "घटक",
+
+  "allergenWarning": "ॲलर्जन इशारा",
+
+  "allergenDeclared": "यात {allergen} आहे",
+
+  "allergenTrace": "यात {allergen} चे अंश असू शकतात",
+
+  "allergenFailSafe": "आम्ही घटक यादी विश्वासार्हपणे वाचू शकलो नाही। ॲलर्जनसाठी स्वतः तपासा.",
+
+  "nutritionFacts": "पोषण तथ्ये",
+
+  "per100g": "प्रति 100 ग्रॅम",
+
+  "perServing": "प्रति सर्व्हिंग ({g}ग्रॅम)",
+
+  "energyKcal": "ऊर्जा",
+
+  "protein": "प्रथिने",
+
+  "totalFat": "एकूण चरबी",
+
+  "saturatedFat": "संतृप्त चरबी",
+
+  "transFat": "ट्रान्स चरबी",
+
+  "carbohydrates": "कर्बोदके",
+
+  "totalSugars": "एकूण साखर",
+
+  "addedSugars": "जोडलेली साखर",
+
+  "dietaryFibre": "आहारातील तंतू",
+
+  "sodium": "सोडियम",
+
+  "copilotTitle": "पोषण सहाय्यक",
+
+  "copilotDisclaimer": "हे वैद्यकीय किंवा आहारतज्ज्ञांच्या सल्ल्याचा पर्याय नाही.",
+
+  "copilotPlaceholder": "या उत्पादाबद्दल विचारा…",
+
+  "weeklyReport": "साप्ताहिक अहवाल",
+
+  "mealLog": "जेवण नोंद",
+
+  "groceryCart": "किराणा टोपली",
+
+  "alternatives": "अधिक आरोग्यदायी पर्याय",
+
+  "budgetPickBadge": "परवडणारा पर्याय",
+
+  "thinCategoryMessage": "या वर्गात कोणताही चांगला स्कोर असलेला पर्याय सापडला नाही.",
+
+  "notificationSettings": "सूचना सेटिंग्ज",
+
+  "weeklyReportNotif": "साप्ताहिक पोषण अहवाल",
+
+  "allergenAlertNotif": "ॲलर्जन सतर्कता",
+
+  "allergenAlertLockedNote": "महत्त्वाच्या सुरक्षा सतर्कता — अक्षम करता येत नाही",
+
+  "dataRightsTitle": "तुमचा डेटा",
+
+  "exportData": "माझा डेटा निर्यात करा",
+
+  "deleteAccount": "माझे खाते हटवा",
+
+  "deleteConfirmTitle": "खाते हटवायचे?",
+
+  "deleteConfirmBody": "यामुळे तुमचे सर्व स्कॅन, जेवण नोंदी आणि प्रोफाइल डेटा कायमचे हटविले जाईल. हे पूर्ववत केले जाऊ शकत नाही.",
+
+  "deleteConfirmButton": "कायमचे हटवा",
+
+  "childModeWarning": "बाल सुरक्षा मोड सक्रिय",
+
+  "hypertensionWarning": "जास्त सोडियम — उच्च रक्तदाबासाठी सावधगिरी",
+
+  "diabetesWarning": "जास्त साखर — मधुमेहासाठी सावधगिरी",
+
+  "searchHistoryTitle": "इतिहास शोधा",
+
+  "searchHistoryHint": "उदा. जास्त सोडियम स्नॅक्स, कमी स्कोर बिस्किटे",
+
+  "estimatedValue": "अंदाजे",
+
+  "disclaimer": "केवळ माहितीसाठी. व्यावसायिक पोषण सल्ल्याचा पर्याय नाही."
+}

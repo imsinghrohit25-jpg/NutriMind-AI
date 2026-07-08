@@ -1,0 +1,167 @@
+{
+  "@@locale": "en",
+
+  "appName": "NutriMind AI",
+  "@appName": { "description": "Application name" },
+
+  "scanProduct": "Scan a product",
+  "@scanProduct": { "description": "Home screen CTA button" },
+
+  "healthScore": "Health Score",
+  "@healthScore": {},
+
+  "excellent": "Excellent",
+  "@excellent": {},
+
+  "good": "Good",
+  "@good": {},
+
+  "fair": "Fair",
+  "@fair": {},
+
+  "poor": "Poor",
+  "@poor": {},
+
+  "novaGroup": "NOVA Group {group}",
+  "@novaGroup": {
+    "placeholders": { "group": { "type": "int" } }
+  },
+
+  "ingredients": "Ingredients",
+  "@ingredients": {},
+
+  "allergenWarning": "Allergen Warning",
+  "@allergenWarning": {},
+
+  "allergenDeclared": "Contains {allergen}",
+  "@allergenDeclared": {
+    "placeholders": { "allergen": { "type": "String" } }
+  },
+
+  "allergenTrace": "May contain traces of {allergen}",
+  "@allergenTrace": {
+    "placeholders": { "allergen": { "type": "String" } }
+  },
+
+  "allergenFailSafe": "We could not reliably read the ingredient list. Check for allergens manually.",
+  "@allergenFailSafe": {},
+
+  "nutritionFacts": "Nutrition Facts",
+  "@nutritionFacts": {},
+
+  "per100g": "per 100g",
+  "@per100g": {},
+
+  "perServing": "per serving ({g}g)",
+  "@perServing": {
+    "placeholders": { "g": { "type": "num", "format": "decimalPattern" } }
+  },
+
+  "energyKcal": "Energy",
+  "@energyKcal": {},
+
+  "protein": "Protein",
+  "@protein": {},
+
+  "totalFat": "Total Fat",
+  "@totalFat": {},
+
+  "saturatedFat": "Saturated Fat",
+  "@saturatedFat": {},
+
+  "transFat": "Trans Fat",
+  "@transFat": {},
+
+  "carbohydrates": "Carbohydrates",
+  "@carbohydrates": {},
+
+  "totalSugars": "Total Sugars",
+  "@totalSugars": {},
+
+  "addedSugars": "Added Sugars",
+  "@addedSugars": {},
+
+  "dietaryFibre": "Dietary Fibre",
+  "@dietaryFibre": {},
+
+  "sodium": "Sodium",
+  "@sodium": {},
+
+  "copilotTitle": "Nutrition Copilot",
+  "@copilotTitle": {},
+
+  "copilotDisclaimer": "Not a substitute for medical or dietetic advice.",
+  "@copilotDisclaimer": {},
+
+  "copilotPlaceholder": "Ask about this product…",
+  "@copilotPlaceholder": {},
+
+  "weeklyReport": "Weekly Report",
+  "@weeklyReport": {},
+
+  "mealLog": "Meal Log",
+  "@mealLog": {},
+
+  "groceryCart": "Grocery Cart",
+  "@groceryCart": {},
+
+  "alternatives": "Healthier Alternatives",
+  "@alternatives": {},
+
+  "budgetPickBadge": "Budget pick",
+  "@budgetPickBadge": {},
+
+  "thinCategoryMessage": "No better-scoring alternatives found in this category.",
+  "@thinCategoryMessage": {},
+
+  "notificationSettings": "Notification Settings",
+  "@notificationSettings": {},
+
+  "weeklyReportNotif": "Weekly nutrition report",
+  "@weeklyReportNotif": {},
+
+  "allergenAlertNotif": "Allergen alerts",
+  "@allergenAlertNotif": {},
+
+  "allergenAlertLockedNote": "Critical safety alerts — cannot be disabled",
+  "@allergenAlertLockedNote": {},
+
+  "dataRightsTitle": "Your Data",
+  "@dataRightsTitle": {},
+
+  "exportData": "Export my data",
+  "@exportData": {},
+
+  "deleteAccount": "Delete my account",
+  "@deleteAccount": {},
+
+  "deleteConfirmTitle": "Delete account?",
+  "@deleteConfirmTitle": {},
+
+  "deleteConfirmBody": "This will permanently erase all your scans, meal logs, and profile data. This cannot be undone.",
+  "@deleteConfirmBody": {},
+
+  "deleteConfirmButton": "Delete permanently",
+  "@deleteConfirmButton": {},
+
+  "childModeWarning": "Child Safety Mode Active",
+  "@childModeWarning": {},
+
+  "hypertensionWarning": "High sodium — caution for hypertension",
+  "@hypertensionWarning": {},
+
+  "diabetesWarning": "High sugar — caution for diabetes",
+  "@diabetesWarning": {},
+
+  "searchHistoryTitle": "Search History",
+  "@searchHistoryTitle": {},
+
+  "searchHistoryHint": "e.g. high sodium snacks, low score biscuits",
+  "@searchHistoryHint": {},
+
+  "estimatedValue": "Estimated",
+  "@estimatedValue": {},
+
+  "disclaimer": "For informational purposes only. Not a substitute for professional nutritional advice.",
+  "@disclaimer": {}
+}

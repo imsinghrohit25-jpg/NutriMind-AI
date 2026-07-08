@@ -1,0 +1,107 @@
+{
+  "@@locale": "hi",
+
+  "appName": "NutriMind AI",
+
+  "scanProduct": "उत्पाद स्कैन करें",
+
+  "healthScore": "स्वास्थ्य स्कोर",
+
+  "excellent": "उत्कृष्ट",
+
+  "good": "अच्छा",
+
+  "fair": "ठीक",
+
+  "poor": "खराब",
+
+  "novaGroup": "NOVA समूह {group}",
+
+  "ingredients": "सामग्री",
+
+  "allergenWarning": "एलर्जन चेतावनी",
+
+  "allergenDeclared": "इसमें {allergen} है",
+
+  "allergenTrace": "इसमें {allergen} के अंश हो सकते हैं",
+
+  "allergenFailSafe": "हम सामग्री सूची को विश्वसनीय रूप से नहीं पढ़ सके। एलर्जन की मैन्युअल जांच करें।",
+
+  "nutritionFacts": "पोषण तथ्य",
+
+  "per100g": "प्रति 100 ग्राम",
+
+  "perServing": "प्रति सर्विंग ({g}ग्राम)",
+
+  "energyKcal": "ऊर्जा",
+
+  "protein": "प्रोटीन",
+
+  "totalFat": "कुल वसा",
+
+  "saturatedFat": "संतृप्त वसा",
+
+  "transFat": "ट्रांस वसा",
+
+  "carbohydrates": "कार्बोहाइड्रेट",
+
+  "totalSugars": "कुल शर्करा",
+
+  "addedSugars": "मिलाई गई शर्करा",
+
+  "dietaryFibre": "आहार फाइबर",
+
+  "sodium": "सोडियम",
+
+  "copilotTitle": "पोषण सहायक",
+
+  "copilotDisclaimer": "यह चिकित्सीय या आहार विशेषज्ञ की सलाह का विकल्प नहीं है।",
+
+  "copilotPlaceholder": "इस उत्पाद के बारे में पूछें…",
+
+  "weeklyReport": "साप्ताहिक रिपोर्ट",
+
+  "mealLog": "भोजन लॉग",
+
+  "groceryCart": "किराना टोकरी",
+
+  "alternatives": "स्वास्थ्यप्रद विकल्प",
+
+  "budgetPickBadge": "किफ़ायती विकल्प",
+
+  "thinCategoryMessage": "इस श्रेणी में कोई बेहतर स्कोर वाला विकल्प नहीं मिला।",
+
+  "notificationSettings": "सूचना सेटिंग",
+
+  "weeklyReportNotif": "साप्ताहिक पोषण रिपोर्ट",
+
+  "allergenAlertNotif": "एलर्जन अलर्ट",
+
+  "allergenAlertLockedNote": "महत्वपूर्ण सुरक्षा अलर्ट — अक्षम नहीं किए जा सकते",
+
+  "dataRightsTitle": "आपका डेटा",
+
+  "exportData": "मेरा डेटा निर्यात करें",
+
+  "deleteAccount": "मेरा खाता हटाएं",
+
+  "deleteConfirmTitle": "खाता हटाएं?",
+
+  "deleteConfirmBody": "यह आपके सभी स्कैन, भोजन लॉग और प्रोफ़ाइल डेटा को स्थायी रूप से मिटा देगा। यह क्रिया पूर्ववत नहीं की जा सकती।",
+
+  "deleteConfirmButton": "स्थायी रूप से हटाएं",
+
+  "childModeWarning": "बाल सुरक्षा मोड सक्रिय",
+
+  "hypertensionWarning": "अधिक सोडियम — उच्च रक्तचाप के लिए सावधानी",
+
+  "diabetesWarning": "अधिक शर्करा — मधुमेह के लिए सावधानी",
+
+  "searchHistoryTitle": "इतिहास खोजें",
+
+  "searchHistoryHint": "जैसे: अधिक सोडियम वाले स्नैक्स, कम स्कोर वाले बिस्किट",
+
+  "estimatedValue": "अनुमानित",
+
+  "disclaimer": "केवल सूचनात्मक उद्देश्यों के लिए। पेशेवर पोषण सलाह का विकल्प नहीं।"
+}
