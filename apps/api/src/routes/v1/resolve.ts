@@ -34,6 +34,7 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
         offClient: fastify.offClient,
         ifct: fastify.ifct,
         usdaClient: fastify.usdaClient,
+        edgeCache: fastify.productCache,
       },
       { userId, persistResult: true },
     );

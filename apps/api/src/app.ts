@@ -17,6 +17,8 @@ import { GatewayCache } from './gateway/cache.js';
 import { OpenFoodFactsClient } from './datasources/openfoodfacts/client.js';
 import { UsdaFdcClient } from './datasources/usda/client.js';
 import { IfctLoader } from './datasources/ifct/loader.js';
+import { EdgeCache } from './cache/edge-cache.js';
+import type { CanonicalProduct } from './nutrition/canonical-model.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -25,6 +27,7 @@ declare module 'fastify' {
     offClient: OpenFoodFactsClient;
     usdaClient: UsdaFdcClient | null;
     ifct: IfctLoader;
+    productCache: EdgeCache<CanonicalProduct>;
   }
 }
 
@@ -101,6 +104,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   const usdaClient = env.USDA_FDC_API_KEY ? new UsdaFdcClient(env.USDA_FDC_API_KEY) : null;
   fastify.decorate('usdaClient', usdaClient);
+
+  // Phase 7 — in-process edge cache in front of the DB-backed product cache
+  fastify.decorate('productCache', new EdgeCache<CanonicalProduct>());
 
   const ifct = new IfctLoader();
   await ifct.load(env.IFCT_DATASET_PATH);

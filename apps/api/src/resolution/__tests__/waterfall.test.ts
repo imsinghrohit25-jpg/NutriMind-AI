@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { resolveBarcode, resolveByName, type WaterfallDeps } from '../waterfall.js';
+import { EdgeCache } from '../../cache/edge-cache.js';
 import type { CanonicalProduct } from '../../nutrition/canonical-model.js';
 import type { OFFProduct } from '../../datasources/openfoodfacts/client.js';
 
@@ -144,6 +145,50 @@ describe('resolveBarcode', () => {
     });
     await resolveBarcode('8901234567890', deps);
     expect(offGetProduct).not.toHaveBeenCalled();
+  });
+
+  describe('edge cache (Phase 7, global.p7.edge_caching)', () => {
+    it('is byte-identical to pre-Phase-7 behavior when omitted', async () => {
+      const sql = makeSql(MOCK_PRODUCT);
+      const deps = makeDeps({ sql }); // no edgeCache
+      const result = await resolveBarcode('8901234567890', deps);
+      expect(result.resolvedBy).toBe('cache');
+      expect(result.product?.name).toBe('Test Product');
+    });
+
+    it('populates the edge cache on a DB cache hit, then skips the DB entirely on the next call', async () => {
+      const sql = makeSql(MOCK_PRODUCT);
+      const edgeCache = new EdgeCache<CanonicalProduct>();
+      const deps = makeDeps({ sql, edgeCache });
+
+      const first = await resolveBarcode('8901234567890', deps);
+      expect(first.resolvedBy).toBe('cache');
+      expect(sql).toHaveBeenCalled();
+
+      vi.mocked(sql).mockClear();
+      const second = await resolveBarcode('8901234567890', deps);
+      expect(second.resolvedBy).toBe('cache');
+      expect(second.product?.name).toBe('Test Product');
+      expect(sql).not.toHaveBeenCalled(); // served entirely from the in-process edge cache
+    });
+
+    it('populates the edge cache on a fresh OFF resolution', async () => {
+      const sql = makeSql(null);
+      const offGetProduct = vi.fn().mockResolvedValue(MOCK_OFF_PRODUCT);
+      const edgeCache = new EdgeCache<CanonicalProduct>();
+      const deps = makeDeps({
+        sql,
+        edgeCache,
+        offClient: { getProduct: offGetProduct, searchByName: vi.fn() } as unknown as WaterfallDeps['offClient'],
+      });
+
+      await resolveBarcode('8901234567890', deps);
+      expect(offGetProduct).toHaveBeenCalledTimes(1);
+
+      const second = await resolveBarcode('8901234567890', deps);
+      expect(second.resolvedBy).toBe('cache');
+      expect(offGetProduct).toHaveBeenCalledTimes(1); // not called again
+    });
   });
 });
 

@@ -3,10 +3,12 @@
 // When ON: uses CountryProfile to route to the most relevant data source first.
 //
 // Source priority per country:
-//   IN: DB cache → OFF/India → IFCT → USDA → not_found   (existing, unchanged)
-//   GB: DB cache → CoFID 2021 → OFF/UK → USDA → not_found
-//   US/CA: DB cache → OFF/region → USDA → not_found
-//   AE/GLOBAL: DB cache → OFF/region → USDA → not_found
+//   IN: edge cache → DB cache → OFF/India → IFCT → USDA → not_found   (existing, unchanged)
+//   GB: edge cache → DB cache → CoFID 2021 → OFF/UK → USDA → not_found
+//   US/CA: edge cache → DB cache → OFF/region → USDA → not_found
+//   AE/GLOBAL: edge cache → DB cache → OFF/region → USDA → not_found
+// Edge cache (Phase 7, `global.p7.edge_caching`) is the same optional `WaterfallDeps.edgeCache`
+// in-process cache waterfall.ts uses — inherited via `CountryWaterfallDeps extends WaterfallDeps`.
 
 import type { CountryProfile } from '../country/types.js';
 import type { CofidLoader } from '../datasources/cofid/loader.js';
@@ -66,13 +68,20 @@ export async function resolveBarcode(
     return legacyResolveBarcode(barcode, deps, opts) as Promise<GlobalResolutionResult>;
   }
 
-  const { sql, offClient, ifct, usdaClient, cofid } = deps;
+  const { sql, offClient, ifct, usdaClient, cofid, edgeCache } = deps;
   const ttl = opts.ttlHours ?? 168;
   const persist = opts.persistResult ?? true;
 
+  // Step 0: in-process edge cache (Phase 7, `global.p7.edge_caching`)
+  const edgeHit = edgeCache?.get(barcode);
+  if (edgeHit) return { product: edgeHit, resolvedBy: 'cache', productId: edgeHit.id };
+
   // Step 1: DB cache (always first, regardless of country)
   const cached = await getProductFromCache(sql, barcode, ttl);
-  if (cached) return { product: cached, resolvedBy: 'cache', productId: cached.id };
+  if (cached) {
+    edgeCache?.set(barcode, cached);
+    return { product: cached, resolvedBy: 'cache', productId: cached.id };
+  }
 
   // Step 2 (UK): CoFID — authoritative for UK food composition
   if (country.isoCode === 'GB' && cofid.isAvailable()) {
@@ -90,6 +99,7 @@ export async function resolveBarcode(
       product.sourceRegion = country.isoCode;
       let productId: string | undefined;
       if (persist) { productId = await persistProduct(sql, product); product.id = productId; }
+      edgeCache?.set(barcode, product);
       return { product, resolvedBy: 'openfoodfacts', productId };
     }
   } catch (err) {

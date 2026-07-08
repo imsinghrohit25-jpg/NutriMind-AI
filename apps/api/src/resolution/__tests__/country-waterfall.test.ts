@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CountryProfile } from '../../country/types.js';
 import type { CountryWaterfallDeps } from '../country-waterfall.js';
 import type { WaterfallOptions } from '../waterfall.js';
+import { EdgeCache } from '../../cache/edge-cache.js';
+import type { CanonicalProduct } from '../../nutrition/canonical-model.js';
 
 // Mock the cache, normalizers, and legacy waterfall before importing the module under test.
 vi.mock('../../datasources/openfoodfacts/cache.js', () => ({
@@ -164,6 +166,19 @@ describe('resolveBarcode', () => {
     const r = await resolveBarcode('012345', UK, deps, FLAG_ON);
     expect(r.resolvedBy).toBe('not_found');
     expect(r.product).toBeNull();
+  });
+
+  it('flag ON: edge cache hit (Phase 7) skips the DB cache lookup entirely', async () => {
+    const edgeCache = new EdgeCache<CanonicalProduct>();
+    const cachedProduct = { ...baseProduct(), id: 'edge-id', name: 'Edge Cached' } as CanonicalProduct;
+    edgeCache.set('012345', cachedProduct);
+    const deps = makeDeps({ edgeCache });
+    vi.mocked(getProductFromCache).mockClear();
+
+    const r = await resolveBarcode('012345', UK, deps, FLAG_ON);
+    expect(r.resolvedBy).toBe('cache');
+    expect(r.product?.name).toBe('Edge Cached');
+    expect(getProductFromCache).not.toHaveBeenCalled();
   });
 });
 

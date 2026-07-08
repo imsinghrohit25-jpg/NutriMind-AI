@@ -1,5 +1,6 @@
 // Barcode resolution waterfall.
-// Priority: DB cache → OpenFoodFacts → IFCT (name fallback) → USDA FDC → not-found → curation queue.
+// Priority: edge cache (Phase 6, in-process) → DB cache → OpenFoodFacts → IFCT (name fallback)
+// → USDA FDC → not-found → curation queue.
 // Each successful resolution persists to DB for future cache hits.
 // IFCT is attempted only when IFCT dataset is available (graceful degradation).
 
@@ -8,6 +9,7 @@ import type { CanonicalProduct } from '../nutrition/canonical-model.js';
 import type { OpenFoodFactsClient } from '../datasources/openfoodfacts/client.js';
 import type { UsdaFdcClient } from '../datasources/usda/client.js';
 import type { IfctLoader } from '../datasources/ifct/loader.js';
+import type { EdgeCache } from '../cache/edge-cache.js';
 import { normalizeOffProduct } from '../datasources/openfoodfacts/normalize.js';
 import { normalizeUsdaFood } from '../datasources/usda/normalize.js';
 import { getProductFromCache, persistProduct } from '../datasources/openfoodfacts/cache.js';
@@ -28,6 +30,12 @@ export interface WaterfallDeps {
   offClient: OpenFoodFactsClient;
   ifct: IfctLoader;
   usdaClient: UsdaFdcClient | null;
+  /**
+   * Optional in-process cache (Phase 7, `global.p7.edge_caching`) checked before the DB cache
+   * step. Omitting it is byte-identical to pre-Phase-7 behavior — every existing caller that
+   * doesn't pass one still works unchanged.
+   */
+  edgeCache?: EdgeCache<CanonicalProduct>;
 }
 
 export interface WaterfallOptions {
@@ -41,13 +49,21 @@ export async function resolveBarcode(
   deps: WaterfallDeps,
   opts: WaterfallOptions = {},
 ): Promise<ResolutionResult> {
-  const { sql, offClient, ifct, usdaClient } = deps;
+  const { sql, offClient, ifct, usdaClient, edgeCache } = deps;
   const ttl = opts.ttlHours ?? 168;
   const persist = opts.persistResult ?? true;
+
+  // Step 0: in-process edge cache (Phase 7, `global.p7.edge_caching`) — skips the DB round-trip
+  // entirely for a barcode looked up again within the TTL window.
+  const edgeHit = edgeCache?.get(barcode);
+  if (edgeHit) {
+    return { product: edgeHit, resolvedBy: 'cache', productId: edgeHit.id };
+  }
 
   // Step 1: DB cache
   const cached = await getProductFromCache(sql, barcode, ttl);
   if (cached) {
+    edgeCache?.set(barcode, cached);
     return { product: cached, resolvedBy: 'cache', productId: cached.id };
   }
 
@@ -61,6 +77,7 @@ export async function resolveBarcode(
         productId = await persistProduct(sql, product);
         product.id = productId;
       }
+      edgeCache?.set(barcode, product);
       return { product, resolvedBy: 'openfoodfacts', productId };
     }
   } catch (err) {

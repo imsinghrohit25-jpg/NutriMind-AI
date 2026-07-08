@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requireAuth } from '../../plugins/auth.js';
+import { resolveDataRegion } from '../../region/resolver.js';
 
 interface FlagRow {
   key:          string;
@@ -75,7 +76,11 @@ export default async function flagRoutes(fastify: FastifyInstance): Promise<void
         }
       }
 
-      return reply.code(200).send({ flags: resolved, country: country ?? 'GLOBAL' });
+      // Phase 7 (`global.p7.multi_region_routing`) — purely additive field, no existing
+      // consumer's parsing of `flags`/`country` changes.
+      const region = resolveDataRegion(country ?? 'GLOBAL');
+
+      return reply.code(200).send({ flags: resolved, country: country ?? 'GLOBAL', region });
     },
   );
 }

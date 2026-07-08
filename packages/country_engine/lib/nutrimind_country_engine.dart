@@ -9,3 +9,4 @@ export 'src/resolution_chain.dart';
 export 'src/sim_info_provider.dart';
 export 'src/country_provider.dart';
 export 'src/travel_watcher.dart';
+export 'src/data_region.dart';
