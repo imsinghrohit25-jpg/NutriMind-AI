@@ -124,7 +124,8 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
       .filter((r: GeneratedRecipe) => r?.ingredients?.length > 0);
 
     const groceryItems = buildGroceryList(recipes);
-    const totalEstimatedRs = groceryItems.reduce((s, i) => s + (i.estimatedRs ?? 0), 0);
+    const totalEstimatedPrice = groceryItems.reduce((s, i) => s + (i.estimatedPrice ?? 0), 0);
+    const currencyCode = groceryItems[0]?.currencyCode ?? 'INR';
 
     const listId = await saveGroceryList({
       userId:      user.id,
@@ -134,7 +135,7 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
       supabase,
     });
 
-    reply.status(201).send({ listId, items: groceryItems, totalEstimatedRs });
+    reply.status(201).send({ listId, items: groceryItems, totalEstimatedPrice, currencyCode });
   });
 
   // ── Get grocery list ───────────────────────────────────────────────────────

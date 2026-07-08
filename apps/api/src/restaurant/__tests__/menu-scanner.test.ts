@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scoreMenuItemForUser } from '../menu-scanner.js';
+import { scoreMenuItemForUser, estimateMenuItemNutrition } from '../menu-scanner.js';
 import type { MenuItem } from '../menu-scanner.js';
 
 const VEG_ITEM: MenuItem = {
@@ -80,5 +80,42 @@ describe('scoreMenuItemForUser', () => {
       item: NUT_ITEM, userSodiumGoal: 2000, isVeg: true, allergens: [],
     });
     expect(r.suitable).toBe(true);
+  });
+});
+
+describe('estimateMenuItemNutrition — Phase 5', () => {
+  it('always returns isEstimated: true and a low confidence', () => {
+    const r = estimateMenuItemNutrition(VEG_ITEM);
+    expect(r.isEstimated).toBe(true);
+    expect(r.confidence).toBeGreaterThan(0);
+    expect(r.confidence).toBeLessThanOrEqual(0.5);
+  });
+
+  it('uses ingredient_density basis when ingredients are present', () => {
+    const r = estimateMenuItemNutrition(VEG_ITEM);
+    expect(r.basis).toBe('ingredient_density');
+    expect(r.nutrients.calories).toBeGreaterThan(0);
+  });
+
+  it('falls back to no_ingredients_unknown basis with lower confidence when ingredients are absent', () => {
+    const noIngredients: MenuItem = { name: 'Chef Special', isVeg: true };
+    const withIngredients = estimateMenuItemNutrition(VEG_ITEM);
+    const without = estimateMenuItemNutrition(noIngredients);
+    expect(without.basis).toBe('no_ingredients_unknown');
+    expect(without.confidence).toBeLessThan(withIngredients.confidence);
+    expect(Number.isFinite(without.nutrients.calories)).toBe(true);
+  });
+
+  it('is deterministic for the same menu item', () => {
+    const a = estimateMenuItemNutrition(VEG_ITEM);
+    const b = estimateMenuItemNutrition(VEG_ITEM);
+    expect(a).toEqual(b);
+  });
+
+  it('never throws regardless of category', () => {
+    for (const category of ['starter', 'main', 'dessert', 'drink', 'bread', 'rice', 'biryani', 'snack', undefined]) {
+      const item: MenuItem = { name: 'Test Item', isVeg: true, category, ingredients: ['rice'] };
+      expect(() => estimateMenuItemNutrition(item)).not.toThrow();
+    }
   });
 });

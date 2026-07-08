@@ -71,7 +71,10 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
       grouped.putIfAbsent(cat, () => []).add(item);
     }
     final purchased = _items.where((i) => i['is_purchased'] == true).length;
-    final totalRs   = _items.fold<num>(0, (s, i) => s + ((i['estimated_rs'] as num?) ?? 0));
+    final totalPrice = _items.fold<num>(0, (s, i) => s + ((i['estimated_price'] as num?) ?? 0));
+    final currencySymbol = _currencySymbol(
+      _items.isNotEmpty ? _items.first['currency_code'] as String? : null,
+    );
 
     final categories = grouped.keys.toList()
       ..sort((a, b) {
@@ -94,7 +97,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'Est. ₹${totalRs.toStringAsFixed(0)}',
+                  'Est. $currencySymbol${totalPrice.toStringAsFixed(2)}',
                   style: AppType.bodySmall.copyWith(color: AppColors.subtle),
                 ),
               ],
@@ -134,6 +137,15 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
   }
 }
 
+/// Phase 5: minimal currency symbol lookup for the currently-registered
+/// GroceryPriceProvider currencies. Falls back to the ISO code itself for
+/// anything not yet mapped (e.g. a provider added server-side without a
+/// matching client-side symbol).
+String _currencySymbol(String? currencyCode) {
+  const symbols = {'INR': '₹', 'USD': '\$', 'GBP': '£'};
+  return symbols[currencyCode] ?? (currencyCode != null ? '$currencyCode ' : '₹');
+}
+
 class _CategoryIcon extends StatelessWidget {
   const _CategoryIcon(this.category);
   final String category;
@@ -166,7 +178,8 @@ class _GroceryItemTile extends StatelessWidget {
     final name      = item['name'] as String;
     final qty       = (item['quantity'] as num?)?.toStringAsFixed(2) ?? '?';
     final unit      = item['unit'] as String? ?? '';
-    final price     = (item['estimated_rs'] as num?)?.toStringAsFixed(0);
+    final price     = (item['estimated_price'] as num?)?.toStringAsFixed(2);
+    final symbol    = _currencySymbol(item['currency_code'] as String?);
 
     return ListTile(
       leading: Checkbox(
@@ -179,7 +192,7 @@ class _GroceryItemTile extends StatelessWidget {
       ),
       subtitle: Text('$qty $unit', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
       trailing: price != null
-          ? Text('₹$price', style: AppType.bodySmall.copyWith(color: AppColors.subtle))
+          ? Text('$symbol$price', style: AppType.bodySmall.copyWith(color: AppColors.subtle))
           : null,
     );
   }

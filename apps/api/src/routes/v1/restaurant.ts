@@ -5,7 +5,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GatewayRouter } from '../../gateway/router.js';
-import { scanMenuText, scoreMenuItemForUser } from '../../restaurant/menu-scanner.js';
+import { scanMenuText, scoreMenuItemForUser, estimateMenuItemNutrition } from '../../restaurant/menu-scanner.js';
 import { generateRecipe } from '../../restaurant/recipe-generator.js';
 import type { DietType, Cuisine } from '../../restaurant/recipe-generator.js';
 
@@ -47,6 +47,7 @@ export async function registerRestaurantRoutes(
       score: scoreMenuItemForUser({
         item, userSodiumGoal: 2000, isVeg, allergens,
       }),
+      nutritionEstimate: estimateMenuItemNutrition(item),
     }));
 
     return reply.send({

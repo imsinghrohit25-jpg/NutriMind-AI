@@ -1,79 +1,45 @@
 // Smart grocery list optimizer.
 // Aggregates ingredients across all meals in a plan, deduplicates, estimates cost.
+//
+// Phase 5: pricing/category logic is delegated to a GroceryPriceProvider (country-aware,
+// see grocery-providers/). Defaulting to INDIA_GROCERY_PROVIDER (an exact port of the
+// pre-Phase-5 hardcoded table) keeps buildGroceryList() byte-identical when no provider is
+// passed. See ADR-0018 for the recipe-vocabulary caveat: recipes remain India-cuisine-focused
+// for now, so non-India providers price the same ingredient names against their own market.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GeneratedRecipe, RecipeIngredient } from '../restaurant/recipe-generator.js';
+import type { GroceryPriceProvider } from './grocery-providers/types.js';
+import { INDIA_GROCERY_PROVIDER } from './grocery-providers/registry.js';
 
 export interface GroceryItem {
-  name:         string;
-  quantity:     number;
-  unit:         string;
-  category:     string;
-  estimatedRs?: number;
+  name:             string;
+  quantity:         number;
+  unit:             string;
+  category:         string;
+  estimatedPrice?:  number;
+  currencyCode?:    string;
 }
 
-// Approximate retail prices for common Indian grocery items (INR/kg or INR/litre)
-const PRICE_PER_KG: Record<string, number> = {
-  // Grains
-  'rice':       60,    'atta':       45,   'maida':      40,
-  'poha':       70,    'oats':      120,   'dalia':      80,
-  // Lentils
-  'dal':        90,    'chana':     100,   'rajma':     130,
-  'moong':     100,    'urad':      110,   'masoor':     90,
-  // Dairy
-  'paneer':    400,    'milk':       60,   'curd':       60,
-  'ghee':     600,     'butter':    500,
-  // Vegetables (approximate)
-  'onion':      30,    'tomato':     40,   'potato':     35,
-  'spinach':    40,    'methi':      30,   'cauliflower':50,
-  'capsicum':   80,    'carrot':     50,   'beans':      70,
-  'peas':       60,    'brinjal':    40,
-  // Oil
-  'oil':       130,    'mustard oil':160,
-  // Spices (per 100g)
-  'garam masala':  300 / 10, // ₹300/kg → ₹30/100g
-  'cumin':         400 / 10,
-  'coriander':     200 / 10,
-  'turmeric':      200 / 10,
-  'chilli':        300 / 10,
-  // Protein
-  'chicken':   300,    'eggs':       80,
-  // Nuts
-  'peanuts':   120,    'cashews':   900,  'almonds': 1200,
-  'makhana':   700,
-};
-
-// Category mappings
-const CATEGORY_MAP: Record<string, string> = {
-  'rice': 'grains', 'atta': 'grains', 'maida': 'grains', 'poha': 'grains',
-  'oats': 'grains', 'dalia': 'grains',
-  'dal': 'legumes', 'chana': 'legumes', 'rajma': 'legumes', 'moong': 'legumes',
-  'urad': 'legumes', 'masoor': 'legumes', 'peas': 'legumes',
-  'paneer': 'dairy', 'milk': 'dairy', 'curd': 'dairy',
-  'ghee': 'dairy', 'butter': 'dairy',
-  'onion': 'produce', 'tomato': 'produce', 'potato': 'produce',
-  'spinach': 'produce', 'methi': 'produce', 'cauliflower': 'produce',
-  'capsicum': 'produce', 'carrot': 'produce', 'beans': 'produce',
-  'brinjal': 'produce',
-  'oil': 'oil', 'mustard oil': 'oil',
-  'chicken': 'protein', 'eggs': 'protein',
-  'peanuts': 'nuts', 'cashews': 'nuts', 'almonds': 'nuts', 'makhana': 'nuts',
-};
-
-function categoriseIngredient(name: string): string {
+function categoriseIngredient(name: string, provider: GroceryPriceProvider): string {
   const lower = name.toLowerCase();
-  for (const [key, cat] of Object.entries(CATEGORY_MAP)) {
+  for (const [key, cat] of Object.entries(provider.categoryMap)) {
     if (lower.includes(key)) return cat;
   }
   return 'spices';
 }
 
-function estimatePrice(name: string, quantityKg: number): number {
+function roundToPrecision(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+function estimatePrice(name: string, quantityKg: number, provider: GroceryPriceProvider): number {
   const lower = name.toLowerCase();
-  for (const [key, pricePerKg] of Object.entries(PRICE_PER_KG)) {
-    if (lower.includes(key)) return Math.round(pricePerKg * quantityKg);
+  for (const [key, pricePerKg] of Object.entries(provider.pricePerKg)) {
+    if (lower.includes(key)) return roundToPrecision(pricePerKg * quantityKg, provider.roundToDecimals);
   }
-  return Math.round(50 * quantityKg); // ₹50/kg default
+  return roundToPrecision(provider.defaultPricePerKg * quantityKg, provider.roundToDecimals);
 }
 
 type UnitKey = 'g' | 'ml' | 'kg' | 'l' | 'tsp' | 'tbsp' | 'cup';
@@ -86,8 +52,19 @@ function toGrams(quantity: number, unit: string): number {
   return quantity * factor;
 }
 
-/** Aggregate all recipe ingredients into a single shopping list. */
-export function buildGroceryList(recipes: GeneratedRecipe[]): GroceryItem[] {
+/**
+ * Aggregate all recipe ingredients into a single shopping list.
+ *
+ * `provider` is optional and additive (ADR-0018, Phase 5, flag `global.p5.grocery_provider_chain`):
+ * when omitted, this function is byte-identical to its pre-Phase-5 behavior (India pricing/
+ * categories, whole-rupee rounding). Callers resolve the right provider (e.g. via
+ * `grocery-providers/registry.ts` + `request.country`) — this function has no flag or country
+ * awareness itself, matching the pattern established in `engine.ts` (ADR-0017).
+ */
+export function buildGroceryList(
+  recipes: GeneratedRecipe[],
+  provider: GroceryPriceProvider = INDIA_GROCERY_PROVIDER,
+): GroceryItem[] {
   const aggregated = new Map<string, { grams: number; unit: string }>();
 
   for (const recipe of recipes) {
@@ -109,17 +86,16 @@ export function buildGroceryList(recipes: GeneratedRecipe[]): GroceryItem[] {
     const displayKg = Math.round(kg * 100) / 100;
     items.push({
       name,
-      quantity:    displayKg >= 0.1 ? displayKg : Math.round(grams),
-      unit:        displayKg >= 0.1 ? 'kg' : 'g',
-      category:    categoriseIngredient(name),
-      estimatedRs: estimatePrice(name, kg),
+      quantity:       displayKg >= 0.1 ? displayKg : Math.round(grams),
+      unit:           displayKg >= 0.1 ? 'kg' : 'g',
+      category:       categoriseIngredient(name, provider),
+      estimatedPrice: estimatePrice(name, kg, provider),
+      currencyCode:   provider.currencyCode,
     });
   }
 
-  // Sort by category for shopping convenience
-  const CATEGORY_ORDER = ['produce', 'dairy', 'protein', 'legumes', 'grains', 'oil', 'nuts', 'spices'];
   return items.sort((a, b) =>
-    CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category),
+    provider.categoryOrder.indexOf(a.category) - provider.categoryOrder.indexOf(b.category),
   );
 }
 
@@ -146,11 +122,12 @@ export async function saveGroceryList(opts: {
     items.map((item) => ({
       grocery_list_id: listId,
       user_id:         userId,
-      name:            item.name,
-      quantity:        item.quantity,
-      unit:            item.unit,
-      category:        item.category,
-      estimated_rs:    item.estimatedRs ?? null,
+      name:             item.name,
+      quantity:         item.quantity,
+      unit:             item.unit,
+      category:         item.category,
+      estimated_price:  item.estimatedPrice ?? null,
+      currency_code:    item.currencyCode ?? 'INR',
     })),
   );
 

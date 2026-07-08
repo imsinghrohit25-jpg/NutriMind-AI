@@ -3,6 +3,7 @@
 // Returns structured menu items with canonical ingredient bindings.
 
 import type { GatewayRouter } from '../gateway/router.js';
+import { estimateNutrientsByDensity, sumNutrients, type EstimatedNutrients } from '../nutrition/density-estimator.js';
 
 export interface MenuItem {
   name:         string;
@@ -11,6 +12,13 @@ export interface MenuItem {
   category?:    string;   // 'starter' | 'main' | 'dessert' | 'drink' | 'bread' | 'rice' | 'biryani' | ...
   isVeg:        boolean;  // true for ◉ green dot marked items
   ingredients?: string[]; // extracted from description
+}
+
+export interface MenuItemNutritionEstimate {
+  nutrients:   EstimatedNutrients;
+  isEstimated: true;
+  confidence:  number;  // 0.0–1.0 — always low; this is a rough per-portion estimate, not a lab value
+  basis:       'ingredient_density' | 'no_ingredients_unknown';
 }
 
 export interface MenuScanResult {
@@ -120,4 +128,47 @@ export function scoreMenuItemForUser(opts: {
   }
 
   return { suitable: true, warnings, score: 'good' };
+}
+
+// Rough total-portion weight (grams) by menu category — used only to spread the density
+// estimate across a plausible restaurant serving size. This is a coarse heuristic, not a
+// measurement; `confidence` on the returned estimate reflects that.
+const PORTION_GRAMS_BY_CATEGORY: Record<string, number> = {
+  starter: 150, snack: 150, bread: 80, rice: 300, biryani: 400,
+  main: 350, dessert: 120, drink: 250,
+};
+const DEFAULT_PORTION_GRAMS = 300;
+
+/**
+ * Estimate a nutrition label for a restaurant menu item — Phase 5 (`global.p5.estimated_nutrition_label`).
+ *
+ * Deterministic only: this never asks an LLM for a calorie/macro number (the LLM's role,
+ * in `scanMenuText` above, is limited to identifying item name/category/ingredients — this
+ * function turns that identification into numbers via `density-estimator.ts`, same policy
+ * as recipe-generator.ts). Always returns `isEstimated: true` with a low `confidence` —
+ * this is a rough per-portion approximation, never presented as a measured value.
+ */
+export function estimateMenuItemNutrition(item: MenuItem): MenuItemNutritionEstimate {
+  const portionGrams = (item.category ? PORTION_GRAMS_BY_CATEGORY[item.category] : undefined) ?? DEFAULT_PORTION_GRAMS;
+
+  if (!item.ingredients || item.ingredients.length === 0) {
+    return {
+      nutrients:   estimateNutrientsByDensity(item.name, portionGrams),
+      isEstimated: true,
+      confidence:  0.15,
+      basis:       'no_ingredients_unknown',
+    };
+  }
+
+  const gramsPerIngredient = portionGrams / item.ingredients.length;
+  const perIngredient = item.ingredients.map((ing) =>
+    estimateNutrientsByDensity(ing, gramsPerIngredient),
+  );
+
+  return {
+    nutrients:   sumNutrients(perIngredient),
+    isEstimated: true,
+    confidence:  0.35,
+    basis:       'ingredient_density',
+  };
 }
