@@ -120,10 +120,15 @@ class OnboardingState {
   const OnboardingState({
     required this.hasConsent,
     required this.hasDisclaimer,
+    required this.hasCountry,
     required this.hasProfile,
   });
   final bool hasConsent;
   final bool hasDisclaimer;
+  // Phase 10 (`global.p10.country_onboarding_v2`) — set once the user confirms/picks their
+  // country in CountrySelectionScreen; gates entry to profile setup the same way
+  // consent/disclaimer already do.
+  final bool hasCountry;
   final bool hasProfile;
 }
 
@@ -132,10 +137,12 @@ Future<OnboardingState> onboardingState(Ref ref) async {
   final db = ref.watch(localDbProvider);
   final consent    = await db.getFlag('consent_v1');
   final disclaimer = await db.getFlag('disclaimer_v1');
+  final country     = await db.getFlag('country_v2');
   final profile    = await db.getFlag('profile_complete');
   return OnboardingState(
     hasConsent:    consent == 'true',
     hasDisclaimer: disclaimer == 'true',
+    hasCountry:    country == 'true',
     hasProfile:    profile == 'true',
   );
 }

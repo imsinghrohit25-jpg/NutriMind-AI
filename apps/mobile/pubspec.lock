@@ -956,6 +956,27 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.0"
+  nutrimind_core:
+    dependency: transitive
+    description:
+      path: "../../packages/core"
+      relative: true
+    source: path
+    version: "0.1.0"
+  nutrimind_country_engine:
+    dependency: "direct main"
+    description:
+      path: "../../packages/country_engine"
+      relative: true
+    source: path
+    version: "0.1.0"
+  nutrimind_localization_engine:
+    dependency: "direct main"
+    description:
+      path: "../../packages/localization_engine"
+      relative: true
+    source: path
+    version: "0.1.0"
   objective_c:
     dependency: transitive
     description:

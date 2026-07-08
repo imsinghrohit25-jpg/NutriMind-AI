@@ -16,6 +16,7 @@ import biomarkerRoutes from './biomarker.js';
 import healthDataRoutes from './health-data.js';
 import voiceRoutes from './voice.js';
 import packRoutes from './packs.js';
+import onboardingRoutes from './onboarding.js';
 
 export async function registerV1Routes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRoutes, { prefix: '/v1' });
@@ -46,4 +47,6 @@ export async function registerV1Routes(fastify: FastifyInstance): Promise<void> 
   await fastify.register(voiceRoutes, { prefix: '/v1' });
   // Phase 9 (`global.p9.incremental_regional_sync`)
   await fastify.register(packRoutes, { prefix: '/v1' });
+  // Phase 10 (`global.p10.country_onboarding_v2`)
+  await fastify.register(onboardingRoutes, { prefix: '/v1' });
 }

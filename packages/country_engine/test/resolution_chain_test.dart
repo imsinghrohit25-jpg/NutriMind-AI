@@ -105,6 +105,29 @@ void main() {
       expect(decoded.rtl,              original.rtl);
       expect(decoded.mccList,          original.mccList);
     });
+
+    test('toJson emits the real server wire-format strings, not Dart enum member names', () {
+      // Phase 10 regression: fromJson()/toJson() used to round-trip via `.name`/`byName()`,
+      // which only ever matched Dart's own enum member names ('fssai8', 'icmrNin') — never the
+      // real values apps/api/src/country/types.ts actually sends ('FSSAI_8', 'ICMR_NIN'). This
+      // was undetected because the only prior caller was a self-consistent SharedPreferences
+      // round-trip (Dart writing then reading its own output), never real API JSON.
+      final json = CountryProfile.india.toJson();
+      expect(json['allergenRegime'], 'FSSAI_8');
+      expect(json['nutritionStandard'], 'ICMR_NIN');
+    });
+
+    test('fromJson parses the real server wire-format strings correctly', () {
+      final json = {
+        'isoCode': 'GB', 'tier': 'tier1', 'displayName': 'United Kingdom',
+        'locale': 'en_GB', 'currencyCode': 'GBP', 'rtl': false,
+        'allergenRegime': 'EU_14', 'nutritionStandard': 'UK_SACN',
+        'callingCode': '+44', 'mccList': ['234', '235'],
+      };
+      final profile = CountryProfile.fromJson(json);
+      expect(profile.allergenRegime, AllergenRegime.eu14);
+      expect(profile.nutritionStandard, NutritionStandard.ukSacn);
+    });
   });
 
   group('CountryResolutionChain', () {

@@ -26,6 +26,24 @@ enum AllergenRegime {
   whoGlobal,
 }
 
+// Wire-format strings (apps/api/src/country/types.ts `AllergenRegime` union) — deliberately NOT
+// `.name`/`byName()`, whose Dart identifiers (`fssai8`, `whoGlobal`, ...) never matched the
+// server's actual values (`FSSAI_8`, `WHO_GLOBAL`, ...). `fromJson()` against a real API
+// response would throw before this was added — there was no prior code path that ever
+// deserialized server-sent JSON through this model (only a self-consistent SharedPreferences
+// round-trip, Dart writing then reading its own `toJson()` output).
+const _allergenRegimeWire = <AllergenRegime, String>{
+  AllergenRegime.fssai8: 'FSSAI_8',
+  AllergenRegime.fda9Sesame: 'FDA_9_SESAME',
+  AllergenRegime.eu14: 'EU_14',
+  AllergenRegime.jp8: 'JP_8',
+  AllergenRegime.whoGlobal: 'WHO_GLOBAL',
+};
+
+AllergenRegime _allergenRegimeFromWire(String s) => _allergenRegimeWire.entries
+    .firstWhere((e) => e.value == s, orElse: () => const MapEntry(AllergenRegime.whoGlobal, ''))
+    .key;
+
 /// Authoritative dietary reference values standard for this country.
 enum NutritionStandard {
   icmrNin,  // India — ICMR-NIN 2020
@@ -37,6 +55,23 @@ enum NutritionStandard {
   hpbSg,    // Singapore — Health Promotion Board RNI
   who,      // Global / WHO — all other countries
 }
+
+// Wire-format strings (apps/api/src/country/types.ts `NutritionStandard` union) — same
+// deliberate explicit mapping as `_allergenRegimeWire` above, same reason.
+const _nutritionStandardWire = <NutritionStandard, String>{
+  NutritionStandard.icmrNin: 'ICMR_NIN',
+  NutritionStandard.usDri: 'US_DRI',
+  NutritionStandard.ukSacn: 'UK_SACN',
+  NutritionStandard.efsa: 'EFSA',
+  NutritionStandard.nhmrc: 'NHMRC',
+  NutritionStandard.jpDri: 'JP_DRI',
+  NutritionStandard.hpbSg: 'HPB_SG',
+  NutritionStandard.who: 'WHO',
+};
+
+NutritionStandard _nutritionStandardFromWire(String s) => _nutritionStandardWire.entries
+    .firstWhere((e) => e.value == s, orElse: () => const MapEntry(NutritionStandard.who, ''))
+    .key;
 
 /// Immutable country configuration resolved once per session.
 /// Every service, provider, and widget receives this via dependency injection.
@@ -108,7 +143,9 @@ class CountryProfile {
   @override
   String toString() => 'CountryProfile($isoCode, $tier)';
 
-  /// JSON serialisation for caching in SharedPreferences.
+  /// JSON serialisation — matches `apps/api/src/country/types.ts`'s `CountryProfile` wire
+  /// shape exactly (both for the SharedPreferences cache round-trip and for parsing real API
+  /// responses, e.g. `GET /v1/onboarding/country`, Phase 10).
   Map<String, dynamic> toJson() => {
     'isoCode':           isoCode,
     'tier':              tier.name,
@@ -116,8 +153,8 @@ class CountryProfile {
     'locale':            locale,
     'currencyCode':      currencyCode,
     'rtl':               rtl,
-    'allergenRegime':    allergenRegime.name,
-    'nutritionStandard': nutritionStandard.name,
+    'allergenRegime':    _allergenRegimeWire[allergenRegime],
+    'nutritionStandard': _nutritionStandardWire[nutritionStandard],
     'callingCode':       callingCode,
     'mccList':           mccList,
   };
@@ -129,8 +166,8 @@ class CountryProfile {
     locale:            j['locale']    as String,
     currencyCode:      j['currencyCode'] as String,
     rtl:               j['rtl']       as bool,
-    allergenRegime:    AllergenRegime.values.byName(j['allergenRegime'] as String),
-    nutritionStandard: NutritionStandard.values.byName(j['nutritionStandard'] as String),
+    allergenRegime:    _allergenRegimeFromWire(j['allergenRegime'] as String),
+    nutritionStandard: _nutritionStandardFromWire(j['nutritionStandard'] as String),
     callingCode:       j['callingCode'] as String,
     mccList:           List<String>.from(j['mccList'] as List),
   );

@@ -8,6 +8,7 @@ import '../../features/auth/auth_state.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/onboarding/screens/consent_screen.dart';
 import '../../features/onboarding/screens/disclaimer_screen.dart';
+import '../../features/onboarding/screens/country_selection_screen.dart';
 import '../../features/profile/screens/profile_setup_screen.dart';
 import '../../features/household/screens/household_screen.dart';
 import '../../features/scanner/screens/scanner_screen.dart' deferred as scanner_lib;
@@ -29,6 +30,7 @@ GoRouter router(Ref ref) {
       final isAuthenticated = authState.valueOrNull?.isAuthenticated ?? false;
       final hasConsent      = onboardingState.valueOrNull?.hasConsent ?? false;
       final hasDisclaimer   = onboardingState.valueOrNull?.hasDisclaimer ?? false;
+      final hasCountry      = onboardingState.valueOrNull?.hasCountry ?? false;
       final hasProfile      = onboardingState.valueOrNull?.hasProfile ?? false;
 
       final path = state.matchedLocation;
@@ -42,12 +44,14 @@ GoRouter router(Ref ref) {
       // Onboarding gates — must complete in order
       if (!hasConsent && path != AppRoutes.consent) return AppRoutes.consent;
       if (!hasDisclaimer && path != AppRoutes.disclaimer) return AppRoutes.disclaimer;
+      // Phase 10 (`global.p10.country_onboarding_v2`)
+      if (!hasCountry && path != AppRoutes.countrySetup) return AppRoutes.countrySetup;
       if (!hasProfile && path != AppRoutes.profileSetup) return AppRoutes.profileSetup;
 
       // Redirect away from auth/onboarding screens once complete
       if (path == AppRoutes.login || path == AppRoutes.splash ||
           path == AppRoutes.consent || path == AppRoutes.disclaimer ||
-          path == AppRoutes.profileSetup) {
+          path == AppRoutes.countrySetup || path == AppRoutes.profileSetup) {
         return AppRoutes.home;
       }
 
@@ -58,6 +62,7 @@ GoRouter router(Ref ref) {
       GoRoute(path: AppRoutes.login,   builder: (_, __) => const LoginScreen()),
       GoRoute(path: AppRoutes.consent, builder: (_, __) => const ConsentScreen()),
       GoRoute(path: AppRoutes.disclaimer, builder: (_, __) => const DisclaimerScreen()),
+      GoRoute(path: AppRoutes.countrySetup, builder: (_, __) => const CountrySelectionScreen()),
       GoRoute(path: AppRoutes.profileSetup, builder: (_, __) => const ProfileSetupScreen()),
       GoRoute(path: AppRoutes.home,    builder: (_, __) => const HomeScreen()),
       // Deferred (Phase 9, `global.p9.deferred_components`) — the scanner screen pulls in the

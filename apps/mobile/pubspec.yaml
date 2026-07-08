@@ -73,6 +73,20 @@ dependencies:
   speech_to_text: ^7.0.0
   flutter_tts: ^4.2.0
 
+  # Country resolution engine (Phase 10, `global.p10.country_onboarding_v2`) — CountryProfile,
+  # countryProfileProvider, CountryResolutionChain. Not previously declared as a dependency of
+  # this app despite being described as "the central spine of the Global Enterprise Edition"
+  # (packages/country_engine's own doc comment) — nothing in apps/mobile had ever imported it.
+  nutrimind_country_engine:
+    path: ../../packages/country_engine
+
+  # Found while verifying Phase 10's mobile changes: app.dart already imports this for
+  # activeLocaleProvider/activeTextDirectionProvider but it was never declared as a dependency
+  # here either — flutter analyze on app.dart failed outright. Fixed in passing (same one-line
+  # shape as the country_engine addition above); see ADR-0023/ADR-0024.
+  nutrimind_localization_engine:
+    path: ../../packages/localization_engine
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
