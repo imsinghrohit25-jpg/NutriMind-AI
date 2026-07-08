@@ -66,6 +66,9 @@ dependencies:
   url_launcher: ^6.3.0
   crypto: ^3.0.3
 
+  # Image picker (lab report photo upload)
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
