@@ -80,4 +80,9 @@ export class CofidLoader {
   get size(): number {
     return this._foods?.length ?? 0;
   }
+
+  /** Full food list — used by the Phase 9 regional pack sync endpoint. Returns a copy. */
+  getAll(): CofidFood[] {
+    return this._foods ? [...this._foods] : [];
+  }
 }

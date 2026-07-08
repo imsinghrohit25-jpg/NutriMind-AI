@@ -41,7 +41,8 @@ describe('registerV1Routes — full route tree', () => {
     app.decorate('sql', vi.fn().mockResolvedValue([]) as never);
     app.decorate('offClient', { getProduct: vi.fn(), searchByName: vi.fn() } as never);
     app.decorate('usdaClient', null as never);
-    app.decorate('ifct', { isAvailable: () => false, searchByName: () => [], toCanonicalProduct: vi.fn() } as never);
+    app.decorate('ifct', { isAvailable: () => false, count: 0, getAll: () => [], searchByName: () => [], toCanonicalProduct: vi.fn() } as never);
+    app.decorate('cofid', { isAvailable: () => false, size: 0, getAll: () => [], searchByName: () => [], toCanonicalProduct: vi.fn() } as never);
     app.decorate('productCache', { get: vi.fn(), set: vi.fn() } as never);
 
     app.decorateRequest('user', null);

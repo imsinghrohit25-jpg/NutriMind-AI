@@ -121,30 +121,49 @@ void main() {
   });
 
   group('RegionalFoodPack', () {
-    test('kKnownRegionalPacks contains IN, GB, US', () {
-      final codes = kKnownRegionalPacks.map((p) => p.countryCode).toList();
-      expect(codes, containsAll(['IN', 'GB', 'US']));
+    // Phase 9: the manifest is fetched from the server (GET /v1/packs), not a static
+    // client-side list — these tests exercise the JSON deserialization and sync-state helpers
+    // against the shape the server's packs/sync-service.ts `getPackManifest()` actually returns.
+    Map<String, dynamic> manifestJson({bool available = true}) => {
+      'packId': 'ifct_in_2017',
+      'countryCode': 'IN',
+      'dataSourceId': 'ifct_2017',
+      'displayName': 'India food pack (IFCT 2017)',
+      'itemCount': available ? 528 : 0,
+      'datasetVersion': '2017',
+      'available': available,
+    };
+
+    test('fromManifestJson parses a server manifest entry', () {
+      final pack = RegionalFoodPack.fromManifestJson(manifestJson());
+      expect(pack.packId, 'ifct_in_2017');
+      expect(pack.dataSourceId, 'ifct_2017');
+      expect(pack.itemCount, 528);
+      expect(pack.available, isTrue);
+      expect(pack.syncedVersion, isNull);
     });
 
-    test('CoFID pack has correct dataSourceId', () {
-      final cofid = kKnownRegionalPacks.firstWhere((p) => p.countryCode == 'GB');
-      expect(cofid.dataSourceId, 'cofid_2021');
-      expect(cofid.itemCount, greaterThan(0));
+    test('needsSync is true when available and never synced', () {
+      final pack = RegionalFoodPack.fromManifestJson(manifestJson());
+      expect(pack.needsSync, isTrue);
     });
 
-    test('JSON round-trip', () {
-      final pack = kKnownRegionalPacks.first;
-      final decoded = RegionalFoodPack.fromJson(pack.toJson());
-      expect(decoded.packId,    pack.packId);
-      expect(decoded.sizeKb,    pack.sizeKb);
-      expect(decoded.isDownloaded, false);
+    test('needsSync is false once syncedVersion matches the current datasetVersion', () {
+      final pack = RegionalFoodPack.fromManifestJson(manifestJson(), syncedVersion: '2017');
+      expect(pack.needsSync, isFalse);
     });
 
-    test('copyWith isDownloaded', () {
-      final pack  = kKnownRegionalPacks.first;
-      final after = pack.copyWith(isDownloaded: true);
-      expect(after.isDownloaded, isTrue);
+    test('needsSync is false when the dataset is not available server-side — never claims sync is possible for missing data', () {
+      final pack = RegionalFoodPack.fromManifestJson(manifestJson(available: false));
+      expect(pack.needsSync, isFalse);
+    });
+
+    test('copyWith updates syncedVersion without touching other fields', () {
+      final pack  = RegionalFoodPack.fromManifestJson(manifestJson());
+      final after = pack.copyWith(syncedVersion: '2017');
+      expect(after.syncedVersion, '2017');
       expect(after.packId, pack.packId);
+      expect(after.needsSync, isFalse);
     });
   });
 }

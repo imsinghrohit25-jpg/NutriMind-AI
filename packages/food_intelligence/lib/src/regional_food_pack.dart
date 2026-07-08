@@ -1,6 +1,12 @@
 /// Descriptor for a downloadable regional food composition data pack.
 /// The pack enables offline food lookup for a specific country/region.
-/// Download URL points to our CDN-hosted pack (populated in Phase 9 — Offline).
+///
+/// Phase 9 (`global.p9.incremental_regional_sync`) implements the actual sync mechanics this
+/// class was a placeholder for — see `PackSyncClient`. `downloadUrl` originally pointed at a
+/// `cdn.nutrimind.app` host that was never provisioned (no CDN exists); packs are synced
+/// through the API itself (`GET /v1/packs/:packId/sync`), not downloaded from a separate CDN,
+/// so that field is gone. `sourceId` is now the real database-owning table, either `ifct_2017`
+/// or `cofid_2021` — matches the server's `packs/registry.ts` `PACK_REGISTRY`.
 class RegionalFoodPack {
   const RegionalFoodPack({
     required this.packId,
@@ -8,14 +14,13 @@ class RegionalFoodPack {
     required this.dataSourceId,
     required this.displayName,
     required this.itemCount,
-    required this.sizeKb,
-    required this.downloadUrl,
     required this.datasetVersion,
-    required this.lastUpdated,
-    required this.isDownloaded,
+    required this.available,
+    this.syncedVersion,
   });
 
-  /// Unique pack identifier, e.g. 'cofid_gb_2021', 'ifct_in_2017'.
+  /// Unique pack identifier, e.g. 'cofid_gb_2021', 'ifct_in_2017'. Matches the server's
+  /// `packs/registry.ts` `PACK_REGISTRY` exactly.
   final String packId;
 
   /// ISO-3166 country code this pack covers.
@@ -27,73 +32,40 @@ class RegionalFoodPack {
   /// Human-readable name shown in UI.
   final String displayName;
 
-  /// Approximate number of food items in the pack.
+  /// Real item count reported by the server (0 when the dataset isn't loaded server-side —
+  /// never a placeholder estimate).
   final int itemCount;
 
-  /// Compressed size in kilobytes.
-  final int sizeKb;
-
-  /// CDN URL for downloading the pack (JSON format, compressed).
-  final String downloadUrl;
-
-  /// Dataset version string (e.g. '2021', '2017').
+  /// Current server-side dataset version, e.g. '2017'.
   final String datasetVersion;
 
-  final DateTime lastUpdated;
+  /// Whether the server actually has this dataset loaded. A pack can be listed
+  /// (`PACK_REGISTRY` knows about it) without being `available` (licensed dataset file not
+  /// placed — see IfctLoader/CofidLoader's graceful degradation).
+  final bool available;
 
-  /// Whether this pack is currently downloaded and available offline.
-  final bool isDownloaded;
+  /// The `datasetVersion` this device last synced, if any. `null` means never synced.
+  final String? syncedVersion;
 
-  RegionalFoodPack copyWith({bool? isDownloaded}) => RegionalFoodPack(
+  /// Whether a sync would actually fetch new data (server has a newer version than this
+  /// device's last sync, and the server dataset is available at all).
+  bool get needsSync => available && syncedVersion != datasetVersion;
+
+  RegionalFoodPack copyWith({String? syncedVersion}) => RegionalFoodPack(
     packId: packId, countryCode: countryCode, dataSourceId: dataSourceId,
-    displayName: displayName, itemCount: itemCount, sizeKb: sizeKb,
-    downloadUrl: downloadUrl, datasetVersion: datasetVersion,
-    lastUpdated: lastUpdated, isDownloaded: isDownloaded ?? this.isDownloaded,
+    displayName: displayName, itemCount: itemCount, datasetVersion: datasetVersion,
+    available: available, syncedVersion: syncedVersion ?? this.syncedVersion,
   );
 
-  Map<String, dynamic> toJson() => {
-    'packId': packId, 'countryCode': countryCode, 'dataSourceId': dataSourceId,
-    'displayName': displayName, 'itemCount': itemCount, 'sizeKb': sizeKb,
-    'downloadUrl': downloadUrl, 'datasetVersion': datasetVersion,
-    'lastUpdated': lastUpdated.toIso8601String(), 'isDownloaded': isDownloaded,
-  };
-
-  factory RegionalFoodPack.fromJson(Map<String, dynamic> j) => RegionalFoodPack(
-    packId:         j['packId'] as String,
-    countryCode:    j['countryCode'] as String,
-    dataSourceId:   j['dataSourceId'] as String,
-    displayName:    j['displayName'] as String,
-    itemCount:      j['itemCount'] as int,
-    sizeKb:         j['sizeKb'] as int,
-    downloadUrl:    j['downloadUrl'] as String,
-    datasetVersion: j['datasetVersion'] as String,
-    lastUpdated:    DateTime.parse(j['lastUpdated'] as String),
-    isDownloaded:   j['isDownloaded'] as bool? ?? false,
-  );
+  factory RegionalFoodPack.fromManifestJson(Map<String, dynamic> j, {String? syncedVersion}) =>
+      RegionalFoodPack(
+        packId:         j['packId'] as String,
+        countryCode:    j['countryCode'] as String,
+        dataSourceId:   j['dataSourceId'] as String,
+        displayName:    j['displayName'] as String,
+        itemCount:      j['itemCount'] as int,
+        datasetVersion: j['datasetVersion'] as String,
+        available:      j['available'] as bool,
+        syncedVersion:  syncedVersion,
+      );
 }
-
-/// Known regional packs, populated at build time.
-/// Download URLs are placeholders until Phase 9 (CDN provisioning).
-final List<RegionalFoodPack> kKnownRegionalPacks = [
-  RegionalFoodPack(
-    packId: 'ifct_in_2017', countryCode: 'IN', dataSourceId: 'ifct_2017',
-    displayName: 'India food pack (IFCT 2017)',
-    itemCount: 528, sizeKb: 320,
-    downloadUrl: 'https://cdn.nutrimind.app/packs/ifct_in_2017.json.gz',
-    datasetVersion: '2017', lastUpdated: DateTime.utc(2017, 1, 1), isDownloaded: false,
-  ),
-  RegionalFoodPack(
-    packId: 'cofid_gb_2021', countryCode: 'GB', dataSourceId: 'cofid_2021',
-    displayName: 'UK food pack (CoFID 2021)',
-    itemCount: 3000, sizeKb: 450,
-    downloadUrl: 'https://cdn.nutrimind.app/packs/cofid_gb_2021.json.gz',
-    datasetVersion: '2021', lastUpdated: DateTime.utc(2021, 1, 1), isDownloaded: false,
-  ),
-  RegionalFoodPack(
-    packId: 'usda_us_2024', countryCode: 'US', dataSourceId: 'usda_fdc',
-    displayName: 'US food pack (USDA FDC 2024)',
-    itemCount: 8789, sizeKb: 1200,
-    downloadUrl: 'https://cdn.nutrimind.app/packs/usda_us_2024.json.gz',
-    datasetVersion: '2024', lastUpdated: DateTime.utc(2024, 1, 1), isDownloaded: false,
-  ),
-];

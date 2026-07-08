@@ -5,4 +5,5 @@ library nutrimind_food_intelligence;
 export 'src/food_data_source.dart';
 export 'src/food_profile.dart';
 export 'src/regional_food_pack.dart';
+export 'src/pack_sync_response.dart';
 export 'src/food_intelligence_service.dart';

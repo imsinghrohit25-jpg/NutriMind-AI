@@ -10,8 +10,9 @@ import '../../features/onboarding/screens/consent_screen.dart';
 import '../../features/onboarding/screens/disclaimer_screen.dart';
 import '../../features/profile/screens/profile_setup_screen.dart';
 import '../../features/household/screens/household_screen.dart';
-import '../../features/scanner/screens/scanner_screen.dart';
+import '../../features/scanner/screens/scanner_screen.dart' deferred as scanner_lib;
 import '../../features/home/home_screen.dart';
+import 'deferred_route.dart';
 import 'routes.dart';
 
 part 'router.g.dart';
@@ -59,7 +60,15 @@ GoRouter router(Ref ref) {
       GoRoute(path: AppRoutes.disclaimer, builder: (_, __) => const DisclaimerScreen()),
       GoRoute(path: AppRoutes.profileSetup, builder: (_, __) => const ProfileSetupScreen()),
       GoRoute(path: AppRoutes.home,    builder: (_, __) => const HomeScreen()),
-      GoRoute(path: AppRoutes.scanner, builder: (_, __) => const ScannerScreen()),
+      // Deferred (Phase 9, `global.p9.deferred_components`) — the scanner screen pulls in the
+      // `camera` plugin, not needed until the user actually navigates here. See DeferredRoute.
+      GoRoute(
+        path: AppRoutes.scanner,
+        builder: (_, __) => DeferredRoute(
+          loadLibrary: scanner_lib.loadLibrary,
+          builder: (_) => scanner_lib.ScannerScreen(),
+        ),
+      ),
       GoRoute(path: AppRoutes.household, builder: (_, __) => const HouseholdScreen()),
       GoRoute(path: AppRoutes.profile, builder: (_, __) => const ProfileSetupScreen()),
     ],

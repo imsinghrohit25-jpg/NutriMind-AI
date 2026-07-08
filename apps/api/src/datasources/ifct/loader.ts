@@ -163,4 +163,13 @@ export class IfctLoader {
   toCanonicalProduct(entry: IfctEntry): CanonicalProduct {
     return entryToCanonicalProduct(entry);
   }
+
+  /** Full entry list — used by the Phase 9 regional pack sync endpoint. Returns a copy. */
+  getAll(): IfctEntry[] {
+    return [...this.entries];
+  }
+
+  get count(): number {
+    return this.entries.length;
+  }
 }

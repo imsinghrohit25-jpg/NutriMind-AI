@@ -17,6 +17,7 @@ import { GatewayCache } from './gateway/cache.js';
 import { OpenFoodFactsClient } from './datasources/openfoodfacts/client.js';
 import { UsdaFdcClient } from './datasources/usda/client.js';
 import { IfctLoader } from './datasources/ifct/loader.js';
+import { CofidLoader } from './datasources/cofid/loader.js';
 import { EdgeCache } from './cache/edge-cache.js';
 import type { CanonicalProduct } from './nutrition/canonical-model.js';
 
@@ -27,6 +28,7 @@ declare module 'fastify' {
     offClient: OpenFoodFactsClient;
     usdaClient: UsdaFdcClient | null;
     ifct: IfctLoader;
+    cofid: CofidLoader;
     productCache: EdgeCache<CanonicalProduct>;
   }
 }
@@ -116,6 +118,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     fastify.log.info('[ifct] IFCT 2017 dataset loaded');
   }
   fastify.decorate('ifct', ifct);
+
+  // Phase 9 — regional pack sync needs CofidLoader decorated the same way ifct is; previously
+  // only country-waterfall.ts (itself not wired into any route) constructed one ad hoc.
+  const cofid = new CofidLoader();
+  await cofid.load();
+  fastify.decorate('cofid', cofid);
 
   await registerV1Routes(fastify);
 

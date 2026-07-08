@@ -5,6 +5,7 @@ import 'package:nutrimind_country_engine/nutrimind_country_engine.dart';
 import 'food_profile.dart';
 import 'food_data_source.dart';
 import 'regional_food_pack.dart';
+import 'pack_sync_response.dart';
 
 /// Result of a food resolution attempt.
 class FoodResolutionResult {
@@ -39,7 +40,7 @@ class FoodIntelligenceService {
     CountryProfile country,
   ) async {
     final resp = await dio.post(
-      '$baseUrl/api/v1/resolve/barcode',
+      '$baseUrl/v1/resolve/barcode',
       data: {'barcode': barcode},
       options: Options(headers: {'x-user-country': country.isoCode}),
     );
@@ -52,17 +53,50 @@ class FoodIntelligenceService {
     CountryProfile country,
   ) async {
     final resp = await dio.post(
-      '$baseUrl/api/v1/resolve/name',
+      '$baseUrl/v1/resolve/name',
       data: {'name': name},
       options: Options(headers: {'x-user-country': country.isoCode}),
     );
     return _parseResolveResponse(resp.data as Map<String, dynamic>, country);
   }
 
-  /// Available regional food packs for the given country.
-  /// Phase 9 will add actual download/install logic.
-  List<RegionalFoodPack> packsFor(CountryProfile country) =>
-      kKnownRegionalPacks.where((p) => p.countryCode == country.isoCode).toList();
+  /// Fetch the regional pack manifest from the server (`GET /v1/packs`) — real item counts and
+  /// availability, not a static client-side list (Phase 9, `global.p9.incremental_regional_sync`).
+  Future<List<RegionalFoodPack>> fetchPackManifest({Map<String, String>? syncedVersions}) async {
+    final resp = await dio.get('$baseUrl/v1/packs');
+    final packs = (resp.data['data']['packs'] as List).cast<Map<String, dynamic>>();
+    return packs
+        .map((j) => RegionalFoodPack.fromManifestJson(
+              j,
+              syncedVersion: syncedVersions?[j['packId'] as String],
+            ))
+        .toList();
+  }
+
+  /// Sync one pack (`GET /v1/packs/:packId/sync`). Pass the pack's current `syncedVersion` (or
+  /// omit for a first sync) — an empty `items` list with `upToDate: true` means nothing changed
+  /// (or the dataset isn't available server-side); a non-empty list is the full current
+  /// snapshot to persist locally (e.g. into Drift), replacing whatever was stored before.
+  Future<PackSyncResponse> syncPack(RegionalFoodPack pack) async {
+    final resp = await dio.get(
+      '$baseUrl/v1/packs/${pack.packId}/sync',
+      queryParameters: pack.syncedVersion != null ? {'version': pack.syncedVersion} : null,
+    );
+    final data = resp.data['data'] as Map<String, dynamic>;
+    return PackSyncResponse(
+      packId: data['packId'] as String,
+      datasetVersion: data['datasetVersion'] as String,
+      upToDate: data['upToDate'] as bool,
+      items: (data['items'] as List)
+          .cast<Map<String, dynamic>>()
+          .map((i) => PackSyncItem(
+                sourceId: i['sourceId'] as String,
+                name: i['name'] as String,
+                nutrition: (i['nutrition'] as Map).cast<String, dynamic>(),
+              ))
+          .toList(),
+    );
+  }
 
   FoodResolutionResult _parseResolveResponse(
     Map<String, dynamic> data,
