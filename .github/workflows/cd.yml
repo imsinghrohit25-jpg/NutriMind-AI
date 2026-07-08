@@ -1,0 +1,112 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'   # semantic version tags only
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Android release build ────────────────────────────────────────────────────
+  android:
+    name: Android AAB → Play Store (staged 10%)
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: stable
+          cache: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      - name: Setup Ruby (Fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > apps/mobile/android/app/nutrimind.jks
+
+      - name: Install Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build AAB
+        working-directory: apps/mobile
+        env:
+          KEY_ALIAS:         ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD:      ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD:    ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define=SUPA_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPA_ANON=${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Upload to Play Store (staged 10%)
+        working-directory: apps/mobile
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane android deploy_staged
+
+  # ── iOS release build ─────────────────────────────────────────────────────────
+  ios:
+    name: iOS IPA → App Store (staged 10%)
+    runs-on: macos-14
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: stable
+          cache: true
+
+      - name: Setup Ruby (Fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/mobile
+
+      - name: Install Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build IPA
+        working-directory: apps/mobile
+        env:
+          MATCH_PASSWORD:         ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=SUPA_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPA_ANON=${{ secrets.SUPABASE_ANON_KEY }}
+          bundle exec fastlane ios deploy_staged
+
+      - name: Upload IPA to App Store
+        working-directory: apps/mobile
+        env:
+          APP_STORE_CONNECT_API_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT:   ${{ secrets.ASC_KEY_CONTENT }}
+        run: bundle exec fastlane ios upload_to_testflight

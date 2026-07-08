@@ -1,4 +1,4 @@
-# NutriMind AI — Setup Guide (v1, Phase 2)
+# NutriMind AI — Setup Guide (Final — Phase 12)
 
 ## Prerequisites
 
@@ -92,27 +92,52 @@ bash scripts/audit-no-mock.sh        # fail if mock/placeholder in src
 npx tsx scripts/audit-llm-writes.ts  # fail if LLM→score write paths
 ```
 
-## 8. Project structure
+## 8. Mobile setup
+
+```bash
+# Prerequisites: Flutter 3.24+, Android Studio or Xcode
+cd apps/mobile
+flutter pub get
+flutter gen-l10n         # generates AppLocalizations from ARB files
+flutter run              # requires connected device or emulator
+```
+
+**Flutter environment variables** (compile-time, via `--dart-define`):
+
+| Variable | Description |
+|----------|-------------|
+| `SUPA_URL` | Supabase project URL |
+| `SUPA_ANON` | Supabase anon key |
+
+## 9. Run k6 load tests (requires k6 installed)
+
+```bash
+k6 run k6/scan-load.js --env API_URL=http://localhost:3000 --env TEST_JWT=<jwt>
+k6 run k6/copilot-load.js --env API_URL=http://localhost:3000 --env TEST_JWT=<jwt>
+```
+
+## 10. Project structure
 
 ```
 apps/api/src/
   server.ts          ← API entry point (binds port)
   worker.ts          ← pg-boss worker entry point
-  app.ts             ← Fastify factory (testable)
-  env.ts             ← env validation (Zod)
-  plugins/           ← auth (JWKS), rbac, rate-limit, otel, error-handler
-  gateway/           ← AI gateway: router, adapters, circuit-breaker, cost-log
-  jobs/              ← pg-boss: boss singleton, registry, idempotency
-  policy/            ← output-policy (diagnosis/score contradiction blocks)
-  telemetry/         ← OTEL init, health-data redaction processor
-  routes/v1/         ← HTTP routes (health, gateway)
-packages/shared/src/
-  schemas/           ← Zod schemas: envelope, LLM types
-  openapi.ts         ← OpenAPI spec builder
-config/
-  routing.json       ← task-tier → provider/model policy (checked in)
-observability/
-  docker-compose.yml ← OTEL, Jaeger, Prometheus, Grafana
+  engines/           ← score, allergen, personalization, meals, cart, alternatives
+  copilot/           ← RAG pipeline: guardrails, retrieval, streaming, memory
+  knowledge/         ← document ingest + hybrid retrieval
+  memory/            ← scan history embeddings, semantic search, signals
+  push/              ← FCM, APNs, preferences
+  jobs/handlers/     ← weekly-report, report-renderer
+  security/          ← prompt-injection sanitizer
+  i18n/              ← language resolution, LLM language routing
+  routes/v1/         ← HTTP routes (scan, score, copilot, meals, cart, data-rights)
+apps/mobile/lib/
+  features/          ← all screens (scanner, score, ingredients, copilot, ...)
+  l10n/              ← ARB files (en, hi, mr)
+  core/              ← design system, router, theme
+supabase/migrations/ ← 0001–0011 (applied in order)
+k6/                  ← scan + copilot load tests
+docs/                ← ARCHITECTURE, SETUP, OPERATIONS, API, RELEASE, COMPLIANCE, SECURITY
 ```
 
 ## 9. Phase gate checklist (Phase 2)

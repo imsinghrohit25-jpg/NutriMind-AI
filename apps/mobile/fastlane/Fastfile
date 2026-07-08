@@ -1,0 +1,68 @@
+default_platform(:android)
+
+# ── Shared ────────────────────────────────────────────────────────────────────
+VERSION_CODE = ENV['BUILD_NUMBER'] || `git rev-list --count HEAD`.strip
+VERSION_NAME = ENV['VERSION_NAME'] || `git describe --tags --abbrev=0`.strip.sub('v', '')
+
+# ── Android ───────────────────────────────────────────────────────────────────
+platform :android do
+  desc 'Deploy AAB to Play Store at 10% staged rollout'
+  lane :deploy_staged do
+    upload_to_play_store(
+      track:              'production',
+      rollout:            '0.10',
+      aab:                '../build/app/outputs/bundle/release/app-release.aab',
+      release_status:     'inProgress',
+      version_code:       VERSION_CODE.to_i,
+      version_name:       VERSION_NAME,
+      skip_upload_apk:    true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc 'Deploy AAB to Play Store internal track (CI pre-release)'
+  lane :deploy_internal do
+    upload_to_play_store(
+      track:              'internal',
+      aab:                '../build/app/outputs/bundle/release/app-release.aab',
+      release_status:     'completed',
+      version_code:       VERSION_CODE.to_i,
+      version_name:       VERSION_NAME,
+      skip_upload_apk:    true,
+    )
+  end
+end
+
+# ── iOS ───────────────────────────────────────────────────────────────────────
+platform :ios do
+  desc 'Deploy IPA at 10% staged rollout on App Store'
+  lane :deploy_staged do
+    app_store_connect_api_key(
+      key_id:      ENV['APP_STORE_CONNECT_API_KEY_ID'],
+      issuer_id:   ENV['APP_STORE_CONNECT_API_ISSUER_ID'],
+      key_content: ENV['APP_STORE_CONNECT_API_KEY_CONTENT'],
+    )
+    upload_to_app_store(
+      ipa:                       '../build/ios/iphoneos/Runner.app',
+      phased_release:            true,
+      skip_metadata:             true,
+      skip_screenshots:          true,
+      submit_for_review:         false,  # manual review submit in App Store Connect
+      automatic_release:         false,
+    )
+  end
+
+  desc 'Upload to TestFlight'
+  lane :upload_to_testflight do
+    app_store_connect_api_key(
+      key_id:      ENV['APP_STORE_CONNECT_API_KEY_ID'],
+      issuer_id:   ENV['APP_STORE_CONNECT_API_ISSUER_ID'],
+      key_content: ENV['APP_STORE_CONNECT_API_KEY_CONTENT'],
+    )
+    pilot(
+      ipa:                     '../build/ios/iphoneos/Runner.app',
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
