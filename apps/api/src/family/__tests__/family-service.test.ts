@@ -65,8 +65,8 @@ describe('validateFamilyMealPlan', () => {
         }
         // profiles
         return chain({ data: [
-          { user_id: 'u1', diet_type: 'vegetarian',     allergens: [] },
-          { user_id: 'u2', diet_type: 'non-vegetarian', allergens: [] },
+          { id: 'u1', diet_type: 'vegetarian',      allergens: [] },
+          { id: 'u2', diet_type: 'non_vegetarian',  allergens: [] },
         ], error: null });
       }),
     } as any;
@@ -84,8 +84,8 @@ describe('validateFamilyMealPlan', () => {
         if (call === 1) return chain({ data: { user_id: 'u1' }, error: null });
         if (call === 2) return chain({ data: [{ user_id: 'u1' }, { user_id: 'u2' }], error: null });
         return chain({ data: [
-          { user_id: 'u1', diet_type: 'vegetarian', allergens: ['peanuts'] },
-          { user_id: 'u2', diet_type: 'vegetarian', allergens: ['dairy'] },
+          { id: 'u1', diet_type: 'vegetarian', allergens: ['peanuts'] },
+          { id: 'u2', diet_type: 'vegetarian', allergens: ['dairy'] },
         ], error: null });
       }),
     } as any;
@@ -104,8 +104,8 @@ describe('validateFamilyMealPlan', () => {
         if (call === 1) return chain({ data: { user_id: 'u1' }, error: null });
         if (call === 2) return chain({ data: [{ user_id: 'u1' }, { user_id: 'u2' }], error: null });
         return chain({ data: [
-          { user_id: 'u1', diet_type: 'vegetarian', allergens: [] },
-          { user_id: 'u2', diet_type: 'vegetarian', allergens: [] },
+          { id: 'u1', diet_type: 'vegetarian', allergens: [] },
+          { id: 'u2', diet_type: 'vegetarian', allergens: [] },
         ], error: null });
       }),
     } as any;

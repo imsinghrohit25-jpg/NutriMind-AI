@@ -1,16 +1,20 @@
 // Health Data Platform routes — Phase 13.
-// POST /api/v1/health/metrics/upload  — mobile → server batch upload (HealthKit/Health Connect)
-// GET  /api/v1/health/metrics         — fetch user's health metrics
-// GET  /api/v1/health/consents        — get consent state for all metric types
-// POST /api/v1/health/consents/grant  — grant per-type consent
-// POST /api/v1/health/consents/revoke — revoke + delete data
-// GET  /api/v1/health/energy-adjustment — today's adjustment for daily dashboard
-// POST /api/v1/health/oauth/fitbit/callback — exchange Fitbit auth code
-// POST /api/v1/health/oauth/garmin/callback — exchange Garmin auth code
-// DELETE /api/v1/health/oauth/:provider    — disconnect provider
+// Registered with prefix '/v1' in routes/v1/index.ts — real reachable paths are
+// `/v1/health/*` (this file previously hardcoded `/api/v1/health/*`, which never resolved to
+// anything real; read a non-existent `req.userId`, so every handler always 401'd; and took a
+// 2-arg `(fastify, supabase)` signature Fastify's `.register()` cannot supply. See ADR-0022.)
+// POST /v1/health/metrics/upload  — mobile → server batch upload (HealthKit/Health Connect)
+// GET  /v1/health/metrics         — fetch user's health metrics
+// GET  /v1/health/consents        — get consent state for all metric types
+// POST /v1/health/consents/grant  — grant per-type consent
+// POST /v1/health/consents/revoke — revoke + delete data
+// GET  /v1/health/energy-adjustment — today's adjustment for daily dashboard
+// POST /v1/health/oauth/fitbit/callback — exchange Fitbit auth code
+// POST /v1/health/oauth/garmin/callback — exchange Garmin auth code
+// DELETE /v1/health/oauth/:provider    — disconnect provider
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { requireAuth } from '../../plugins/auth.js';
 import { upsertHealthMetrics } from '../../health/dedup.js';
 import { grantConsent, revokeConsent, getConsents } from '../../health/consent.js';
 import { computeEnergyAdjustment } from '../../health/energy-adjustment.js';
@@ -19,17 +23,12 @@ import { exchangeGarminCode } from '../../health/providers/garmin.js';
 import type { HealthMetric, MetricType, SourcePlatform } from '../../health/types.js';
 import type { ActivityLevel } from '../../engines/personalization/targets.js';
 
-type AuthedRequest = FastifyRequest & { userId?: string };
-
-export async function registerHealthDataRoutes(
-  fastify:  FastifyInstance,
-  supabase: SupabaseClient,
-): Promise<void> {
+export default async function healthDataRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Upload batch of metrics from on-device platforms (HealthKit / Health Connect)
-  fastify.post('/api/v1/health/metrics/upload', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/health/metrics/upload', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const body = req.body as {
       metrics: Array<{
@@ -62,25 +61,26 @@ export async function registerHealthDataRoutes(
       syncBatch:      m.syncBatch,
     }));
 
-    const result = await upsertHealthMetrics(metrics, supabase);
+    const result = await upsertHealthMetrics(metrics, fastify.supabase);
     return reply.send(result);
   });
 
   // Fetch health metrics
-  fastify.get('/api/v1/health/metrics', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/health/metrics', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { metricType, from, to, limit } = req.query as {
       metricType?: string; from?: string; to?: string; limit?: string;
     };
 
-    let query = supabase
+    const parsedLimit = parseInt(limit ?? '100', 10);
+    let query = fastify.supabase
       .from('health_metrics')
       .select('*')
       .eq('user_id', userId)
       .order('start_time', { ascending: false })
-      .limit(parseInt(limit ?? '100', 10));
+      .limit(Number.isFinite(parsedLimit) ? parsedLimit : 100);
 
     if (metricType) query = query.eq('metric_type', metricType);
     if (from)       query = query.gte('start_time', from);
@@ -92,35 +92,32 @@ export async function registerHealthDataRoutes(
   });
 
   // Consent state
-  fastify.get('/api/v1/health/consents', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
-    const consents = await getConsents(userId, supabase);
+  fastify.get('/health/consents', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const consents = await getConsents(req.user.id, fastify.supabase);
     return reply.send({ consents });
   });
 
-  fastify.post('/api/v1/health/consents/grant', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/health/consents/grant', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
     const { metricType } = req.body as { metricType: MetricType };
     if (!metricType) return reply.code(400).send({ error: 'metricType required' });
-    await grantConsent(userId, metricType, supabase);
+    await grantConsent(req.user.id, metricType, fastify.supabase);
     return reply.send({ granted: true, metricType });
   });
 
-  fastify.post('/api/v1/health/consents/revoke', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/health/consents/revoke', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
     const { metricType } = req.body as { metricType: MetricType };
     if (!metricType) return reply.code(400).send({ error: 'metricType required' });
-    const result = await revokeConsent(userId, metricType, supabase);
+    const result = await revokeConsent(req.user.id, metricType, fastify.supabase);
     return reply.send({ revoked: true, metricType, deletedRows: result.deletedRows });
   });
 
   // Energy adjustment for daily dashboard
-  fastify.get('/api/v1/health/energy-adjustment', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/health/energy-adjustment', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { tdee, activityLevel, date } = req.query as {
       tdee?: string; activityLevel?: string; date?: string;
@@ -129,12 +126,16 @@ export async function registerHealthDataRoutes(
     if (!tdee || !activityLevel) {
       return reply.code(400).send({ error: 'tdee and activityLevel required' });
     }
+    const tdeeKcal = parseInt(tdee, 10);
+    if (!Number.isFinite(tdeeKcal)) {
+      return reply.code(400).send({ error: 'tdee must be a number' });
+    }
 
     const today       = date ?? new Date().toISOString().slice(0, 10);
     const startOfDay  = new Date(today + 'T00:00:00Z');
     const endOfDay    = new Date(today + 'T23:59:59Z');
 
-    const { data: energyRows } = await supabase
+    const { data: energyRows } = await fastify.supabase
       .from('health_metrics')
       .select('value')
       .eq('user_id', userId)
@@ -142,10 +143,10 @@ export async function registerHealthDataRoutes(
       .gte('start_time', startOfDay.toISOString())
       .lte('start_time', endOfDay.toISOString());
 
-    const measured = (energyRows ?? []).reduce((s, r) => s + (r.value as number), 0);
+    const measured = (energyRows ?? []).reduce((s, r) => s + (Number(r.value) || 0), 0);
 
     const result = computeEnergyAdjustment({
-      tdeeKcal:           parseInt(tdee, 10),
+      tdeeKcal,
       activityLevel:      activityLevel as ActivityLevel,
       measuredActiveKcal: Math.round(measured),
       date:               today,
@@ -155,9 +156,9 @@ export async function registerHealthDataRoutes(
   });
 
   // Fitbit OAuth callback
-  fastify.post('/api/v1/health/oauth/fitbit/callback', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/health/oauth/fitbit/callback', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { code, redirectUri, codeVerifier } = req.body as {
       code: string; redirectUri: string; codeVerifier: string;
@@ -165,7 +166,7 @@ export async function registerHealthDataRoutes(
 
     const tokens = await exchangeFitbitCode(code, redirectUri, codeVerifier);
 
-    await supabase.from('oauth_tokens').upsert({
+    await fastify.supabase.from('oauth_tokens').upsert({
       user_id:          userId,
       provider:         'fitbit',
       access_token:     tokens.accessToken,
@@ -179,14 +180,14 @@ export async function registerHealthDataRoutes(
   });
 
   // Garmin OAuth callback
-  fastify.post('/api/v1/health/oauth/garmin/callback', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/health/oauth/garmin/callback', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { code, redirectUri } = req.body as { code: string; redirectUri: string };
     const tokens = await exchangeGarminCode(code, redirectUri);
 
-    await supabase.from('oauth_tokens').upsert({
+    await fastify.supabase.from('oauth_tokens').upsert({
       user_id:       userId,
       provider:      'garmin',
       access_token:  tokens.accessToken,
@@ -199,13 +200,12 @@ export async function registerHealthDataRoutes(
   });
 
   // Disconnect a provider
-  fastify.delete('/api/v1/health/oauth/:provider', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.delete('/health/oauth/:provider', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
     const { provider } = req.params as { provider: string };
 
-    await supabase.from('oauth_tokens').delete()
-      .eq('user_id', userId).eq('provider', provider);
+    await fastify.supabase.from('oauth_tokens').delete()
+      .eq('user_id', req.user.id).eq('provider', provider);
 
     return reply.send({ disconnected: true, provider });
   });

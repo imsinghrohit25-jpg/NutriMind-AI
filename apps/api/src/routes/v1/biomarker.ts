@@ -1,34 +1,33 @@
 // Biomarker platform routes — Phase 14.
-// POST /api/v1/biomarker/lab-reports/upload — upload lab report PDF/image
-// GET  /api/v1/biomarker/lab-results        — fetch results with optional filter
-// GET  /api/v1/biomarker/lab-results/:type/history — time-series for one biomarker
-// GET  /api/v1/biomarker/types              — registry
-// POST /api/v1/biomarker/lab-results/manual — manual entry
-// GET  /api/v1/biomarker/glucose/readings   — CGM readings
-// GET  /api/v1/biomarker/glucose/tir        — time-in-range stats
-// POST /api/v1/biomarker/oauth/dexcom/callback — Dexcom OAuth exchange
-// DELETE /api/v1/biomarker/oauth/dexcom     — disconnect Dexcom
+// Registered with prefix '/v1' in routes/v1/index.ts — real reachable paths are
+// `/v1/biomarker/*` (this file previously hardcoded `/api/v1/biomarker/*`, which never
+// resolved to anything real; read a non-existent `req.userId`, so every handler always 401'd;
+// and took a 3-arg `(fastify, supabase, gateway)` signature Fastify's `.register()` cannot
+// supply — `supabase` would have received the register options object instead of a real
+// client. See ADR-0022.)
+// POST /v1/biomarker/lab-reports/upload — upload lab report PDF/image
+// GET  /v1/biomarker/lab-results        — fetch results with optional filter
+// GET  /v1/biomarker/lab-results/:type/history — time-series for one biomarker
+// GET  /v1/biomarker/types              — registry
+// POST /v1/biomarker/lab-results/manual — manual entry
+// GET  /v1/biomarker/glucose/readings   — CGM readings
+// GET  /v1/biomarker/glucose/tir        — time-in-range stats
+// POST /v1/biomarker/oauth/dexcom/callback — Dexcom OAuth exchange
+// DELETE /v1/biomarker/oauth/dexcom     — disconnect Dexcom
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { GatewayRouter } from '../../gateway/router.js';
+import { requireAuth } from '../../plugins/auth.js';
 import { parseAndPersistLabReport } from '../../biomarker/lab-ocr-parser.js';
 import { exchangeDexcomCode, computeTimeInRange } from '../../biomarker/dexcom.js';
 import { flagLabResults } from '../../biomarker/flag-engine.js';
 import type { BiomarkerType } from '../../biomarker/types.js';
 
-type AuthedRequest = FastifyRequest & { userId?: string };
-
-export async function registerBiomarkerRoutes(
-  fastify:  FastifyInstance,
-  supabase: SupabaseClient,
-  gateway:  GatewayRouter,
-): Promise<void> {
+export default async function biomarkerRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ── Lab report upload (multipart PDF/image → OCR → parse) ────────────────
-  fastify.post('/api/v1/biomarker/lab-reports/upload', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/biomarker/lab-reports/upload', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const body = req.body as {
       reportDate:  string;
@@ -41,7 +40,7 @@ export async function registerBiomarkerRoutes(
     if (!body?.ocrText)    return reply.code(400).send({ error: 'ocrText required' });
 
     // Create lab report record
-    const { data: report, error: reportErr } = await supabase
+    const { data: report, error: reportErr } = await fastify.supabase
       .from('lab_reports')
       .insert({
         user_id:      userId,
@@ -58,14 +57,15 @@ export async function registerBiomarkerRoutes(
       return reply.code(500).send({ error: reportErr?.message ?? 'Insert failed' });
     }
 
-    // Parse + persist (async — return reportId immediately)
+    // Parse + persist (async — return reportId immediately). gateway is optional here —
+    // parseAndPersistLabReport falls back to regex-only extraction when absent.
     parseAndPersistLabReport({
       labReportId: report.id as string,
       userId,
       ocrText:     body.ocrText,
       reportDate:  body.reportDate,
-      supabase,
-      gateway,
+      supabase:    fastify.supabase,
+      gateway:     fastify.gateway ?? undefined,
     }).catch((err) => {
       console.error('[biomarker] parse error:', err);
     });
@@ -74,12 +74,12 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── Lab report parse status ───────────────────────────────────────────────
-  fastify.get('/api/v1/biomarker/lab-reports/:id', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/biomarker/lab-reports/:id', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
     const { id } = req.params as { id: string };
 
-    const { data, error } = await supabase
+    const { data, error } = await fastify.supabase
       .from('lab_reports')
       .select('id, report_date, lab_name, parse_status, parse_error, created_at')
       .eq('id', id)
@@ -91,20 +91,21 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── Lab results ───────────────────────────────────────────────────────────
-  fastify.get('/api/v1/biomarker/lab-results', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/biomarker/lab-results', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { biomarkerType, from, to, limit } = req.query as {
       biomarkerType?: string; from?: string; to?: string; limit?: string;
     };
 
-    let query = supabase
+    const parsedLimit = parseInt(limit ?? '100', 10);
+    let query = fastify.supabase
       .from('lab_results')
       .select('*')
       .eq('user_id', userId)
       .order('measured_at', { ascending: false })
-      .limit(parseInt(limit ?? '100', 10));
+      .limit(Number.isFinite(parsedLimit) ? parsedLimit : 100);
 
     if (biomarkerType) query = query.eq('biomarker_type', biomarkerType);
     if (from)          query = query.gte('measured_at', from);
@@ -114,7 +115,7 @@ export async function registerBiomarkerRoutes(
     if (error) return reply.code(500).send({ error: error.message });
 
     // Fetch registry for flagging
-    const { data: registry } = await supabase.from('biomarker_types').select('*');
+    const { data: registry } = await fastify.supabase.from('biomarker_types').select('*');
     const biomarkerTypes: BiomarkerType[] = (registry ?? []).map((r) => ({
       id:          r.id as string,
       displayName: r.display_name as string,
@@ -133,12 +134,12 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── Time-series for a single biomarker ───────────────────────────────────
-  fastify.get('/api/v1/biomarker/lab-results/:type/history', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/biomarker/lab-results/:type/history', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
     const { type } = req.params as { type: string };
 
-    const { data, error } = await supabase
+    const { data, error } = await fastify.supabase
       .from('lab_results')
       .select('value, unit, measured_at, source, flags')
       .eq('user_id', userId)
@@ -150,16 +151,16 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── Biomarker registry ────────────────────────────────────────────────────
-  fastify.get('/api/v1/biomarker/types', async (_req, reply: FastifyReply) => {
-    const { data, error } = await supabase.from('biomarker_types').select('*').order('panel').order('display_name');
+  fastify.get('/biomarker/types', async (_req, reply: FastifyReply) => {
+    const { data, error } = await fastify.supabase.from('biomarker_types').select('*').order('panel').order('display_name');
     if (error) return reply.code(500).send({ error: error.message });
     return reply.send({ types: data });
   });
 
   // ── Manual lab result entry ───────────────────────────────────────────────
-  fastify.post('/api/v1/biomarker/lab-results/manual', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/biomarker/lab-results/manual', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const body = req.body as {
       biomarkerType: string; value: number; unit: string;
@@ -170,7 +171,7 @@ export async function registerBiomarkerRoutes(
       return reply.code(400).send({ error: 'biomarkerType, value, measuredAt required' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await fastify.supabase
       .from('lab_results')
       .insert({
         user_id:        userId,
@@ -190,18 +191,19 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── CGM glucose readings ──────────────────────────────────────────────────
-  fastify.get('/api/v1/biomarker/glucose/readings', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/biomarker/glucose/readings', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { from, to, limit } = req.query as { from?: string; to?: string; limit?: string };
 
-    let query = supabase
+    const parsedLimit = parseInt(limit ?? '288', 10); // 288 = 24h of 5-min readings
+    let query = fastify.supabase
       .from('glucose_readings')
       .select('*')
       .eq('user_id', userId)
       .order('reading_time', { ascending: false })
-      .limit(parseInt(limit ?? '288', 10));   // 288 = 24h of 5-min readings
+      .limit(Number.isFinite(parsedLimit) ? parsedLimit : 288);
 
     if (from) query = query.gte('reading_time', from);
     if (to)   query = query.lte('reading_time', to);
@@ -212,30 +214,31 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── Time-in-range stats ───────────────────────────────────────────────────
-  fastify.get('/api/v1/biomarker/glucose/tir', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.get('/biomarker/glucose/tir', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
     const { from, to } = req.query as { from?: string; to?: string };
     const fromDate = from ? new Date(from) : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const toDate   = to   ? new Date(to)   : new Date();
 
-    const stats = await computeTimeInRange(userId, fromDate, toDate, supabase);
+    const stats = await computeTimeInRange(userId, fromDate, toDate, fastify.supabase);
     return reply.send(stats);
   });
 
   // ── Dexcom OAuth callback ─────────────────────────────────────────────────
-  fastify.post('/api/v1/biomarker/oauth/dexcom/callback', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
+  fastify.post('/biomarker/oauth/dexcom/callback', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    const userId = req.user.id;
 
-    const { code, redirectUri, codeVerifier } = req.body as {
-      code: string; redirectUri: string; codeVerifier: string;
-    };
+    const body = req.body as { code?: string; redirectUri?: string; codeVerifier?: string };
+    if (!body?.code || !body?.redirectUri || !body?.codeVerifier) {
+      return reply.code(400).send({ error: 'code, redirectUri, codeVerifier required' });
+    }
 
-    const tokens = await exchangeDexcomCode(code, redirectUri, codeVerifier);
+    const tokens = await exchangeDexcomCode(body.code, body.redirectUri, body.codeVerifier);
 
-    await supabase.from('oauth_tokens').upsert({
+    await fastify.supabase.from('oauth_tokens').upsert({
       user_id:       userId,
       provider:      'dexcom',
       access_token:  tokens.accessToken,
@@ -248,10 +251,9 @@ export async function registerBiomarkerRoutes(
   });
 
   // ── Disconnect Dexcom ─────────────────────────────────────────────────────
-  fastify.delete('/api/v1/biomarker/oauth/dexcom', async (req: AuthedRequest, reply: FastifyReply) => {
-    const userId = req.userId;
-    if (!userId) return reply.code(401).send({ error: 'Unauthenticated' });
-    await supabase.from('oauth_tokens').delete().eq('user_id', userId).eq('provider', 'dexcom');
+  fastify.delete('/biomarker/oauth/dexcom', async (req: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(req);
+    await fastify.supabase.from('oauth_tokens').delete().eq('user_id', req.user.id).eq('provider', 'dexcom');
     return reply.send({ disconnected: true, provider: 'dexcom' });
   });
 }

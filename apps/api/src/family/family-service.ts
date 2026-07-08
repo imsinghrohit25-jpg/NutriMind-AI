@@ -124,12 +124,14 @@ export async function validateFamilyMealPlan(opts: {
 
   if (!members?.length) return { valid: true, warnings: [] };
 
-  // Get user profiles for each member to check dietary restrictions
+  // Get user profiles for each member to check dietary restrictions.
+  // Table is `users_profiles` (not `user_profiles`) and its PK IS the user id — there is no
+  // separate `user_id` column (migration 0002).
   const memberIds = (members as FamilyMember[]).map((m) => m.user_id);
   const { data: profiles } = await supabase
-    .from('user_profiles')
-    .select('user_id, diet_type, allergens')
-    .in('user_id', memberIds);
+    .from('users_profiles')
+    .select('id, diet_type, allergens')
+    .in('id', memberIds);
 
   const warnings: string[] = [];
   const dietTypes = new Set<string>();
@@ -140,11 +142,13 @@ export async function validateFamilyMealPlan(opts: {
     if (Array.isArray(p.allergens)) allAllergens.push(...(p.allergens as string[]));
   }
 
+  // `diet_type`'s real CHECK constraint values (migration 0002) use underscores:
+  // 'non_vegetarian', not 'non-vegetarian'.
   // If any member is vegetarian, plan must be vegetarian
-  if (dietTypes.has('vegetarian') && dietTypes.has('non-vegetarian')) {
+  if (dietTypes.has('vegetarian') && dietTypes.has('non_vegetarian')) {
     warnings.push('Group has mixed dietary types: vegetarian + non-vegetarian members. Consider separate plans.');
   }
-  if (dietTypes.has('vegan') && !dietTypes.has('non-vegetarian')) {
+  if (dietTypes.has('vegan') && !dietTypes.has('non_vegetarian')) {
     warnings.push('Some members are vegan — ensure no dairy in shared meals.');
   }
   if (allAllergens.length > 0) {

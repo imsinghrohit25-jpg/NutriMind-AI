@@ -1,15 +1,20 @@
 // Meal Planner + Smart Grocery Planner routes.
+// Registered with prefix '/v1' in routes/v1/index.ts — real reachable paths are
+// `/v1/planner/*` (this file previously hardcoded `/api/v1/planner/*`, which never resolved to
+// anything real, and read `request.user` without a null guard — an unauthenticated request
+// would throw instead of 401; see ADR-0022).
 
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { requireAuth } from '../../plugins/auth.js';
 import { generateAndSaveMealPlan } from '../../planner/meal-plan-generator.js';
 import { buildGroceryList, saveGroceryList } from '../../planner/grocery-optimizer.js';
 import type { GeneratedRecipe } from '../../restaurant/recipe-generator.js';
 
-export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
+export default async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ── Generate AI meal plan ─────────────────────────────────────────────────
-  fastify.post('/api/v1/planner/generate', async (request, reply) => {
-    const user = (request as any).user as { id: string };
+  fastify.post('/planner/generate', async (request: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(request);
     const body = request.body as {
       title?:          string;
       startDate:       string;
@@ -20,10 +25,14 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
       allergens?:      string[];
     };
 
+    if (!fastify.gateway) {
+      return reply.status(503).send({ error: 'AI gateway not configured; set at least one LLM provider key' });
+    }
+
     const durationDays = Math.min(body.durationDays ?? 7, 30); // cap at 30
 
     const { planId, days, warnings } = await generateAndSaveMealPlan({
-      userId:    user.id,
+      userId:    request.user.id,
       title:     body.title ?? `Meal Plan ${body.startDate}`,
       startDate: body.startDate,
       constraints: {
@@ -33,22 +42,20 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
         allergens:     body.allergens ?? [],
         durationDays,
       },
-      gateway:  (fastify as any).gateway,
-      supabase: (fastify as any).supabase,
+      gateway:  fastify.gateway,
+      supabase: fastify.supabase,
     });
 
     reply.status(201).send({ planId, days, warnings });
   });
 
   // ── List meal plans ───────────────────────────────────────────────────────
-  fastify.get('/api/v1/planner/plans', async (request, reply) => {
-    const user    = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-
-    const { data, error } = await supabase
+  fastify.get('/planner/plans', async (request: FastifyRequest, reply: FastifyReply) => {
+    requireAuth(request);
+    const { data, error } = await fastify.supabase
       .from('meal_plans')
       .select('id, title, start_date, end_date, diet_type, kcal_target, status, generated_by, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .order('created_at', { ascending: false });
 
     if (error) return reply.status(500).send({ error: error.message });
@@ -56,21 +63,20 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Get single plan with items ─────────────────────────────────────────────
-  fastify.get<{ Params: { planId: string } }>('/api/v1/planner/plans/:planId', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
+  fastify.get<{ Params: { planId: string } }>('/planner/plans/:planId', async (request, reply) => {
+    requireAuth(request);
     const { planId } = request.params;
 
-    const { data: plan, error } = await supabase
+    const { data: plan, error } = await fastify.supabase
       .from('meal_plans')
       .select('*')
       .eq('id', planId)
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .single();
 
     if (error || !plan) return reply.status(404).send({ error: 'Plan not found' });
 
-    const { data: items } = await supabase
+    const { data: items } = await fastify.supabase
       .from('meal_plan_items')
       .select('*')
       .eq('meal_plan_id', planId)
@@ -81,14 +87,13 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Mark meal complete ─────────────────────────────────────────────────────
-  fastify.patch<{ Params: { itemId: string } }>('/api/v1/planner/items/:itemId/complete', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const { data, error } = await supabase
+  fastify.patch<{ Params: { itemId: string } }>('/planner/items/:itemId/complete', async (request, reply) => {
+    requireAuth(request);
+    const { data, error } = await fastify.supabase
       .from('meal_plan_items')
       .update({ is_complete: true })
       .eq('id', request.params.itemId)
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .select('id')
       .single();
 
@@ -97,22 +102,21 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Generate grocery list from plan ───────────────────────────────────────
-  fastify.post<{ Params: { planId: string } }>('/api/v1/planner/plans/:planId/grocery', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
+  fastify.post<{ Params: { planId: string } }>('/planner/plans/:planId/grocery', async (request, reply) => {
+    requireAuth(request);
     const { planId } = request.params;
 
-    const { data: plan, error: planErr } = await supabase
+    const { data: plan, error: planErr } = await fastify.supabase
       .from('meal_plans')
       .select('id, title')
       .eq('id', planId)
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .single();
 
     if (planErr || !plan) return reply.status(404).send({ error: 'Plan not found' });
 
     // Collect all recipe_data JSONs from meal plan items
-    const { data: items, error: itemErr } = await supabase
+    const { data: items, error: itemErr } = await fastify.supabase
       .from('meal_plan_items')
       .select('recipe_data')
       .eq('meal_plan_id', planId);
@@ -128,31 +132,29 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
     const currencyCode = groceryItems[0]?.currencyCode ?? 'INR';
 
     const listId = await saveGroceryList({
-      userId:      user.id,
+      userId:      request.user.id,
       title:       `Grocery — ${(plan as any).title}`,
       mealPlanId:  planId,
       items:       groceryItems,
-      supabase,
+      supabase:    fastify.supabase,
     });
 
     reply.status(201).send({ listId, items: groceryItems, totalEstimatedPrice, currencyCode });
   });
 
   // ── Get grocery list ───────────────────────────────────────────────────────
-  fastify.get<{ Params: { listId: string } }>('/api/v1/planner/grocery/:listId', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-
-    const { data: list, error } = await supabase
+  fastify.get<{ Params: { listId: string } }>('/planner/grocery/:listId', async (request, reply) => {
+    requireAuth(request);
+    const { data: list, error } = await fastify.supabase
       .from('grocery_lists')
       .select('*')
       .eq('id', request.params.listId)
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .single();
 
     if (error || !list) return reply.status(404).send({ error: 'List not found' });
 
-    const { data: items } = await supabase
+    const { data: items } = await fastify.supabase
       .from('grocery_items')
       .select('*')
       .eq('grocery_list_id', request.params.listId)
@@ -162,23 +164,24 @@ export async function plannerRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Toggle grocery item purchased ─────────────────────────────────────────
-  fastify.patch<{ Params: { itemId: string } }>('/api/v1/planner/grocery/items/:itemId/toggle', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-
-    const { data: existing } = await supabase
+  fastify.patch<{ Params: { itemId: string } }>('/planner/grocery/items/:itemId/toggle', async (request, reply) => {
+    requireAuth(request);
+    const { data: existing } = await fastify.supabase
       .from('grocery_items')
       .select('is_purchased')
       .eq('id', request.params.itemId)
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .single();
 
     if (!existing) return reply.status(404).send({ error: 'Item not found' });
 
-    await supabase
+    // Repeat the ownership filter on the write itself (defense in depth — the preceding SELECT
+    // already 404s for another user's item, but the UPDATE shouldn't rely on that alone).
+    await fastify.supabase
       .from('grocery_items')
       .update({ is_purchased: !(existing as any).is_purchased })
-      .eq('id', request.params.itemId);
+      .eq('id', request.params.itemId)
+      .eq('user_id', request.user.id);
 
     reply.send({ ok: true });
   });

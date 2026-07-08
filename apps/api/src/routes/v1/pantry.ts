@@ -1,39 +1,44 @@
 // Pantry Intelligence routes.
+// Registered with prefix '/v1' in routes/v1/index.ts — real reachable paths are
+// `/v1/pantry/*` (this file previously hardcoded `/api/v1/pantry/*`, which never resolved to
+// anything real, and read `request.user` without a null guard — an unauthenticated request
+// would throw instead of 401; see ADR-0022).
 
 import type { FastifyInstance } from 'fastify';
+import { requireAuth } from '../../plugins/auth.js';
 import { parseAndSavePantryItems } from '../../pantry/receipt-ocr.js';
 import { getExpiryAlerts } from '../../pantry/expiry-tracker.js';
 
-export async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
+export default async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
 
   // ── Upload receipt text (OCR already done on-device) ─────────────────────
-  fastify.post('/api/v1/pantry/receipts', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const body     = request.body as { text: string };
+  fastify.post('/pantry/receipts', async (request, reply) => {
+    requireAuth(request);
+    const body = request.body as { text: string };
 
     if (!body.text?.trim()) return reply.status(400).send({ error: 'text is required' });
 
+    // gateway is optional here — parseReceipt() degrades to a regex-only parse when absent
+    // (no LLM key configured), it does not require one like scans.ts's meal-photo route does.
     const { receiptId, itemCount } = await parseAndSavePantryItems({
-      userId:  user.id,
+      userId:  request.user.id,
       text:    body.text,
-      supabase,
-      gateway: (fastify as any).gateway,
+      supabase: fastify.supabase,
+      gateway: fastify.gateway ?? undefined,
     });
 
     reply.status(201).send({ receiptId, itemCount });
   });
 
   // ── List pantry items ──────────────────────────────────────────────────────
-  fastify.get('/api/v1/pantry/items', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const query    = request.query as { consumed?: string; category?: string };
+  fastify.get('/pantry/items', async (request, reply) => {
+    requireAuth(request);
+    const query = request.query as { consumed?: string; category?: string };
 
-    let q = supabase
+    let q = fastify.supabase
       .from('pantry_items')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .order('expiry_date', { nullsFirst: false });
 
     if (query.consumed !== 'true') q = q.eq('is_consumed', false);
@@ -45,18 +50,17 @@ export async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Add pantry item manually ───────────────────────────────────────────────
-  fastify.post('/api/v1/pantry/items', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const body     = request.body as {
+  fastify.post('/pantry/items', async (request, reply) => {
+    requireAuth(request);
+    const body = request.body as {
       name: string; quantity: number; unit: string;
       category?: string; expiryDate?: string; purchaseDate?: string; estimatedRs?: number;
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await fastify.supabase
       .from('pantry_items')
       .insert({
-        user_id:       user.id,
+        user_id:       request.user.id,
         name:          body.name,
         quantity:      body.quantity,
         unit:          body.unit,
@@ -74,10 +78,9 @@ export async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Update item (quantity, consumed, expiry) ──────────────────────────────
-  fastify.patch<{ Params: { itemId: string } }>('/api/v1/pantry/items/:itemId', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const body     = request.body as Partial<{
+  fastify.patch<{ Params: { itemId: string } }>('/pantry/items/:itemId', async (request, reply) => {
+    requireAuth(request);
+    const body = request.body as Partial<{
       quantity: number; unit: string; isConsumed: boolean; expiryDate: string;
     }>;
 
@@ -87,11 +90,11 @@ export async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
     if (body.isConsumed  !== undefined) update.is_consumed  = body.isConsumed;
     if (body.expiryDate  !== undefined) update.expiry_date  = body.expiryDate;
 
-    const { data, error } = await supabase
+    const { data, error } = await fastify.supabase
       .from('pantry_items')
       .update(update)
       .eq('id', request.params.itemId)
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .select()
       .single();
 
@@ -100,34 +103,32 @@ export async function pantryRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // ── Delete pantry item ─────────────────────────────────────────────────────
-  fastify.delete<{ Params: { itemId: string } }>('/api/v1/pantry/items/:itemId', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    await supabase.from('pantry_items').delete()
+  fastify.delete<{ Params: { itemId: string } }>('/pantry/items/:itemId', async (request, reply) => {
+    requireAuth(request);
+    await fastify.supabase.from('pantry_items').delete()
       .eq('id', request.params.itemId)
-      .eq('user_id', user.id);
+      .eq('user_id', request.user.id);
     reply.send({ ok: true });
   });
 
   // ── Expiry alerts ─────────────────────────────────────────────────────────
-  fastify.get('/api/v1/pantry/expiry', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const query    = request.query as { withinDays?: string };
-    const withinDays = parseInt(query.withinDays ?? '7', 10);
+  fastify.get('/pantry/expiry', async (request, reply) => {
+    requireAuth(request);
+    const query = request.query as { withinDays?: string };
+    const parsed = parseInt(query.withinDays ?? '7', 10);
+    const withinDays = Number.isFinite(parsed) ? parsed : 7;
 
-    const alerts = await getExpiryAlerts({ userId: user.id, withinDays, supabase });
+    const alerts = await getExpiryAlerts({ userId: request.user.id, withinDays, supabase: fastify.supabase });
     reply.send({ alerts });
   });
 
   // ── Receipt list ──────────────────────────────────────────────────────────
-  fastify.get('/api/v1/pantry/receipts', async (request, reply) => {
-    const user     = (request as any).user as { id: string };
-    const supabase = (fastify as any).supabase;
-    const { data, error } = await supabase
+  fastify.get('/pantry/receipts', async (request, reply) => {
+    requireAuth(request);
+    const { data, error } = await fastify.supabase
       .from('pantry_receipts')
       .select('id, store_name, bill_date, total_rs, items_count, status, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', request.user.id)
       .order('created_at', { ascending: false });
 
     if (error) return reply.status(500).send({ error: error.message });

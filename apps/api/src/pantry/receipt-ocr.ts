@@ -185,7 +185,7 @@ export async function parseAndSavePantryItems(opts: {
   if (rErr || !receiptRow) throw new Error(`pantry_receipts insert: ${rErr?.message}`);
 
   if (receipt.items.length > 0) {
-    await supabase.from('pantry_items').insert(
+    const { error: itemsErr } = await supabase.from('pantry_items').insert(
       receipt.items.map((item) => ({
         user_id:       userId,
         name:          item.name,
@@ -197,6 +197,7 @@ export async function parseAndSavePantryItems(opts: {
         source:        'receipt_ocr',
       })),
     );
+    if (itemsErr) throw new Error(`pantry_items insert: ${itemsErr.message}`);
   }
 
   return { receiptId: receiptRow.id as string, itemCount: receipt.items.length };

@@ -2,7 +2,7 @@
 
 BEGIN;
 
-ALTER TABLE user_profiles
+ALTER TABLE public.users_profiles
   DROP COLUMN IF EXISTS preferred_country,
   DROP COLUMN IF EXISTS detected_country;
 

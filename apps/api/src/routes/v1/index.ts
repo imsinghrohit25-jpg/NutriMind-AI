@@ -8,6 +8,13 @@ import scanRoutes from './scans.js';
 import flagRoutes from './flags.js';
 import privacyRoutes from './privacy.js';
 import dataRightsRoutes from './data-rights.js';
+import familyRoutes from './family.js';
+import restaurantRoutes from './restaurant.js';
+import plannerRoutes from './planner.js';
+import pantryRoutes from './pantry.js';
+import biomarkerRoutes from './biomarker.js';
+import healthDataRoutes from './health-data.js';
+import voiceRoutes from './voice.js';
 
 export async function registerV1Routes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRoutes, { prefix: '/v1' });
@@ -21,4 +28,19 @@ export async function registerV1Routes(fastify: FastifyInstance): Promise<void> 
   // existed since the original build but was never registered here; see ADR-0021.
   await fastify.register(privacyRoutes, { prefix: '/v1' });
   await fastify.register(dataRightsRoutes, { prefix: '/v1' });
+  // Route-registration audit (ADR-0022): family.ts, restaurant.ts, planner.ts, pantry.ts,
+  // biomarker.ts, health-data.ts, and voice.ts all existed since the original build with real
+  // handler code but were never registered here — completely unreachable. Each also had at
+  // least one of: a non-default/multi-arg export signature incompatible with
+  // `fastify.register()`, a hardcoded `/api/v1/...` path (this file's `{ prefix: '/v1' }`
+  // resolves paths to `/v1/...`, not `/api/v1/...`), a `req.userId` property `auth.ts` never
+  // sets, or (restaurant.ts, family.ts) references to non-existent tables/columns. All fixed;
+  // see ADR-0022 for the full defect list per file.
+  await fastify.register(familyRoutes, { prefix: '/v1' });
+  await fastify.register(restaurantRoutes, { prefix: '/v1' });
+  await fastify.register(plannerRoutes, { prefix: '/v1' });
+  await fastify.register(pantryRoutes, { prefix: '/v1' });
+  await fastify.register(biomarkerRoutes, { prefix: '/v1' });
+  await fastify.register(healthDataRoutes, { prefix: '/v1' });
+  await fastify.register(voiceRoutes, { prefix: '/v1' });
 }
