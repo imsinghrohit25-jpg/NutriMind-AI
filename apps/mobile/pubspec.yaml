@@ -69,6 +69,10 @@ dependencies:
   # Image picker (lab report photo upload)
   image_picker: ^1.1.2
 
+  # Voice logging (STT + TTS — on-device, no API)
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
