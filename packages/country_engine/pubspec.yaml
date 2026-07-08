@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_riverpod: ^2.6.1
+  shared_preferences: ^2.3.3
   nutrimind_core:
     path: ../core
 

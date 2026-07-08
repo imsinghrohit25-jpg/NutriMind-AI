@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { requireAuth } from '../../plugins/auth.js';
 
 interface FlagRow {
-  key: string;
-  enabled: boolean;
+  key:          string;
+  enabled:      boolean;
   country_code: string | null;
-  rollout_pct: number;
+  rollout_pct:  number;
 }
 
 interface FlagsQuery {
@@ -22,17 +22,24 @@ export default async function flagRoutes(fastify: FastifyInstance): Promise<void
    */
   fastify.get<{ Querystring: FlagsQuery }>(
     '/flags',
-    { preHandler: [fastify.authenticate] },
+    {},
     async (request: FastifyRequest<{ Querystring: FlagsQuery }>, reply: FastifyReply) => {
-      const supabase = request.supabase as SupabaseClient;
-      const userId   = request.user.sub;
-      const country  = (request.query.country ?? '').toUpperCase() || null;
+      requireAuth(request);
+
+      const supabase = fastify.supabase;
+      const userId   = request.user.id;
+      // Use resolved request.country if available, else use query param
+      const country  = (
+        (request as any).country?.isoCode ??
+        request.query.country ??
+        ''
+      ).toUpperCase() || null;
 
       // Fetch all rows relevant to this country (global + country-specific)
       const { data, error } = await supabase
         .from('feature_flags')
         .select('key, enabled, country_code, rollout_pct')
-        .or(`country_code.is.null${country ? `,country_code.eq.${country}` : ''}`);
+        .or(`country_code.is.null${country && country !== 'GLOBAL' ? `,country_code.eq.${country}` : ''}`);
 
       if (error) {
         request.log.error({ error }, 'feature_flags fetch failed');
@@ -42,19 +49,19 @@ export default async function flagRoutes(fastify: FastifyInstance): Promise<void
       const rows = (data ?? []) as FlagRow[];
 
       // Build resolved map: country-specific rows win over global (null) rows
-      const global: Map<string, FlagRow>  = new Map();
-      const local:  Map<string, FlagRow>  = new Map();
+      const globalRows: Map<string, FlagRow> = new Map();
+      const localRows:  Map<string, FlagRow> = new Map();
 
       for (const row of rows) {
         if (row.country_code === null) {
-          global.set(row.key, row);
+          globalRows.set(row.key, row);
         } else {
-          local.set(row.key, row);
+          localRows.set(row.key, row);
         }
       }
 
       // Merge: local wins over global
-      const merged = new Map<string, FlagRow>([...global, ...local]);
+      const merged = new Map<string, FlagRow>([...globalRows, ...localRows]);
 
       // Apply rollout_pct via deterministic hash of userId+key
       const resolved: Record<string, boolean> = {};
@@ -64,7 +71,6 @@ export default async function flagRoutes(fastify: FastifyInstance): Promise<void
         } else if (row.rollout_pct >= 100) {
           resolved[key] = true;
         } else {
-          // Deterministic: hash(userId + key) % 100 < rollout_pct
           resolved[key] = deterministicBucket(userId, key) < row.rollout_pct;
         }
       }
@@ -80,7 +86,7 @@ function deterministicBucket(userId: string, flagKey: string): number {
   let   hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-    hash = hash >>> 0; // keep 32-bit unsigned
+    hash = hash >>> 0;
   }
   return hash % 100;
 }

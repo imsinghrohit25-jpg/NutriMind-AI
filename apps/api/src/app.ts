@@ -8,6 +8,8 @@ import rbacPlugin from './plugins/rbac.js';
 import rateLimitPlugin from './plugins/rate-limit.js';
 import otelPlugin from './plugins/otel.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
+import supabasePlugin from './plugins/supabase.js';
+import countryPlugin from './country/plugin.js';
 import { registerV1Routes } from './routes/v1/index.js';
 import { buildRouter, type GatewayRouter } from './gateway/router.js';
 import { CostLogger } from './gateway/cost-log.js';
@@ -54,10 +56,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await fastify.register(errorHandlerPlugin);
+  await fastify.register(supabasePlugin);
   await fastify.register(authPlugin);
   await fastify.register(rbacPlugin);
   await fastify.register(rateLimitPlugin);
   await fastify.register(otelPlugin);
+  await fastify.register(countryPlugin);
 
   const sql = postgres(env.DATABASE_URL, {
     max: 10,
