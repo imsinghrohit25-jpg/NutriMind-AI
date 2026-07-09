@@ -37,6 +37,40 @@ export async function embedAndStore(
   return results;
 }
 
+/**
+ * Re-embeds a single already-ingested chunk by id — the `embed-knowledge-chunk` pg-boss job's
+ * real handler. Ingestion (`embedAndStore`) inserts text+embedding together for a fresh batch;
+ * this path is for backfill/re-embedding an existing row (e.g. after a model change), so it
+ * fetches the row's existing text/metadata rather than requiring the caller to resupply it.
+ */
+export async function embedChunkById(
+  chunkId: string,
+  supabase: SupabaseClient,
+  gateway: GatewayRouter,
+): Promise<EmbedResult> {
+  const { data: row, error } = await supabase
+    .from('knowledge_chunks')
+    .select('id, doc_id, title, source, year, text, metadata, corpus_version')
+    .eq('id', chunkId)
+    .single();
+
+  if (error || !row) {
+    return { chunkId, embedded: false, error: error?.message ?? 'chunk not found' };
+  }
+
+  const chunk: KnowledgeChunk = {
+    chunkId:  row.id as string,
+    docId:    row.doc_id as string,
+    title:    row.title as string,
+    source:   row.source as string,
+    year:     row.year as number,
+    text:     row.text as string,
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+  };
+
+  return embedOne(chunk, (row.corpus_version as string) ?? 'unknown', supabase, gateway);
+}
+
 async function embedOne(
   chunk: KnowledgeChunk,
   corpusVersion: string,

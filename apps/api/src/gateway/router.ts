@@ -21,6 +21,20 @@ import { AnthropicAdapter } from './adapters/anthropic.js';
 import { OpenAIAdapter } from './adapters/openai.js';
 import { GeminiAdapter } from './adapters/gemini.js';
 import { OpenAICompatAdapter } from './adapters/openai-compat.js';
+import { SemanticCache } from './semantic-cache.js';
+import { GatewayBackpressure } from './backpressure.js';
+import { classifyModelTier, isT0Eligible, renderT0Template } from './model-tier.js';
+
+export interface GatewayRouterOptions {
+  semanticCache?: SemanticCache;
+  backpressure?: GatewayBackpressure;
+  /** Phase 12 (§13.3) runaway-cost kill switch — when true, every T2-eligible request is forced
+   *  to T1 globally. Injected as a closure (not a supabase client) so this class stays decoupled
+   *  from any particular DB client; see gateway/cost-governance.ts for the real implementation
+   *  and jobs/registry.ts's ai-cost-budget-check job for what flips it. Omitted = never active,
+   *  i.e. byte-identical to pre-Phase-12 behavior. */
+  killSwitch?: () => Promise<boolean> | boolean;
+}
 
 export class GatewayRouter {
   private readonly breakers = new Map<string, CircuitBreaker>();
@@ -30,6 +44,7 @@ export class GatewayRouter {
     private readonly config: RoutingConfig,
     private readonly costLog: CostLogger,
     private readonly cache: GatewayCache,
+    private readonly opts: GatewayRouterOptions = {},
   ) {
     for (const providerName of providers.keys()) {
       this.breakers.set(providerName, new CircuitBreaker(providerName));
@@ -42,49 +57,99 @@ export class GatewayRouter {
   }
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
-    const cached = this.cache.get(request);
-    if (cached) {
-      await this.costLog.logFromLLMResponse(cached, request.tier, request.userId);
-      return cached;
+    // T0: fixed-form template, no provider call, no spend, no cache lookups needed at all.
+    if (isT0Eligible(request.intentTag)) {
+      const response: LLMResponse = {
+        content: renderT0Template(request.intentTag!),
+        provider: 't0-template',
+        model: 'deterministic-template',
+        promptTokens: 0,
+        completionTokens: 0,
+        costUsd: 0,
+        latencyMs: 0,
+        cached: false,
+        traceId: request.traceId,
+      };
+      await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+      return response;
     }
 
-    const policy = this.config[request.tier];
-    if (!policy) throw new Error(`No routing policy for tier: ${request.tier}`);
-
-    const targets: ModelTarget[] = [policy.primary, ...policy.fallbacks];
-    const errors: Error[] = [];
-
-    for (const target of targets) {
-      const provider = this.providers.get(target.provider);
-      if (!provider) continue;
-
-      const breaker = this.breakers.get(target.provider);
-      if (!breaker || breaker.isOpen()) {
-        errors.push(new ProviderUnavailableError(target.provider));
-        continue;
+    const backpressureSlot = this.opts.backpressure?.acquire(request.userId);
+    try {
+      const cached = this.cache.get(request);
+      if (cached) {
+        await this.costLog.logFromLLMResponse(cached, request.tier, request.userId);
+        return cached;
       }
 
-      try {
-        const response = await Promise.race([
-          breaker.call(() => provider.complete(request, target.model)),
-          this.rejectAfter(policy.timeoutMs, target.provider),
-        ]);
+      if (this.opts.semanticCache) {
+        const semanticHit = await this.opts.semanticCache.lookup(
+          request,
+          (text) => this.embedText(text, request.userId),
+        );
+        if (semanticHit) {
+          await this.costLog.logFromLLMResponse(semanticHit, request.tier, request.userId);
+          return semanticHit;
+        }
+      }
 
-        const policyResult = checkOutputPolicy(response.content);
-        if (!policyResult.ok) {
-          throw new OutputPolicyViolationError(policyResult.violations, response.content);
+      const policy = this.config[request.tier];
+      if (!policy) throw new Error(`No routing policy for tier: ${request.tier}`);
+
+      const killSwitchActive = (await this.opts.killSwitch?.()) ?? false;
+      const modelTier = classifyModelTier(request, killSwitchActive);
+      const targets: ModelTarget[] =
+        modelTier === 'T1' && policy.fast
+          ? [policy.fast, policy.primary, ...policy.fallbacks]
+          : [policy.primary, ...policy.fallbacks];
+      const errors: Error[] = [];
+
+      for (const target of targets) {
+        const provider = this.providers.get(target.provider);
+        if (!provider) continue;
+
+        const breaker = this.breakers.get(target.provider);
+        if (!breaker || breaker.isOpen()) {
+          errors.push(new ProviderUnavailableError(target.provider));
+          continue;
         }
 
-        this.cache.set(request, response);
-        await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
-        return response;
-      } catch (err: unknown) {
-        if (err instanceof OutputPolicyViolationError) throw err;
-        errors.push(err instanceof Error ? err : new Error(String(err)));
-      }
-    }
+        try {
+          const response = await Promise.race([
+            breaker.call(() => provider.complete(request, target.model)),
+            this.rejectAfter(policy.timeoutMs, target.provider),
+          ]);
 
-    throw new AllProvidersFailedError(request.tier, errors);
+          const policyResult = checkOutputPolicy(response.content);
+          if (!policyResult.ok) {
+            throw new OutputPolicyViolationError(policyResult.violations, response.content);
+          }
+
+          this.cache.set(request, response);
+          if (this.opts.semanticCache) {
+            // Known gap: this re-embeds the same query text lookup() just embedded on a miss
+            // (two embedding calls instead of one) — cheap relative to the completion call just
+            // made, but a real, documented cost, not a free operation. Reusing lookup()'s
+            // embedding here would remove it; not done yet.
+            await this.opts.semanticCache.store(request, response, (text) => this.embedText(text, request.userId));
+          }
+          await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+          return response;
+        } catch (err: unknown) {
+          if (err instanceof OutputPolicyViolationError) throw err;
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+
+      throw new AllProvidersFailedError(request.tier, errors);
+    } finally {
+      backpressureSlot?.release();
+    }
+  }
+
+  private async embedText(text: string, userId?: string): Promise<number[]> {
+    const resp = await this.embed({ input: text, traceId: crypto.randomUUID(), userId });
+    return resp.embeddings[0] ?? [];
   }
 
   async embed(request: EmbeddingRequest): Promise<EmbeddingResponse> {
@@ -138,6 +203,10 @@ export class GatewayRouter {
     }
     return states;
   }
+
+  getBackpressureStatus(): { inFlight: number } | null {
+    return this.opts.backpressure ? { inFlight: this.opts.backpressure.currentInFlight } : null;
+  }
 }
 
 export function buildRouter(opts: {
@@ -149,6 +218,7 @@ export function buildRouter(opts: {
   routingConfigPath: string;
   costLogger: CostLogger;
   cache: GatewayCache;
+  routerOptions?: GatewayRouterOptions;
 }): GatewayRouter {
   const providers = new Map<string, LLMProvider>();
 
@@ -169,5 +239,5 @@ export function buildRouter(opts: {
   }
 
   const config = GatewayRouter.loadConfig(opts.routingConfigPath);
-  return new GatewayRouter(providers, config, opts.costLogger, opts.cache);
+  return new GatewayRouter(providers, config, opts.costLogger, opts.cache, opts.routerOptions);
 }

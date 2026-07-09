@@ -34,6 +34,22 @@ export const LLMRequestSchema = z.object({
   traceId: z.string(),
   userId: z.string().uuid().optional(),
   idempotencyKey: z.string().optional(),
+  // Phase 12 (§13.3, model routing tiers + semantic cache). Both optional/additive — omitting
+  // either preserves every existing caller's behavior exactly.
+  //
+  // cacheScope: 'user' (default) means the response may contain personalized content and must
+  // never be served to a different user from the semantic cache (§13.3: "personalization-bearing
+  // responses are NEVER cached across users"). Only 'global' (purely informational, e.g. "what is
+  // sodium?") is eligible for the cross-user semantic cache.
+  cacheScope: z.enum(['user', 'global']).optional(),
+  // intentTag selects a T0 deterministic template (see gateway/model-tier.ts) when the caller
+  // knows the response is trivial and fixed-form — never inferred/guessed from message content,
+  // only ever set explicitly by the caller, per §12.1's "derived, never divined" discipline.
+  intentTag: z.string().optional(),
+  // Explicit low-complexity hint that permits T1 (fast/small model) routing instead of the
+  // tier's default T2 (frontier) target. Never inferred from content; the caller (which knows the
+  // intent it's asking about) sets this, e.g. "confirm this scan" vs "explain my weekly trend."
+  complexityHint: z.enum(['low', 'high']).optional(),
 });
 export type LLMRequest = z.infer<typeof LLMRequestSchema>;
 

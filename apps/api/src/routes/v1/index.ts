@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import healthRoutes from './health.js';
+import readyRoutes from './ready.js';
+import systemRoutes from './system.js';
 import gatewayRoutes from './gateway.js';
 import productRoutes from './products.js';
 import resolveRoutes from './resolve.js';
@@ -21,6 +23,8 @@ import memoryRoutes from './memory.js';
 
 export async function registerV1Routes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRoutes, { prefix: '/v1' });
+  await fastify.register(readyRoutes, { prefix: '/v1' });
+  await fastify.register(systemRoutes, { prefix: '/v1' });
   await fastify.register(gatewayRoutes, { prefix: '/v1' });
   await fastify.register(productRoutes, { prefix: '/v1' });
   await fastify.register(resolveRoutes, { prefix: '/v1' });

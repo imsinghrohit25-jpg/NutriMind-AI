@@ -1,0 +1,94 @@
+# Default values — overridden per region by values-<region-id>.yaml (§13.2's "per-region
+# clusters aligned to residency zones"). Only ap-south-1 corresponds to a real, provisioned
+# cluster today (region/registry.ts's ACTIVE_REGION); eu-west-1/us-east-1 values files exist so
+# the chart is ready the day those clusters are provisioned, not because they're deployed now.
+
+image:
+  repository: ghcr.io/nutrimind/api
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+region:
+  id: ap-south-1
+  provisioned: true
+
+serviceAccount:
+  create: true
+  name: ""
+
+api:
+  enabled: true
+  replicaCount: 2
+  port: 3000
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 1
+
+worker:
+  enabled: true
+  replicaCount: 2
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    # Custom metric (pgboss job queue depth) requires a metrics adapter (e.g. prometheus-adapter
+    # scraping pgboss.job row counts) — NOT installed by this chart. Documented gap, not silently
+    # assumed: without it, this HPA entry is inert and the worker stays at minReplicas.
+    queueDepthTarget: 50
+  podDisruptionBudget:
+    minAvailable: 1
+
+cronJobs:
+  memoryAggregation:
+    enabled: true
+    schedule: "0 */6 * * *"
+    jobName: aggregate-memory-facts-fanout
+  healthSync:
+    enabled: true
+    schedule: "0 */6 * * *"
+    jobName: health-sync-fanout
+  weeklyReport:
+    enabled: true
+    schedule: "30 2 * * 1"
+    jobName: weekly-report-fanout
+  costBudgetCheck:
+    enabled: true
+    schedule: "0 * * * *"
+    jobName: ai-cost-budget-check
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+
+canary:
+  # Replica-ratio canary (see templates/api-canary-deployment.yaml's own comment for why this
+  # isn't a real percentage-based traffic split). Disabled by default; the CD pipeline
+  # (.github/workflows/cd-backend.yml) sets `replicas` across the 5% -> 25% -> 100% progression
+  # by re-running `helm upgrade --set canary.replicas=N`, then folds the new tag into
+  # `image.tag` and disables canary once the rollout is complete.
+  enabled: false
+  replicas: 0
+  tag: ""
+
+externalSecrets:
+  # Requires the External Secrets Operator (external-secrets.io) installed cluster-wide — not
+  # part of this chart. When disabled, envFrom falls back to a plain Secret named
+  # <release>-env that must be created out-of-band (kubectl create secret ...), documented in
+  # docs/scale/limits.md rather than assumed.
+  enabled: false
+  secretStoreRef:
+    name: nutrimind-secret-store
+    kind: ClusterSecretStore
+  refreshInterval: 1h
+
+networkPolicy:
+  enabled: true

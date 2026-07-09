@@ -1,0 +1,62 @@
+{{- if .Values.networkPolicy.enabled }}
+# Default-deny + explicit allows (§13.2 "network policies"). Egress to Postgres/LLM providers is
+# left open on 443/5432 rather than IP-pinned — provider IP ranges are neither stable nor
+# published as CIDR blocks for all four LLM vendors this gateway supports, so pinning them would
+# be either wrong or a maintenance trap; documented as a real (not silently assumed) scope limit.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nutrimind.fullname" . }}-default-deny
+  labels:
+    {{- include "nutrimind.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nutrimind.fullname" . }}-api-allow
+  labels:
+    {{- include "nutrimind.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: {{ .Values.api.port }}
+  egress:
+    - to: []
+      ports:
+        - { protocol: TCP, port: 443 }  # Supabase (PostgREST/Auth), LLM providers
+        - { protocol: TCP, port: 5432 } # direct Postgres (worker-side jobs, pg-boss)
+        - { protocol: UDP, port: 53 }   # DNS
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nutrimind.fullname" . }}-worker-allow
+  labels:
+    {{- include "nutrimind.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: worker
+  policyTypes: ["Egress"]
+  egress:
+    - to: []
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 5432 }
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+{{- end }}

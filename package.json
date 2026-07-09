@@ -4,16 +4,23 @@
   "workspaces": [
     "apps/api",
     "packages/shared",
-    "supabase/tests"
+    "supabase/tests",
+    "infra/cloudflare/barcode-edge-cache"
   ],
   "scripts": {
     "test:db": "npm run test --workspace=supabase/tests",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "test:scripts": "vitest run scripts/__tests__",
+    "lint:migrations": "tsx scripts/lint-migrations.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "vitest": "^2.1.5"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "npm": ">=10.0.0"
   }
 }

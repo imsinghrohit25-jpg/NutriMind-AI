@@ -1,0 +1,5 @@
+# ap-south-1 (Mumbai) — the ONE region with a real provisioned deployment today
+# (region/registry.ts's ACTIVE_REGION). helm install/upgrade with this file for the real cluster.
+region:
+  id: ap-south-1
+  provisioned: true

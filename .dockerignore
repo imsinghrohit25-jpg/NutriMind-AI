@@ -1,0 +1,22 @@
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/build
+apps/mobile
+packages/*/build
+.env
+.env.*
+*.log
+k6
+observability
+docs
+infra
+.claude
+
+# supabase/tests is an npm workspace whose package.json the root lockfile install needs present,
+# but its test fixtures/output don't belong in an image build context.
+supabase/tests/**
+!supabase/tests/package.json

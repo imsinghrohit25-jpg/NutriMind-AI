@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GatewayRouter } from '../router.js';
 import { GatewayCache } from '../cache.js';
+import { SemanticCache } from '../semantic-cache.js';
+import { GatewayBackpressure, GatewayOverloadedError } from '../backpressure.js';
 import type { LLMProvider } from '../provider.js';
 import type { LLMRequest, LLMResponse, EmbeddingRequest, EmbeddingResponse } from '@nutrimind/shared';
 
@@ -156,5 +158,102 @@ describe('GatewayRouter', () => {
     });
     expect(result.provider).toBe('mock-embed');
     expect(result.embeddings).toHaveLength(1);
+  });
+
+  // Phase 12 (§13.3) additions —————————————————————————————————————————————
+
+  it('T0: renders a deterministic template without calling any provider', async () => {
+    const response = await router.complete({ ...BASE_REQUEST, intentTag: 'ack_received' });
+    expect(response.content).toBe('Got it — noted.');
+    expect(response.provider).toBe('t0-template');
+    expect(response.costUsd).toBe(0);
+    expect(providerA.complete).not.toHaveBeenCalled();
+    expect(costLogger.logFromLLMResponse).toHaveBeenCalledOnce();
+  });
+
+  it('T1: kill switch active routes to the tier\'s fast target instead of primary', async () => {
+    const providerFast = makeMockProvider('mock-fast');
+    const providers = new Map<string, LLMProvider>([
+      ['mock-a', providerA],
+      ['mock-fast', providerFast],
+    ]);
+    const configWithFast = {
+      ...ROUTING_CONFIG,
+      parse_assist: { ...ROUTING_CONFIG.parse_assist, fast: { provider: 'mock-fast', model: 'model-tiny' } },
+    };
+    const killSwitchRouter = new GatewayRouter(
+      providers, configWithFast as never, costLogger as never, new GatewayCache(),
+      { killSwitch: () => true },
+    );
+
+    const response = await killSwitchRouter.complete(BASE_REQUEST);
+    expect(response.provider).toBe('mock-fast');
+    expect(providerA.complete).not.toHaveBeenCalled();
+  });
+
+  it('does not route to the fast target when the kill switch is inactive', async () => {
+    const providerFast = makeMockProvider('mock-fast');
+    const providers = new Map<string, LLMProvider>([
+      ['mock-a', providerA],
+      ['mock-fast', providerFast],
+    ]);
+    const configWithFast = {
+      ...ROUTING_CONFIG,
+      parse_assist: { ...ROUTING_CONFIG.parse_assist, fast: { provider: 'mock-fast', model: 'model-tiny' } },
+    };
+    const normalRouter = new GatewayRouter(
+      providers, configWithFast as never, costLogger as never, new GatewayCache(),
+      { killSwitch: () => false },
+    );
+
+    const response = await normalRouter.complete(BASE_REQUEST);
+    expect(response.provider).toBe('mock-a');
+  });
+
+  it('rejects with GatewayOverloadedError when backpressure capacity is exhausted', async () => {
+    const backpressure = new GatewayBackpressure(0, 0, 50); // zero user-bucket capacity
+    const limitedRouter = new GatewayRouter(
+      new Map([['mock-a', providerA]]), ROUTING_CONFIG as never, costLogger as never, new GatewayCache(),
+      { backpressure },
+    );
+
+    await expect(
+      limitedRouter.complete({ ...BASE_REQUEST, userId: '11111111-1111-1111-1111-111111111111' }),
+    ).rejects.toThrow(GatewayOverloadedError);
+  });
+
+  it('semantic cache serves a cross-request hit for cacheScope=global requests', async () => {
+    const embedProvider: LLMProvider = {
+      name: 'mock-embed',
+      isAvailable: () => true,
+      complete: vi.fn(),
+      embed: vi.fn(async (_req: EmbeddingRequest, model: string): Promise<EmbeddingResponse> => ({
+        embeddings: [[1, 0, 0]],
+        model,
+        provider: 'mock-embed',
+        totalTokens: 5,
+        costUsd: 0.0001,
+        latencyMs: 20,
+      })),
+    };
+    const providers = new Map<string, LLMProvider>([
+      ['mock-a', providerA],
+      ['mock-embed', embedProvider],
+    ]);
+    const semanticRouter = new GatewayRouter(
+      providers, ROUTING_CONFIG as never, costLogger as never, new GatewayCache(),
+      { semanticCache: new SemanticCache() },
+    );
+
+    const req1: LLMRequest = { ...BASE_REQUEST, cacheScope: 'global', temperature: 0.9, messages: [{ role: 'user', content: 'What is sodium?' }] };
+    const req2: LLMRequest = { ...BASE_REQUEST, cacheScope: 'global', temperature: 0.9, messages: [{ role: 'user', content: 'Explain sodium please' }] };
+
+    await semanticRouter.complete(req1);
+    const response2 = await semanticRouter.complete(req2);
+
+    // Same fixed embedding [1,0,0] for both mock texts => cosine similarity 1.0 => cache hit,
+    // so the provider is called exactly once despite two different-text requests.
+    expect(providerA.complete).toHaveBeenCalledOnce();
+    expect(response2.cached).toBe(true);
   });
 });

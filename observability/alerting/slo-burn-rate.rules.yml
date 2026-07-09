@@ -1,0 +1,86 @@
+# SLO burn-rate alerts — Phase 12 (§13.5). See docs/slo/core-paths.md for the SLO target (99.9%
+# monthly availability) and error-budget math these thresholds encode.
+#
+# Metric used: `http_server_duration_count` — the REAL metric this API exports (confirmed by
+# starting the server locally with initTelemetry() and scraping :9464/metrics directly during
+# this phase, not assumed from OTEL docs). It has NO route/path label (only http_method,
+# http_status_code, http_flavor, http_scheme, net_host_port) — these rules are therefore an
+# aggregate API-wide availability SLO, not genuinely per-core-path. See core-paths.md's "Known
+# gap" section.
+#
+# Wired into observability/prometheus.yml via `rule_files`. This docker-compose stack has no
+# Alertmanager — these rules evaluate and populate Prometheus's own /alerts UI, but nothing
+# currently routes a firing alert to Slack/PagerDuty/email. Adding Alertmanager + a receiver is a
+# documented follow-up (docs/scale/limits.md), not silently assumed to already exist.
+
+groups:
+  - name: nutrimind-slo-burn-rate
+    rules:
+      # Error ratio helper series (5xx / total), per window — not itself alerted on, just makes
+      # the alert expressions below readable.
+      - record: nutrimind:http_error_ratio:rate5m
+        expr: |
+          sum(rate(http_server_duration_count{http_status_code=~"5.."}[5m]))
+          /
+          sum(rate(http_server_duration_count[5m]))
+
+      - record: nutrimind:http_error_ratio:rate30m
+        expr: |
+          sum(rate(http_server_duration_count{http_status_code=~"5.."}[30m]))
+          /
+          sum(rate(http_server_duration_count[30m]))
+
+      - record: nutrimind:http_error_ratio:rate1h
+        expr: |
+          sum(rate(http_server_duration_count{http_status_code=~"5.."}[1h]))
+          /
+          sum(rate(http_server_duration_count[1h]))
+
+      - record: nutrimind:http_error_ratio:rate6h
+        expr: |
+          sum(rate(http_server_duration_count{http_status_code=~"5.."}[6h]))
+          /
+          sum(rate(http_server_duration_count[6h]))
+
+      - alert: APIErrorBudgetBurnFast
+        # 99.9% SLO -> 0.1% (0.001) error budget. 14.4x burn over both a 1h and 5m window
+        # consumes ~2% of the 30-day budget in one hour if sustained.
+        expr: |
+          nutrimind:http_error_ratio:rate1h > (14.4 * 0.001)
+          and
+          nutrimind:http_error_ratio:rate5m > (14.4 * 0.001)
+        for: 2m
+        labels:
+          severity: page
+          slo: api-availability
+        annotations:
+          summary: "API error budget burning fast (>14.4x, 1h+5m windows)"
+          description: "5xx ratio over both the last hour and last 5 minutes exceeds 14.4x the 99.9% SLO's allowed error rate. At this rate the 30-day error budget is exhausted in ~2 days. See docs/slo/core-paths.md."
+
+      - alert: APIErrorBudgetBurnSlow
+        # 6x burn over a 6h and 30m window consumes ~5% of the 30-day budget in 6 hours.
+        expr: |
+          nutrimind:http_error_ratio:rate6h > (6 * 0.001)
+          and
+          nutrimind:http_error_ratio:rate30m > (6 * 0.001)
+        for: 15m
+        labels:
+          severity: ticket
+          slo: api-availability
+        annotations:
+          summary: "API error budget burning steadily (>6x, 6h+30m windows)"
+          description: "5xx ratio over both the last 6 hours and last 30 minutes exceeds 6x the 99.9% SLO's allowed error rate. At this rate the 30-day error budget is exhausted in ~5 days. See docs/slo/core-paths.md."
+
+      - alert: BarcodeResolveLatencyHigh
+        # Design-gate target from the addendum (§14 Phase 12 acceptance gate): barcode p95 < 1.5s.
+        # Still aggregate (no route label — see file header), so this fires on ANY endpoint's p95
+        # breaching 1.5s, not barcode-resolve specifically, until the route-label gap is closed.
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_server_duration_bucket[5m])) by (le)) > 1500
+        for: 10m
+        labels:
+          severity: ticket
+          slo: latency
+        annotations:
+          summary: "API p95 latency over 1.5s for 10m"
+          description: "p95(http_server_duration) has exceeded 1500ms for 10 minutes. Design target from the Phase 12 addendum's load-test acceptance gate (barcode resolve p95 < 1.5s at burst) — this is the closest available signal until route-level labels exist."

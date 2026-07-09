@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { LLMRequestSchema } from '@nutrimind/shared';
 import { requireAuth } from '../../plugins/auth.js';
+import { isKillSwitchActive, AI_KILL_SWITCH_FLAG_KEY } from '../../gateway/cost-governance.js';
 
 const GatewayCompleteBodySchema = LLMRequestSchema.omit({ traceId: true, userId: true });
 
@@ -43,10 +44,21 @@ const gatewayRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get('/gateway/status', {
     config: {},
-  }, async (request, _reply) => {
+  }, async (_request, _reply) => {
     const router = fastify.gateway;
     const states = router?.getCircuitBreakerStates() ?? {};
-    return { ok: true, data: { circuitBreakers: states } };
+    const backpressure = router?.getBackpressureStatus() ?? null;
+    // Phase 12 (§13.3) — surfaces the same kill-switch flag the ai-cost-budget-check job flips,
+    // so an operator (or the per-country cost dashboard) can see it without querying Postgres.
+    const killSwitchActive = await isKillSwitchActive(fastify.supabase);
+    return {
+      ok: true,
+      data: {
+        circuitBreakers: states,
+        backpressure,
+        costGovernance: { killSwitchActive, flagKey: AI_KILL_SWITCH_FLAG_KEY },
+      },
+    };
   });
 };
 

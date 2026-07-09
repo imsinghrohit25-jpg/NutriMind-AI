@@ -65,6 +65,8 @@ describe('registerV1Routes — full route tree', () => {
     // found in biomarker.ts/health-data.ts/voice.ts/restaurant.ts pre-fix), beforeAll's
     // registerV1Routes()/app.ready() call above would have already thrown before reaching here.
     expect(app.hasRoute({ method: 'GET', url: '/v1/health' })).toBe(true);
+    expect(app.hasRoute({ method: 'GET', url: '/v1/ready' })).toBe(true);
+    expect(app.hasRoute({ method: 'GET', url: '/v1/system/degradation' })).toBe(true);
   });
 
   const authRequiredRoutes: Array<{ method: 'GET' | 'POST' | 'PATCH' | 'DELETE'; url: string }> = [

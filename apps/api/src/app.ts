@@ -14,6 +14,9 @@ import { registerV1Routes } from './routes/v1/index.js';
 import { buildRouter, type GatewayRouter } from './gateway/router.js';
 import { CostLogger } from './gateway/cost-log.js';
 import { GatewayCache } from './gateway/cache.js';
+import { SemanticCache } from './gateway/semantic-cache.js';
+import { GatewayBackpressure } from './gateway/backpressure.js';
+import { isKillSwitchActive } from './gateway/cost-governance.js';
 import { OpenFoodFactsClient } from './datasources/openfoodfacts/client.js';
 import { UsdaFdcClient } from './datasources/usda/client.js';
 import { IfctLoader } from './datasources/ifct/loader.js';
@@ -96,6 +99,11 @@ export async function buildApp(): Promise<FastifyInstance> {
       routingConfigPath: env.LLM_ROUTING_CONFIG,
       costLogger,
       cache,
+      routerOptions: {
+        semanticCache: new SemanticCache(),
+        backpressure: new GatewayBackpressure(),
+        killSwitch: () => isKillSwitchActive(fastify.supabase),
+      },
     });
   }
   fastify.decorate('gateway', gateway);

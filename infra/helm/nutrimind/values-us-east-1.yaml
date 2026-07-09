@@ -1,0 +1,17 @@
+# us-east-1 (N. Virginia) — NOT provisioned (region/registry.ts: `live: false`). Same status as
+# values-eu-west-1.yaml: ready to use, not currently deployed anywhere.
+region:
+  id: us-east-1
+  provisioned: false
+
+api:
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 5
+
+worker:
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3

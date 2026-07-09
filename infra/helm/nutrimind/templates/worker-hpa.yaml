@@ -1,0 +1,33 @@
+{{- if and .Values.worker.enabled .Values.worker.autoscaling.enabled }}
+# Custom-metric HPA on pg-boss queue depth (§13.2's "HPA on CPU+custom metrics (queue depth)").
+# Requires a metrics adapter exposing the `pgboss_queue_depth` external metric (e.g.
+# prometheus-adapter, scraping a query against pgboss.job) — NOT bundled by this chart (see
+# values.yaml's comment on worker.autoscaling.queueDepthTarget). Without that adapter installed,
+# the Kubernetes API server will reject this metric source and the worker HPA will simply not
+# scale on it — a real, documented prerequisite, not a silent no-op.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "nutrimind.fullname" . }}-worker
+  labels:
+    {{- include "nutrimind.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "nutrimind.fullname" . }}-worker
+  minReplicas: {{ .Values.worker.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.worker.autoscaling.maxReplicas }}
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: pgboss_queue_depth
+          selector:
+            matchLabels:
+              release: {{ .Release.Name }}
+        target:
+          type: AverageValue
+          averageValue: {{ .Values.worker.autoscaling.queueDepthTarget }}
+{{- end }}

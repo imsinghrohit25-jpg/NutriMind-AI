@@ -9,6 +9,77 @@ permissions:
   contents: read
 
 jobs:
+  # ── Backend (API + worker) → K8s canary ───────────────────────────────────────
+  # Phase 12 (§13.4). Real, valid pipeline: image build/push to GHCR would work today (uses
+  # GITHUB_TOKEN, no external account needed). The deploy steps need a real cluster's kubeconfig
+  # (secrets.KUBE_CONFIG_AP_SOUTH_1) which does not exist in this environment (no K8s cluster is
+  # provisioned anywhere yet — see docs/scale/limits.md) — the job detects that and skips the
+  # deploy steps rather than failing the whole run or fabricating a "success."
+  backend:
+    name: Backend (API + Worker) → K8s canary (ap-south-1)
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: api
+          push: true
+          tags: ghcr.io/${{ github.repository }}/api:${{ github.ref_name }}
+
+      - name: Build and push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: worker
+          push: true
+          tags: ghcr.io/${{ github.repository }}/worker:${{ github.ref_name }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Configure kubeconfig
+        id: kubeconfig
+        run: |
+          if [ -z "${{ secrets.KUBE_CONFIG_AP_SOUTH_1 }}" ]; then
+            echo "::warning::KUBE_CONFIG_AP_SOUTH_1 is not set — no real K8s cluster provisioned yet (Phase 12 infra is real but undeployed here). Skipping the deploy steps; images above were still built and pushed."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG_AP_SOUTH_1 }}" | base64 -d > "$HOME/.kube/config"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Canary 5%
+        if: steps.kubeconfig.outputs.skip != 'true'
+        run: ./scripts/cd/deploy-canary.sh 5 ${{ github.ref_name }} 2
+
+      - name: Canary 25%
+        if: steps.kubeconfig.outputs.skip != 'true'
+        run: ./scripts/cd/deploy-canary.sh 25 ${{ github.ref_name }} 2
+
+      - name: Promote to 100%
+        if: steps.kubeconfig.outputs.skip != 'true'
+        run: ./scripts/cd/deploy-canary.sh 100 ${{ github.ref_name }} 2
+
   # ── Android release build ────────────────────────────────────────────────────
   android:
     name: Android AAB → Play Store (staged 10%)

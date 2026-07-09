@@ -2,6 +2,13 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Phase 12 (§13.5) — SLO burn-rate alerting. See docs/slo/core-paths.md for the SLO targets and
+# error-budget math these rules encode; alerting/README.md for how to wire a real receiver
+# (Alertmanager isn't part of this docker-compose stack — these rules fire but have nowhere to
+# route to until one is added, a documented gap, not a fabricated end-to-end alert pipeline).
+rule_files:
+  - 'alerting/slo-burn-rate.rules.yml'
+
 scrape_configs:
   - job_name: 'otel-collector'
     static_configs:

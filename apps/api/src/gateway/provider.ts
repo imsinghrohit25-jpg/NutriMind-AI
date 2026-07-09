@@ -17,6 +17,10 @@ export interface TierPolicy {
   fallbacks: ModelTarget[];
   maxRetries: number;
   timeoutMs: number;
+  /** Phase 12 (§13.3 model routing tiers) — the T1 "small/fast model" target for this task tier.
+   *  Optional/additive: a tier without one simply never routes to T1 (falls through to T2/primary
+   *  as it always has), so every routing.json written before Phase 12 is unaffected. */
+  fast?: ModelTarget;
 }
 
 export type RoutingConfig = Record<string, TierPolicy>;

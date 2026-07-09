@@ -1,0 +1,19 @@
+# eu-west-1 (Ireland) — NOT provisioned (region/registry.ts: `live: false`). This file exists so
+# the chart is ready the day a real EU cluster is stood up for GDPR/UK-GDPR residency
+# (region/registry.ts's EU_UK_GDPR set); `helm install` against this file today would deploy to
+# whatever cluster your kubeconfig points at — there is no real eu-west-1 cluster to target yet.
+region:
+  id: eu-west-1
+  provisioned: false
+
+api:
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 5
+
+worker:
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3

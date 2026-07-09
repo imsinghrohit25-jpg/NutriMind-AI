@@ -53,6 +53,12 @@ abstract final class NutriMindFlagKeys {
   // Phase 11 — AI Memory System
   static const kGlobalAIMemorySystem       = 'global.p11.ai_memory_system';
 
+  // Phase 12 — Enterprise Scale & Reliability
+  static const kGlobalAICostKillSwitch     = 'global.p12.ai_cost_kill_switch';
+  static const kGlobalAIGatewaySemanticCache = 'global.p12.ai_gateway_semantic_cache';
+  static const kGlobalK8sWorkerMigration   = 'global.p12.k8s_worker_migration';
+  static const kGlobalDegradationLadder    = 'global.p12.degradation_ladder';
+
   /// All flag keys — used for FlagSnapshot.allEnabled() in tests.
   static const List<String> all = [
     kGlobalCountryEngine,
@@ -84,5 +90,9 @@ abstract final class NutriMindFlagKeys {
     kGlobalDeferredComponents,
     kGlobalCountryOnboardingV2,
     kGlobalAIMemorySystem,
+    kGlobalAICostKillSwitch,
+    kGlobalAIGatewaySemanticCache,
+    kGlobalK8sWorkerMigration,
+    kGlobalDegradationLadder,
   ];
 }

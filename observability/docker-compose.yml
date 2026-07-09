@@ -21,6 +21,11 @@ services:
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Phase 12 (§13.5): prometheus.yml's rule_files references alerting/slo-burn-rate.rules.yml
+      # — found missing from this compose file while actually starting this stack to verify the
+      # new rules load (only prometheus.yml itself was ever mounted; the rules directory was not,
+      # so `rule_files` would have 404'd on container start with zero prior notice).
+      - ./alerting:/etc/prometheus/alerting:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"

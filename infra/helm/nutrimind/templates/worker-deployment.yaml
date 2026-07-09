@@ -1,0 +1,47 @@
+{{- if .Values.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nutrimind.fullname" . }}-worker
+  labels:
+    {{- include "nutrimind.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "nutrimind.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "nutrimind.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: {{ include "nutrimind.serviceAccountName" . }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["node", "apps/api/dist/apps/api/src/worker.js"]
+          envFrom:
+            {{- include "nutrimind.envFrom" . | nindent 12 }}
+          env:
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          # No HTTP server in this process — liveness is "the Node process is still running";
+          # a stuck-but-alive pg-boss consumer is caught by job-latency alerting
+          # (docs/slo/), not a probe.
+          livenessProbe:
+            exec: { command: ["node", "-e", "process.exit(0)"] }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities: { drop: ["ALL"] }
+{{- end }}

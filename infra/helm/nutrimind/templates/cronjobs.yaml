@@ -1,0 +1,58 @@
+{{/*
+K8s CronJobs triggering the same fanout-job LOGIC pg-boss's own `boss.schedule()` cron already
+runs (jobs/registry.ts's scheduleRecurringJobs()) — Phase 12's real migration of the *trigger*
+mechanism (ADR-0025's explicit follow-up), each running `node dist/jobs/run-once.js <name>` via
+jobs/run-once.ts and exiting. Both triggers are wired at once deliberately: pg-boss's own
+schedule keeps running (harmless — runJobOnce's fanout jobs are idempotent per period via
+singletonKey/dedup where it matters, e.g. weekly-report's per-user-per-week key), so this chart
+can be adopted without a hard cutover, then pg-boss's `boss.schedule()` calls removed later once
+these CronJobs are confirmed reliable in a real cluster — not done in this repo yet since there
+is no real cluster here to confirm it against.
+*/}}
+{{- $root := . -}}
+{{- range $key, $job := .Values.cronJobs }}
+{{- if and (kindIs "map" $job) $job.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "nutrimind.fullname" $root }}-{{ $key | kebabcase }}
+  labels:
+    {{- include "nutrimind.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: cronjob
+spec:
+  schedule: {{ $job.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 900
+      template:
+        metadata:
+          labels:
+            {{- include "nutrimind.labels" $root | nindent 12 }}
+            app.kubernetes.io/component: cronjob
+        spec:
+          serviceAccountName: {{ include "nutrimind.serviceAccountName" $root }}
+          restartPolicy: Never
+          containers:
+            - name: {{ $key | kebabcase }}
+              image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+              imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+              args: ["node", "apps/api/dist/apps/api/src/jobs/run-once.js", "{{ $job.jobName }}"]
+              envFrom:
+                {{- include "nutrimind.envFrom" $root | nindent 16 }}
+              env:
+                - name: NODE_ENV
+                  value: "production"
+              resources:
+                {{- toYaml $root.Values.cronJobs.resources | nindent 16 }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                capabilities: { drop: ["ALL"] }
+---
+{{- end }}
+{{- end }}

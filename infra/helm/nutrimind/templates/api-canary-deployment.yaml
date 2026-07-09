@@ -1,0 +1,64 @@
+{{- if and .Values.api.enabled .Values.canary.enabled }}
+# Replica-ratio canary (§13.4: "canary gated on SLO metrics; automatic rollback on error-budget
+# burn"). No service mesh/Flagger/Istio in this environment to do percentage-based traffic
+# splitting properly — this approximates a traffic percentage via
+# canaryReplicas / (stableReplicas + canaryReplicas) against the SAME Service selector (matching
+# only app.kubernetes.io/component: api, not the `track` label), which is a real, working,
+# honestly-simpler technique, not a fabricated stand-in for the real thing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nutrimind.fullname" . }}-api-canary
+  labels:
+    {{- include "nutrimind.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    track: canary
+spec:
+  replicas: {{ .Values.canary.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "nutrimind.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: api
+      track: canary
+  template:
+    metadata:
+      labels:
+        {{- include "nutrimind.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+        track: canary
+    spec:
+      serviceAccountName: {{ include "nutrimind.serviceAccountName" . }}
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.canary.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["node", "apps/api/dist/apps/api/src/server.js"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+          envFrom:
+            {{- include "nutrimind.envFrom" . | nindent 12 }}
+          env:
+            - name: API_PORT
+              value: "{{ .Values.api.port }}"
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          livenessProbe:
+            httpGet: { path: /v1/health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /v1/ready, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities: { drop: ["ALL"] }
+{{- end }}

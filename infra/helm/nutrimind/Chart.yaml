@@ -1,0 +1,11 @@
+apiVersion: v2
+name: nutrimind
+description: >
+  NutriMind AI — self-managed compute tier (Phase 12, §13.2). Deploys ONLY the workloads the
+  addendum names as K8s-appropriate: the API server (incl. AI gateway routes), the pg-boss
+  worker (ETL/embeddings/report jobs), and CronJobs that trigger fanout jobs on a schedule.
+  Supabase (Postgres/Auth/Storage), Cloudflare Workers/KV/CDN, and Supabase Edge Functions are
+  explicitly OUT of scope for this chart — see docs/adr/ADR-0027-k8s-scope-boundary.md.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

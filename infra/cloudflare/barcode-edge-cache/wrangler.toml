@@ -1,0 +1,22 @@
+# NutriMind barcode edge cache — Phase 12 (§13.1/§13.2). Real Cloudflare Worker code, NOT
+# deployed anywhere: this environment has no Cloudflare account/credentials (same honesty rule
+# as region/registry.ts's eu-west-1/us-east-1 — "designed ceiling," per §13.1's own wording, not
+# a fabricated deployment). `wrangler deploy` against a real account + zone would work as-is once
+# ORIGIN_BASE_URL and the KV namespace id below are filled in.
+
+name = "nutrimind-barcode-edge-cache"
+main = "src/worker.ts"
+compatibility_date = "2026-01-01"
+
+# One namespace per data region (§13.2 "country-aware cache keys" — same barcode resolves
+# differently per CountryProfile, so region isolation prevents cross-region cache pollution).
+kv_namespaces = [
+  { binding = "BARCODE_KV", id = "REPLACE_WITH_REAL_KV_NAMESPACE_ID" }
+]
+
+[vars]
+# Origin the Worker proxies to on a cache miss — the real API's ap-south-1 deployment today
+# (region/registry.ts's ACTIVE_REGION); a second Worker + KV namespace per provisioned region
+# once eu-west-1/us-east-1 exist.
+ORIGIN_BASE_URL = "https://api.nutrimind.ai"
+CACHE_TTL_SECONDS = "86400"

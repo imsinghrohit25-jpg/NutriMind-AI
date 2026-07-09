@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: apps/api/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -83,6 +83,78 @@ jobs:
       # Gate: injection strings inert
       - name: Prompt injection test
         run: npx vitest run src/security/__tests__/prompt-injection.test.ts --reporter=verbose
+
+  # ── Root workspaces (packages/shared, CI/infra scripts, Cloudflare Worker) ────
+  # Phase 12 (§13.4): a separate root-level install/typecheck also proves the exact dependency
+  # graph the Dockerfile builds from (apps/api's own job above installs scoped to apps/api,
+  # which the container build does NOT do — it installs from the repo-root lockfile, which is
+  # what caught the missing @supabase/supabase-js dependency and the Node-20-vs-22 requirement,
+  # neither of which the apps/api-scoped job below could have surfaced on its own).
+  root-workspaces:
+    name: Root workspaces — typecheck + scripts/worker tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (root, all workspaces)
+        run: npm ci
+
+      - name: Typecheck every workspace
+        run: npm run typecheck --workspaces --if-present
+
+      - name: Test CI/lint scripts (scripts/__tests__)
+        run: npm run test:scripts
+
+      - name: Test Cloudflare barcode edge cache worker
+        run: npm run test --workspace=infra/cloudflare/barcode-edge-cache
+
+  # ── Migrations — destructive DDL guard (§13.4 zero-downtime, expand-contract) ─
+  # Blocks a migration ADDED in this PR/push from containing destructive DDL (DROP TABLE/COLUMN,
+  # RENAME, TRUNCATE, a type change, or a NOT-NULL constraint with no safe backfill) unless it's
+  # explicitly marked as an intentional contract-phase migration. Pre-Phase-12 migrations
+  # (0017's DROP TABLE, 0020's RENAME COLUMN — both pre-launch, zero-production-data exceptions,
+  # documented in their own ADRs) are never re-flagged: this only lints files ADDED relative to
+  # the PR's base/previous push, not the full historical migration set.
+  migrations-lint:
+    name: Migrations — destructive DDL guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine diff base
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.event.pull_request.base.sha }}" --depth=1
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            git fetch origin "${{ github.event.before }}" --depth=1 || true
+            echo "ref=${{ github.event.before || 'HEAD~1' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint newly-added migrations for destructive DDL
+        run: npx tsx scripts/lint-migrations.ts --since ${{ steps.base.outputs.ref }}
 
   # ── Mobile ───────────────────────────────────────────────────────────────────
   mobile:
@@ -196,7 +268,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: apps/api/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: npm audit (no high/critical)
         working-directory: apps/api
