@@ -251,9 +251,10 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            cd apps/mobile
-            flutter test integration_test/ --device-id emulator-5554
+          # android-emulator-runner runs each line of `script` as its own separate shell
+          # invocation, so a `cd` on one line never carries over to the next — chain into a
+          # single command so `flutter test` actually runs from apps/mobile.
+          script: cd apps/mobile && flutter test integration_test/ --device-id emulator-5554
 
   # ── Security audit ────────────────────────────────────────────────────────────
   audit:
