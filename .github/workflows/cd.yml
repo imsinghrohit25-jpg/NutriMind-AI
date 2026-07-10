@@ -127,8 +127,8 @@ jobs:
           STORE_PASSWORD:    ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           flutter build appbundle --release \
-            --dart-define=SUPA_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPA_ANON=${{ secrets.SUPABASE_ANON_KEY }}
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Upload to Play Store (staged 10%)
         working-directory: apps/mobile
@@ -170,8 +170,8 @@ jobs:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
           flutter build ios --release --no-codesign \
-            --dart-define=SUPA_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPA_ANON=${{ secrets.SUPABASE_ANON_KEY }}
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           bundle exec fastlane ios deploy_staged
 
       - name: Upload IPA to App Store

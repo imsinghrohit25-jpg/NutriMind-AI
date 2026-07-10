@@ -254,7 +254,15 @@ jobs:
           # android-emulator-runner runs each line of `script` as its own separate shell
           # invocation, so a `cd` on one line never carries over to the next — chain into a
           # single command so `flutter test` actually runs from apps/mobile.
-          script: cd apps/mobile && flutter test integration_test/ --device-id emulator-5554
+          # main.dart asserts SUPABASE_URL/SUPABASE_ANON_KEY are non-empty before it will even
+          # call runApp() — these CI-only placeholders are not real credentials and are never
+          # queried (these specific integration tests only assert the initial UI renders without
+          # an unhandled exception, never a live Supabase call); real builds use the actual
+          # secrets (see cd.yml).
+          script: >-
+            cd apps/mobile && flutter test integration_test/ --device-id emulator-5554
+            --dart-define=SUPABASE_URL=https://ci-placeholder.supabase.co
+            --dart-define=SUPABASE_ANON_KEY=ci-placeholder-anon-key
 
   # ── Security audit ────────────────────────────────────────────────────────────
   audit:
