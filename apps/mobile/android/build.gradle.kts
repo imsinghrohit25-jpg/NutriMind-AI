@@ -11,11 +11,16 @@ allprojects {
 // Android build. Force every library subproject to compile against at least Flutter's own
 // default (36) regardless of what the plugin's own build.gradle declares, rather than patching
 // vendored plugin source or bumping the plugin's Dart-facing major version.
+// Must run in afterEvaluate: subprojects{} actions run BEFORE a subproject's own build.gradle
+// body executes, so an unwrapped override here would be clobbered right back to 34 by the
+// plugin's own `compileSdk 34` line — afterEvaluate runs once that body has already applied.
 subprojects {
-    plugins.withId("com.android.library") {
-        extensions.configure<com.android.build.gradle.LibraryExtension> {
-            if ((compileSdk ?: 0) < 36) {
-                compileSdk = 36
+    afterEvaluate {
+        plugins.withId("com.android.library") {
+            extensions.configure<com.android.build.gradle.LibraryExtension> {
+                if ((compileSdk ?: 0) < 36) {
+                    compileSdk = 36
+                }
             }
         }
     }
