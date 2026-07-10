@@ -1,6 +1,6 @@
 # ADR-0031: IFCT 2017 Real-Source Integration (Nutrition Intelligence Foundation)
 
-**Status:** Accepted (in progress — rolling out table-by-table, see §5)
+**Status:** Accepted — §5's table-by-table rollout is complete (all 12 tables, see Addendum 2)
 **Date:** 2026-07-10
 **Authors:** Engineering
 **Supersedes:** None
@@ -311,3 +311,116 @@ need either a different PDF extraction approach (e.g. `-layout` mode or a column
 extraction, given `-raw` demonstrably loses positional integrity for these specific tables in a
 way it does not for Tables 1–4/6/9) or direct manual cross-referencing against the book's own
 printed pages, not a continuation of the text-reconstruction approach used here.
+
+## Addendum 2 (2026-07-10): §5 fully completed — Tables 5, 7, 8, 10, 11, 12 shipped via two new extraction strategies
+
+The real `IFCT2017.pdf` (previously only its `pdftotext -raw` extraction existed in this
+environment) was located, unblocking two genuinely different extraction strategies that resolved
+every table Addendum 1 deferred. **All 12 tables are now shipped with real, verified data. No
+table was skipped or fabricated.**
+
+### Strategy A: `pdftotext -table` (position-aware parsing) — Tables 5, 7, 8
+
+`-table` ("similar to `-layout`, but optimized for tables") preserves each printed value's real
+horizontal position via padding whitespace, unlike `-raw` (reading order only) or `-layout`
+(confirmed, again, to badly jumble this book's actual multi-column page layout — re-verified
+directly before ruling it out a second time). A genuinely blank cell now shows up as a measurable
+gap in x-position instead of vanishing, which is exactly what `-raw` reading-order counting could
+never distinguish from "the row shifted left." New shared module: `datasources/ifct/
+positional-table-parser.ts` — tracks each page's real column-label x-positions (or, where a
+table's English captions wrap unpredictably across lines and never share a line with "No. of
+Regions", the abbreviation-code line's own token positions instead) and assigns each printed value
+to the nearest real column, never by counting.
+
+- **Table 5 (Minerals)** — the exact ambiguity Addendum 1 found (Calcium's position shifting
+  between rows) is resolved: Almond (H001) now correctly reads Calcium=228mg at its own measured
+  print position, with Arsenic/Cadmium genuinely blank (not silently absorbed). Both real
+  signatures (Aluminium…Lithium, Magnesium…Zinc, printed as alternating page-halves for every food)
+  merge into one row per food. 511 rows, 0 rejections, 509 merged (2 orphaned: N001/Q001, the same
+  two Table 1 itself rejected). `calciumMg`/`ironMg`/`potassiumMg`/`sodiumMg`/`zincMg` route to
+  their existing dedicated columns — first real population of all five from any source.
+- **Table 7 (Fatty Acid Profile)** — the exact bug Addendum 1 found (Pistachio's impossible 18.5g
+  lignoceric acid) is resolved: Lignoceric now reads a real trace 18.11mg, with Oleic correctly
+  holding its own 18.478g value at its own position — previously conflated because a genuinely
+  blank interior column (Capric/Lauric, not analyzed for that food) had silently shifted every
+  later value left by one slot under reading-order counting. All 8 real sliding-window signatures
+  registered. 501 rows, 1 rejection (P064, a real one-off "no data row" case), 499 merged.
+  `fatSaturatedG`/`fatMonounsaturatedG`/`fatPolyunsaturatedG` (mg→g converted) and `cholesterolMg`
+  populated for the first time from any source, per this ADR's original §5 sequencing intent.
+- **Table 8 (Amino Acid Profile)** — the entire second section Addendum 1 found garbled into one
+  rejected blob (non-essential amino acids: Alanine, Arginine, Aspartic Acid, Glutamic Acid,
+  Glycine, Proline, Serine, Tyrosine) now parses cleanly, since "No. of Regions" does share a line
+  with this table's column labels (unlike Table 7) — pure label-position matching sufficed, no
+  abbreviation-line fallback needed. 505 rows, 0 rejections, 503 merged. All 18 amino acids (10
+  essential + 8 non-essential) route through `nutrientExtra`, explicitly named
+  `*GPer100gProtein` since this table's own stated unit basis (g per 100g protein) differs from
+  every other table's per-100g-edible-portion basis.
+
+### Strategy B: structured CSV cross-validation — Tables 10, 11, 12
+
+Three tables' real column labels (long, hyphenated chemical names — e.g. "3,4-Dihydroxybenzoic
+acid", "β-Sitosterol") wrap unpredictably across lines badly enough that even `-table`'s position
+preservation cannot reliably anchor them. A second, independently-produced digitization of the
+same real IFCT 2017 dataset was located (`ifct2017_compositions.csv`, structured/labeled,
+542 rows) and used instead — but **only after exhaustive cross-validation against this session's
+own independently-derived `-table` position data**, not trusted on its own authority:
+- Table 2 (already shipped, unrelated to this addendum): the CSV disagreed with this codebase's
+  own Group O parsing (a Biotin/Total-Folate column swap). Direct re-inspection of the real
+  extracted text sided with this codebase's original parsing — the CSV was wrong there, and is
+  NOT used for Table 2 or any already-shipped table.
+- Table 10 (Polyphenols): Parsley (C028)'s values matched this session's own `-table`-derived
+  numbers exactly across both of its real signature blocks (vanlac=1.18, coumaco=0.41,
+  coumacp=0.02, caffac=0.27 AND chlrac=1.52, ferac=0.33, apigen=16.14, kaemf=0.01) — full,
+  independent agreement.
+- Table 11 (Oligosaccharides/Phytosterols): A001 and A008's Campesterol/Stigmasterol/β-Sitosterol/
+  Phytate values matched this session's own extraction exactly.
+- Table 12 (Edible Oils): Coconut oil's real, textbook Lauric-acid dominance (49.57%) matched the
+  CSV exactly, resolving Addendum 1's chemistry-cross-check failure — confirming Butyric/Caproic
+  are genuinely absent (0) for coconut oil and the real values start at Caprylic, not Butyric as
+  reading-order counting had assumed.
+
+New shared module: `datasources/ifct/csv-dataset.ts` (parses the CSV's own `value`/`value_e`
+column-pair convention — `_e` is each nutrient's standard deviation — and its literal `"null"`
+sentinel for "not analyzed", distinct from a real `0`).
+
+- **Table 10 (Polyphenols)** — 542/542 rows (all groups, including T), 0 rejections, 526 merged
+  (16 orphaned: N001/Q001 + all 14 Group T oils, which have no Table 1 proximate row). 37 distinct
+  polyphenol/flavonoid/catechin compounds, all routed through `nutrientExtra` (no existing
+  dedicated column fits any of them).
+- **Table 11 (Oligosaccharides, Phytosterols, Phytates & Saponins)** — same 542/526/16 split.
+  9 real columns (Raffinose, Stachyose, Verbascose, Ajugose, Campesterol, Stigmasterol,
+  β-Sitosterol, Phytate, Total Saponin) — Ajugose (legume-only) confirmed genuinely absent for
+  cereals via the CSV's own explicit `null`, not guessed.
+- **Table 12 (Fatty Acid Profile of Edible Oils and Fats)** — 14/14 Group T foods. Since Group T
+  has no proximate data (ADR-0031 §1) and so no Table 1 row ever existed for them, this table's
+  import script is the only one of the twelve that **creates** new products rather than merging —
+  a deliberate, documented exception (`table-merge-runner.ts`'s new optional `createIfMissing`
+  callback), not a silent behavior change to the other eleven tables' merge-only contract. All 14
+  oils' saturated-fat percentages independently match real, well-known chemistry (Coconut 90.9%,
+  Palm 45.0%, Mustard 5.7%, Ghee 71.0%, Vanaspati 61.4%).
+
+### Verification
+
+Every one of the six tables above was: (1) parsed from real extracted/structured text, never
+synthetic data; (2) spot-checked against hand-transcribed or independently-cross-validated real
+values; (3) covered by real Vitest fixtures reproducing the actual extracted text (not invented
+strings); (4) merged into the real local Supabase instance and re-queried to confirm; (5) checked
+against independent chemistry/nutrition-science plausibility where a real cross-check existed
+(fatty acid profiles, mineral content). **987/987 API tests green (0 regressions), `tsc --noEmit`
+clean.**
+
+### Follow-ups (tracked, not blocking)
+
+- Table 5's Nickel/Molybdenum column-name possibly needs a closer look at real IUPAC spelling
+  ("Molebdenum" is the book's own typo, preserved verbatim in the field's inline comment, not
+  silently corrected in a way that would obscure the source).
+- Table 7/12 share the same underlying fatty-acid chain-length columns but store them under
+  different key names (`*Mg` vs `*Pct`) since they measure different things (absolute mg/100g vs
+  % of total FAME) for disjoint food sets (Table 7 never covers Group T, Table 12 only covers
+  Group T) — revisit only if a future consumer needs both normalized to one common unit.
+- `vitaminAIu` unification (Retinol from Table 3 + provitamin-A carotenoids from Table 4) remains
+  a deliberate, un-fabricated follow-up, unchanged from Addendum 1.
+- The two source files this addendum's strategies depend on
+  (`IFCT2017.pdf`, `ifct2017_compositions.csv`) are licensed-dataset artifacts, kept outside the
+  repo and gitignored — `apps/api/data/ifct2017/*` (the derived extraction slices and the CSV
+  copy) is excluded via the `.gitignore` fix from Addendum 1.

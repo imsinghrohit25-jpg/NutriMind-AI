@@ -15,6 +15,7 @@ import postgres from 'postgres';
 import { getProductBySourceId, persistProduct } from '../openfoodfacts/cache.js';
 import { mergeTableValuesIntoNutrition, type DedicatedFieldMap } from './nutrient-merge.js';
 import type { SignatureParsedRow, RejectedRow } from './table-parsing.js';
+import type { CanonicalProduct } from '../../nutrition/canonical-model.js';
 
 export interface SpotCheckResult {
   foodCode: string;
@@ -33,6 +34,12 @@ export interface TableMergeImportOptions<ColumnKey extends string> {
   dedicatedFields: DedicatedFieldMap<ColumnKey>;
   spotChecks?: (rows: SignatureParsedRow<ColumnKey>[]) => SpotCheckResult[];
   adrNote?: string;
+  /** When a row's food code has no existing product (e.g. Table 12's Group T oils, which Table 1
+   *  never created — they have no proximate data of their own, see ADR-0031 §1), builds a genuine
+   *  new product instead of orphaning the row. Every other table leaves this unset and keeps the
+   *  existing "orphan and report" behavior — a food absent from Table 1's valid set for THOSE
+   *  tables is a real data gap, not something to fabricate a product for. */
+  createIfMissing?: (row: SignatureParsedRow<ColumnKey>) => CanonicalProduct;
 }
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../../../..');
@@ -74,6 +81,7 @@ export async function runTableMergeImport<ColumnKey extends string>(
   }
 
   let merged = 0;
+  let created = 0;
   const orphaned: string[] = [];
 
   if (dryRun) {
@@ -83,7 +91,7 @@ export async function runTableMergeImport<ColumnKey extends string>(
     try {
       for (const row of rows) {
         const existing = await getProductBySourceId(sql, 'ifct_2017', row.foodCode);
-        if (!existing || !existing.nutrition) orphaned.push(row.foodCode);
+        if ((!existing || !existing.nutrition) && !opts.createIfMissing) orphaned.push(row.foodCode);
       }
     } finally {
       await sql.end();
@@ -94,6 +102,15 @@ export async function runTableMergeImport<ColumnKey extends string>(
       for (const row of rows) {
         const existing = await getProductBySourceId(sql, 'ifct_2017', row.foodCode);
         if (!existing || !existing.nutrition) {
+          if (opts.createIfMissing) {
+            const fresh = opts.createIfMissing(row);
+            const mergedNutrition = fresh.nutrition
+              ? mergeTableValuesIntoNutrition(fresh.nutrition, row.values, opts.dedicatedFields)
+              : null;
+            await persistProduct(sql, { ...fresh, nutrition: mergedNutrition });
+            created++;
+            continue;
+          }
           orphaned.push(row.foodCode);
           continue;
         }
@@ -102,6 +119,7 @@ export async function runTableMergeImport<ColumnKey extends string>(
         merged++;
       }
       console.log(`\n[${opts.reportSlug}] Merged ${merged} rows into existing products/product_nutrition rows.`);
+      if (created > 0) console.log(`  Created ${created} new products (no Table 1 row existed for them).`);
       if (orphaned.length > 0) {
         console.log(`  ${orphaned.length} rows had no matching Table 1 product (never persisted): ${orphaned.join(', ')}`);
       }
@@ -110,7 +128,7 @@ export async function runTableMergeImport<ColumnKey extends string>(
     }
   }
 
-  const reportPath = writeReport(opts, rows.length, rejected, spotChecks, merged, orphaned, dryRun);
+  const reportPath = writeReport(opts, rows.length, rejected, spotChecks, merged, created, orphaned, dryRun);
   console.log(`\n[${opts.reportSlug}] Report written to ${reportPath}`);
 }
 
@@ -120,6 +138,7 @@ function writeReport<ColumnKey extends string>(
   rejected: RejectedRow[],
   spotChecks: SpotCheckResult[],
   merged: number,
+  created: number,
   orphaned: string[],
   dryRun: boolean,
 ): string {
@@ -140,6 +159,7 @@ function writeReport<ColumnKey extends string>(
   lines.push(`- rows parsed: ${parsedCount}`);
   lines.push(`- rejected at parse: ${rejected.length}`);
   lines.push(`- merged into existing products/product_nutrition rows: ${dryRun ? 'N/A (--dry-run)' : merged}`);
+  if (created > 0 || opts.createIfMissing) lines.push(`- new products created (no Table 1 row existed): ${dryRun ? 'N/A (--dry-run)' : created}`);
   lines.push(`- orphaned (no matching Table 1 product): ${orphaned.length}`);
   lines.push('');
 
