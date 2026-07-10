@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'sse_event.dart';
 
 part 'api_client.g.dart';
 
@@ -36,6 +39,44 @@ class ApiClient {
 
   Future<Response<T>> delete<T>(String path) =>
       _dio.delete<T>(path);
+
+  /// Real Server-Sent-Events consumption — used by the Phase 13 multi-agent chat endpoint
+  /// (`POST /v1/agent/chat`). Reads the response as a raw byte stream (not Dio's default
+  /// buffer-then-parse-JSON path) and yields one [SseEvent] per real `event:`/`data:` frame as it
+  /// arrives — genuine incremental delivery, not a buffered response split up afterwards.
+  Stream<SseEvent> postSse(String path, {dynamic data}) {
+    final controller = StreamController<SseEvent>();
+
+    _dio.post<ResponseBody>(
+      path,
+      data: data,
+      options: Options(responseType: ResponseType.stream),
+    ).then((resp) async {
+      var buffer = '';
+      try {
+        await for (final chunk in resp.data!.stream) {
+          buffer += utf8.decode(chunk, allowMalformed: true);
+          var separatorIndex = buffer.indexOf('\n\n');
+          while (separatorIndex != -1) {
+            final frame = buffer.substring(0, separatorIndex);
+            buffer = buffer.substring(separatorIndex + 2);
+            final event = SseEvent.parse(frame);
+            if (event != null) controller.add(event);
+            separatorIndex = buffer.indexOf('\n\n');
+          }
+        }
+        await controller.close();
+      } catch (e, st) {
+        controller.addError(e, st);
+        await controller.close();
+      }
+    }).catchError((Object e, StackTrace st) {
+      controller.addError(e, st);
+      controller.close();
+    });
+
+    return controller.stream;
+  }
 }
 
 // Attaches Supabase JWT to every request.

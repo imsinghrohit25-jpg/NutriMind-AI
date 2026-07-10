@@ -52,6 +52,31 @@ export class CircuitBreaker {
     }
   }
 
+  /** Phase 13 — same semantics as call() (open check up front, success/failure recorded once the
+   *  whole operation finishes), adapted for an async generator instead of a single Promise, so
+   *  streaming completions get the same circuit-breaker protection as non-streaming ones. */
+  async *callStream<TYield, TReturn>(
+    fn: () => AsyncGenerator<TYield, TReturn, void>,
+  ): AsyncGenerator<TYield, TReturn, void> {
+    if (this.isOpen()) {
+      throw new Error(`Circuit breaker OPEN for ${this.name}`);
+    }
+
+    try {
+      const gen = fn();
+      let result = await gen.next();
+      while (!result.done) {
+        yield result.value;
+        result = await gen.next();
+      }
+      this.onSuccess();
+      return result.value;
+    } catch (err) {
+      this.onFailure();
+      throw err;
+    }
+  }
+
   private onSuccess(): void {
     this.consecutiveFailures = 0;
     if (this.state === 'HALF_OPEN') {

@@ -1,5 +1,12 @@
-// Voice food logging — hold-to-record, STT via platform speech_to_text,
-// then sends transcription to /api/v1/voice/parse, plays TTS response.
+// Voice food logging — hold-to-record, STT via platform speech_to_text, then sends the
+// transcript through the real Phase 13 Voice Agent (POST /v1/agent/chat, SSE) rather than the
+// older /v1/voice/parse endpoint, which had no confidence gating at all. The Voice Agent's own
+// contract (agents/specialists/voice.ts): below its confidence threshold it asks ONE clarifying
+// question instead of guessing, and above threshold it returns a confirmation utterance the user
+// must accept before anything is treated as logged — this screen mirrors both states instead of
+// always showing whatever was parsed.
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +14,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/sse_event.dart';
 
 class VoiceLogScreen extends ConsumerStatefulWidget {
   const VoiceLogScreen({super.key});
@@ -18,13 +26,16 @@ class VoiceLogScreen extends ConsumerStatefulWidget {
 class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
   final SpeechToText _stt    = SpeechToText();
   final FlutterTts   _tts    = FlutterTts();
-  bool   _sttReady   = false;
-  bool   _listening  = false;
-  bool   _processing = false;
-  String _transcript = '';
-  List<_ParsedFood> _parsedFoods = [];
-  String? _ttsText;
+  bool   _sttReady    = false;
+  bool   _listening   = false;
+  bool   _processing  = false;
+  String _transcript  = '';
+  String? _responseText;
+  bool   _ambiguous   = false;
+  List<Map<String, dynamic>> _pendingFoods = [];
+  bool   _foodLogConfirmed = false;
   String? _error;
+  StreamSubscription<SseEvent>? _sub;
 
   @override
   void initState() {
@@ -47,6 +58,7 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
 
   @override
   void dispose() {
+    _sub?.cancel();
     _stt.stop();
     _tts.stop();
     super.dispose();
@@ -54,11 +66,18 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
 
   Future<void> _startListening() async {
     if (!_sttReady || _listening) return;
-    setState(() { _transcript = ''; _parsedFoods = []; _ttsText = null; _error = null; });
+    setState(() {
+      _transcript = '';
+      _responseText = null;
+      _ambiguous = false;
+      _pendingFoods = [];
+      _foodLogConfirmed = false;
+      _error = null;
+    });
     await _stt.listen(
       onResult: (r) {
         if (mounted) setState(() => _transcript = r.recognizedWords);
-        if (r.finalResult) _sendToNlu(r.recognizedWords);
+        if (r.finalResult) _sendToAgent(r.recognizedWords);
       },
       listenOptions: SpeechListenOptions(
         localeId:      'en_IN',
@@ -71,48 +90,68 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
   Future<void> _stopListening() async {
     await _stt.stop();
     if (mounted) setState(() => _listening = false);
-    if (_transcript.isNotEmpty && _parsedFoods.isEmpty && !_processing) {
-      _sendToNlu(_transcript);
+    if (_transcript.isNotEmpty && _responseText == null && !_processing) {
+      _sendToAgent(_transcript);
     }
   }
 
-  Future<void> _sendToNlu(String text) async {
+  Future<void> _sendToAgent(String text) async {
     if (text.trim().isEmpty) return;
-    setState(() { _processing = true; _error = null; });
-    try {
-      final api  = ref.read(apiClientProvider);
-      final resp = await api.post<Map<String, dynamic>>(
-        '/api/v1/voice/parse',
-        data: {'text': text},
-      );
-      final nlu    = resp.data?['nlu']  as Map<String, dynamic>? ?? {};
-      final ttsMap = resp.data?['tts']  as Map<String, dynamic>? ?? {};
-      final foods  = (nlu['foods'] as List<dynamic>? ?? []).map((f) {
-        final m = f as Map<String, dynamic>;
-        return _ParsedFood(
-          name:    m['name'] as String? ?? '',
-          nameRaw: m['nameRaw'] as String? ?? '',
-          quantity:m['quantity'] as num?,
-          unit:    m['unit'] as String?,
-        );
-      }).toList();
+    setState(() {
+      _processing = true;
+      _error = null;
+      _responseText = null;
+      _ambiguous = false;
+      _pendingFoods = [];
+      _foodLogConfirmed = false;
+    });
 
-      if (mounted) {
-        setState(() {
-          _parsedFoods = foods;
-          _ttsText     = ttsMap['text'] as String?;
-          _processing  = false;
-        });
-      }
+    final api = ref.read(apiClientProvider);
+    Map<String, dynamic> handoffState = {};
 
-      if (ttsMap['text'] != null) {
-        final lang = ttsMap['lang'] as String? ?? 'en-IN';
-        await _tts.setLanguage(lang);
-        await _tts.speak(ttsMap['text'] as String);
-      }
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _processing = false; });
+    _sub = api.postSse('/v1/agent/chat', data: {'message': text, 'locale': 'en-IN'}).listen(
+      (event) {
+        final data = event.data is Map ? Map<String, dynamic>.from(event.data as Map) : <String, dynamic>{};
+        switch (event.type) {
+          case 'agent_handoff':
+            handoffState = Map<String, dynamic>.from(data['handoffState'] as Map? ?? {});
+          case 'done':
+            _finish(data['finalText'] as String? ?? '', handoffState);
+          case 'guard_rejected':
+            _finish(null, handoffState, error: data['reason'] as String? ?? 'This response was blocked.');
+          case 'error':
+            _finish(null, handoffState, error: data['message'] as String? ?? 'Something went wrong.');
+        }
+      },
+      onError: (Object e) => _finish(null, handoffState, error: 'Could not reach the assistant.'),
+    );
+  }
+
+  Future<void> _finish(String? text, Map<String, dynamic> handoffState, {String? error}) async {
+    if (!mounted) return;
+    final foods = (handoffState['pendingFoodLog'] as Map?)?['foods'] as List?;
+    setState(() {
+      _processing = false;
+      _error = error;
+      _responseText = text;
+      _ambiguous = handoffState['voiceAmbiguous'] == true;
+      _pendingFoods = foods?.cast<Map<String, dynamic>>() ?? [];
+    });
+
+    if (text != null && text.isNotEmpty) {
+      await _tts.speak(text);
     }
+  }
+
+  void _confirmFoodLog() {
+    setState(() => _foodLogConfirmed = true);
+    // Honest, documented gap: there is no `log.record` tool in the Shared Tool Registry yet
+    // (agents/types.ts's ToolName union has no meal-logging tool), so confirming here can only
+    // acknowledge the parse, not persist it — same limitation the pre-existing per-item "add to
+    // meal log" affordance already had before this screen was wired to the real Voice Agent.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Confirmed — meal logging persistence is not wired up yet.')),
+    );
   }
 
   @override
@@ -123,15 +162,12 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // Instruction
             Text(
               'Hold the button and say what you ate',
               style: AppType.bodySmall.copyWith(color: AppColors.subtle),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-
-            // Mic button
             GestureDetector(
               onLongPressStart: (_) => _startListening(),
               onLongPressEnd:   (_) => _stopListening(),
@@ -155,7 +191,6 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Transcript
             if (_transcript.isNotEmpty) ...[
               Container(
                 width: double.infinity,
@@ -173,47 +208,67 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Processing
-            if (_processing)
-              const CircularProgressIndicator(),
+            if (_processing) const CircularProgressIndicator(),
 
-            // Parsed foods
-            if (_parsedFoods.isNotEmpty) ...[
+            // Ambiguous — the Voice Agent asked ONE clarifying question rather than guessing.
+            if (_ambiguous && _responseText != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.warning.withAlpha(60)),
+                ),
+                child: Column(children: [
+                  Text(_responseText!, textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _startListening,
+                    icon: const Icon(Icons.mic),
+                    label: const Text('Try again'),
+                  ),
+                ]),
+              ),
+            ],
+
+            // Confirmable — a high-confidence food-logging parse, awaiting explicit confirmation.
+            if (_pendingFoods.isNotEmpty && !_foodLogConfirmed) ...[
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Recognised:', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+                child: Text('Did you have:', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
               ),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.separated(
-                  itemCount: _parsedFoods.length,
+                  itemCount: _pendingFoods.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
-                    final f = _parsedFoods[i];
-                    final qty = f.quantity != null ? '${f.quantity} ' : '';
-                    final unit = f.unit != null ? '${f.unit} of ' : '';
+                    final f = _pendingFoods[i];
+                    final qty = f['quantity'] != null ? '${f['quantity']} ' : '';
+                    final unit = f['unit'] != null ? '${f['unit']} of ' : '';
                     return ListTile(
                       leading: const Icon(Icons.restaurant),
-                      title:    Text(f.name),
-                      subtitle: Text('$qty$unit(said: "${f.nameRaw}")'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${f.name} added to meal log')),
-                          );
-                        },
-                      ),
+                      title: Text((f['name'] as String?) ?? ''),
+                      subtitle: Text('$qty$unit(said: "${f['nameRaw'] ?? f['name']}")'),
                     );
                   },
                 ),
               ),
+              const SizedBox(height: 8),
+              FilledButton(onPressed: _confirmFoodLog, child: const Text('Confirm')),
             ],
 
-            // TTS text
-            if (_ttsText != null && _parsedFoods.isEmpty) ...[
+            if (_foodLogConfirmed) ...[
               const SizedBox(height: 16),
-              Text(_ttsText!, textAlign: TextAlign.center),
+              const Icon(Icons.check_circle, color: AppColors.success, size: 32),
+              const SizedBox(height: 8),
+              const Text('Confirmed'),
+            ],
+
+            if (_responseText != null && !_ambiguous && _pendingFoods.isEmpty) ...[
+              const SizedBox(height: 16),
+              Text(_responseText!, textAlign: TextAlign.center),
             ],
 
             if (_error != null) ...[
@@ -233,14 +288,4 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
       ),
     );
   }
-}
-
-class _ParsedFood {
-  const _ParsedFood({
-    required this.name, required this.nameRaw,
-    this.quantity, this.unit,
-  });
-  final String  name, nameRaw;
-  final num?    quantity;
-  final String? unit;
 }

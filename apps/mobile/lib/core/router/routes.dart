@@ -18,4 +18,9 @@ abstract final class AppRoutes {
   static const profile   = '/profile';
   // Phase 11 (`global.p11.ai_memory_system`)
   static const memory     = '/settings/memory';
+  // Phase 13 (`global.p13.multi_agent_system`) — reachable via direct navigation, same as
+  // `memory` above; not yet linked from a menu entry point (this app has no built settings/home
+  // shell to link from yet — see router.dart's own comment on that pre-existing gap).
+  static const agentChat  = '/assistant';
+  static const voiceLog   = '/assistant/voice';
 }

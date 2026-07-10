@@ -59,6 +59,9 @@ abstract final class NutriMindFlagKeys {
   static const kGlobalK8sWorkerMigration   = 'global.p12.k8s_worker_migration';
   static const kGlobalDegradationLadder    = 'global.p12.degradation_ladder';
 
+  // Phase 13 — Multi-Agent System
+  static const kGlobalMultiAgentSystem     = 'global.p13.multi_agent_system';
+
   /// All flag keys — used for FlagSnapshot.allEnabled() in tests.
   static const List<String> all = [
     kGlobalCountryEngine,
@@ -94,5 +97,6 @@ abstract final class NutriMindFlagKeys {
     kGlobalAIGatewaySemanticCache,
     kGlobalK8sWorkerMigration,
     kGlobalDegradationLadder,
+    kGlobalMultiAgentSystem,
   ];
 }

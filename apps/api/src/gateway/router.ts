@@ -147,6 +147,132 @@ export class GatewayRouter {
     }
   }
 
+  /**
+   * Phase 13 (§16.2: "Streaming responses (SSE/WebSocket) to client, mandatory"). Real
+   * token-level streaming — every adapter (gateway/adapters/*.ts) implements `completeStream`
+   * natively via its own SDK's streaming API, so this is genuine incremental delivery, not the
+   * "whole response as one chunk" simulation copilot/streaming.ts used pre-Phase-13.
+   *
+   * T0/exact-cache/semantic-cache hits still yield their content as a single chunk (there is
+   * nothing to stream — the answer is already fully known before any provider call), which is
+   * honest, not a shortcut: streaming exists to reveal a slow LLM call's progress, and none of
+   * these three paths make one.
+   */
+  async *completeStream(request: LLMRequest): AsyncGenerator<string, LLMResponse, void> {
+    if (isT0Eligible(request.intentTag)) {
+      const content = renderT0Template(request.intentTag!);
+      yield content;
+      const response: LLMResponse = {
+        content, provider: 't0-template', model: 'deterministic-template',
+        promptTokens: 0, completionTokens: 0, costUsd: 0, latencyMs: 0, cached: false,
+        traceId: request.traceId,
+      };
+      await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+      return response;
+    }
+
+    const backpressureSlot = this.opts.backpressure?.acquire(request.userId);
+    try {
+      const cached = this.cache.get(request);
+      if (cached) {
+        yield cached.content;
+        await this.costLog.logFromLLMResponse(cached, request.tier, request.userId);
+        return cached;
+      }
+
+      if (this.opts.semanticCache) {
+        const semanticHit = await this.opts.semanticCache.lookup(
+          request, (text) => this.embedText(text, request.userId),
+        );
+        if (semanticHit) {
+          yield semanticHit.content;
+          await this.costLog.logFromLLMResponse(semanticHit, request.tier, request.userId);
+          return semanticHit;
+        }
+      }
+
+      const policy = this.config[request.tier];
+      if (!policy) throw new Error(`No routing policy for tier: ${request.tier}`);
+
+      const killSwitchActive = (await this.opts.killSwitch?.()) ?? false;
+      const modelTier = classifyModelTier(request, killSwitchActive);
+      const targets: ModelTarget[] =
+        modelTier === 'T1' && policy.fast
+          ? [policy.fast, policy.primary, ...policy.fallbacks]
+          : [policy.primary, ...policy.fallbacks];
+      const errors: Error[] = [];
+
+      for (const target of targets) {
+        const provider = this.providers.get(target.provider);
+        if (!provider) continue;
+
+        const breaker = this.breakers.get(target.provider);
+        if (!breaker || breaker.isOpen()) {
+          errors.push(new ProviderUnavailableError(target.provider));
+          continue;
+        }
+
+        if (!provider.completeStream) {
+          // Documented fallback, not silent: every adapter in this codebase implements
+          // completeStream today, so this only triggers for a hypothetical future provider that
+          // doesn't — it gets a single "chunk" containing the whole response rather than crashing.
+          try {
+            const response = await Promise.race([
+              breaker.call(() => provider.complete(request, target.model)),
+              this.rejectAfter(policy.timeoutMs, target.provider),
+            ]);
+            yield response.content;
+            this.cache.set(request, response);
+            await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+            return response;
+          } catch (err: unknown) {
+            errors.push(err instanceof Error ? err : new Error(String(err)));
+            continue;
+          }
+        }
+
+        // Once any chunk from THIS target has reached the caller, a subsequent failure must not
+        // silently retry a different provider — the caller has already seen partial output from
+        // the failed one, and splicing a second provider's text onto it would be a worse outcome
+        // than surfacing the interruption. Only a failure BEFORE the first chunk (breaker OPEN,
+        // immediate connection error) is eligible for fallback.
+        let yieldedAny = false;
+        try {
+          let fullContent = '';
+          const gen = breaker.callStream(() => provider.completeStream!(request, target.model));
+          let result = await Promise.race([gen.next(), this.rejectAfter(policy.timeoutMs, target.provider)]);
+          while (!result.done) {
+            fullContent += result.value;
+            yield result.value;
+            yieldedAny = true;
+            result = await Promise.race([gen.next(), this.rejectAfter(policy.timeoutMs, target.provider)]);
+          }
+          const response = result.value;
+
+          const policyResult = checkOutputPolicy(fullContent);
+          if (!policyResult.ok) {
+            throw new OutputPolicyViolationError(policyResult.violations, fullContent);
+          }
+
+          this.cache.set(request, response);
+          if (this.opts.semanticCache) {
+            await this.opts.semanticCache.store(request, response, (text) => this.embedText(text, request.userId));
+          }
+          await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+          return response;
+        } catch (err: unknown) {
+          if (err instanceof OutputPolicyViolationError) throw err;
+          if (yieldedAny) throw err; // no fallback once the client has seen partial output
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+
+      throw new AllProvidersFailedError(request.tier, errors);
+    } finally {
+      backpressureSlot?.release();
+    }
+  }
+
   private async embedText(text: string, userId?: string): Promise<number[]> {
     const resp = await this.embed({ input: text, traceId: crypto.randomUUID(), userId });
     return resp.embeddings[0] ?? [];

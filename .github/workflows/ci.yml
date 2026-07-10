@@ -60,6 +60,9 @@ jobs:
 
       - name: "GATE: Regression suite — Feature flags defaults"
         run: npx vitest run src/routes/v1/__tests__/flags.regression.test.ts --reporter=verbose
+
+      - name: "GATE: Multi-agent eval suite (Phase 13, regression threshold)"
+        run: npx vitest run src/agents/__eval__/__tests__/eval-suite.regression.test.ts --reporter=verbose
       # ── END REGRESSION GATE ──────────────────────────────────────────────────
 
       # Gate: deterministic score engine — no LLM writes to score

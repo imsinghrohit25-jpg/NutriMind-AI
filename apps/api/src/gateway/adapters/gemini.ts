@@ -74,6 +74,69 @@ export class GeminiAdapter implements LLMProvider {
     }
   }
 
+  /** Phase 13 — real token-level streaming via the Gemini SDK's native generateContentStream(). */
+  async *completeStream(request: LLMRequest, model: string): AsyncGenerator<string, LLMResponse, void> {
+    const start = Date.now();
+
+    try {
+      const generativeModel = this.client.getGenerativeModel({
+        model,
+        systemInstruction: request.systemPrompt,
+      });
+
+      const contents: Content[] = request.messages.map((m) => {
+        if (m.role === 'user' && request.images?.length) {
+          const parts: Part[] = [
+            ...request.images.map((img) => ({
+              inlineData: { mimeType: img.mimeType, data: img.data },
+            })),
+            { text: m.content },
+          ];
+          return { role: 'user', parts };
+        }
+        return {
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        };
+      });
+
+      const result = await generativeModel.generateContentStream({ contents });
+      let content = '';
+
+      for await (const chunk of result.stream) {
+        const delta = chunk.text();
+        if (delta) {
+          content += delta;
+          yield delta;
+        }
+      }
+
+      const final = await result.response;
+      const usage = final.usageMetadata;
+      const promptTokens = usage?.promptTokenCount ?? 0;
+      const completionTokens = usage?.candidatesTokenCount ?? 0;
+      const modelKey = `gemini/${model}`;
+
+      return {
+        content,
+        provider: 'gemini',
+        model,
+        promptTokens,
+        completionTokens,
+        costUsd: computeCostUsd(modelKey, promptTokens, completionTokens),
+        latencyMs: Date.now() - start,
+        cached: false,
+        traceId: request.traceId,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+        throw new RateLimitError('gemini');
+      }
+      throw new GatewayError(`Gemini streaming error: ${msg}`, 'GEMINI_ERROR', 'gemini', true, err);
+    }
+  }
+
   async embed(request: EmbeddingRequest, model: string): Promise<EmbeddingResponse> {
     const start = Date.now();
     const inputs = Array.isArray(request.input) ? request.input : [request.input];

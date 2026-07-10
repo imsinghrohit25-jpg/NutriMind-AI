@@ -4,6 +4,7 @@
 
 import type { StoredMemoryEvent } from '../events.js';
 import { type FactCandidate, confidenceFromSampleSize } from './types.js';
+import { computeOlsRegression } from '../../stats/linear-regression.js';
 
 /** The most recently set goal. */
 export function computeActiveGoalFact(events: StoredMemoryEvent[]): FactCandidate | null {
@@ -80,14 +81,12 @@ export function computePlateauFact(events: StoredMemoryEvent[], biomarkerType = 
   if (readings.length < 4) return null; // need enough points for a meaningful trend
 
   const t0 = readings[0]!.occurredAt.getTime();
-  const xs = readings.map((r) => (r.occurredAt.getTime() - t0) / 86_400_000); // days since first reading
-  const ys = readings.map((r) => r.payload.value);
-  const n = xs.length;
-  const meanX = xs.reduce((s, x) => s + x, 0) / n;
-  const meanY = ys.reduce((s, y) => s + y, 0) / n;
-  const num = xs.reduce((s, x, i) => s + (x - meanX) * (ys[i]! - meanY), 0);
-  const den = xs.reduce((s, x) => s + (x - meanX) ** 2, 0);
-  const slopePerDay = den === 0 ? 0 : num / den;
+  const { slope: slopePerDay, sampleSize: n } = computeOlsRegression(
+    readings.map((r) => ({
+      x: (r.occurredAt.getTime() - t0) / 86_400_000, // days since first reading
+      y: r.payload.value,
+    })),
+  );
   const slopePerWeek = slopePerDay * 7;
 
   // Plateau threshold: less than 0.1 unit/week of movement over a real multi-reading trend.

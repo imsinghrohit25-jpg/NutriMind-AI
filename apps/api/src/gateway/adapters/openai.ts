@@ -84,6 +84,69 @@ export class OpenAIAdapter implements LLMProvider {
     }
   }
 
+  /** Phase 13 — real token-level streaming via the OpenAI SDK's native `stream: true` +
+   *  `stream_options.include_usage` (real usage accounting on the final chunk, not estimated). */
+  async *completeStream(request: LLMRequest, model: string): AsyncGenerator<string, LLMResponse, void> {
+    const start = Date.now();
+
+    const messages: OpenAI.ChatCompletionMessageParam[] = [];
+    if (request.systemPrompt) {
+      messages.push({ role: 'system', content: request.systemPrompt });
+    }
+    for (const m of request.messages) {
+      messages.push({ role: m.role as 'user' | 'assistant' | 'system', content: m.content });
+    }
+
+    try {
+      const stream = await this.client.chat.completions.create({
+        model,
+        messages,
+        max_tokens: request.maxTokens ?? 4096,
+        temperature: request.temperature ?? 0.7,
+        stream: true,
+        stream_options: { include_usage: true },
+      });
+
+      let content = '';
+      let promptTokens = 0;
+      let completionTokens = 0;
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          content += delta;
+          yield delta;
+        }
+        if (chunk.usage) {
+          promptTokens = chunk.usage.prompt_tokens;
+          completionTokens = chunk.usage.completion_tokens;
+        }
+      }
+
+      const modelKey = `openai/${model}`;
+      return {
+        content,
+        provider: 'openai',
+        model,
+        promptTokens,
+        completionTokens,
+        costUsd: computeCostUsd(modelKey, promptTokens, completionTokens),
+        latencyMs: Date.now() - start,
+        cached: false,
+        traceId: request.traceId,
+      };
+    } catch (err: unknown) {
+      if (err instanceof OpenAI.RateLimitError) throw new RateLimitError('openai');
+      throw new GatewayError(
+        `OpenAI streaming error: ${err instanceof Error ? err.message : String(err)}`,
+        'OPENAI_ERROR',
+        'openai',
+        true,
+        err,
+      );
+    }
+  }
+
   async embed(request: EmbeddingRequest, model: string): Promise<EmbeddingResponse> {
     const start = Date.now();
     const inputs = Array.isArray(request.input) ? request.input : [request.input];

@@ -3,6 +3,13 @@ import type { LLMRequest, LLMResponse, EmbeddingRequest, EmbeddingResponse } fro
 export interface LLMProvider {
   readonly name: string;
   complete(request: LLMRequest, model: string): Promise<LLMResponse>;
+  /** Phase 13 (§16.2: "Streaming responses ... mandatory"). Optional: a provider without a real
+   *  streaming API simply doesn't implement this, and GatewayRouter.completeStream() falls back
+   *  to a clearly-labeled buffer-then-chunk simulation (gateway/router.ts) rather than silently
+   *  pretending every provider streams natively. Yields text deltas as they arrive; the final
+   *  return value (not a yielded value — an async generator's `return`) is the complete
+   *  LLMResponse with real token/cost accounting, available only once the stream ends. */
+  completeStream?(request: LLMRequest, model: string): AsyncGenerator<string, LLMResponse, void>;
   embed?(request: EmbeddingRequest, model: string): Promise<EmbeddingResponse>;
   isAvailable(): boolean;
 }

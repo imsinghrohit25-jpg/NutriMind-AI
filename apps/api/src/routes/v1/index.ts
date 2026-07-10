@@ -20,6 +20,7 @@ import voiceRoutes from './voice.js';
 import packRoutes from './packs.js';
 import onboardingRoutes from './onboarding.js';
 import memoryRoutes from './memory.js';
+import agentRoutes from './agent.js';
 
 export async function registerV1Routes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRoutes, { prefix: '/v1' });
@@ -56,4 +57,6 @@ export async function registerV1Routes(fastify: FastifyInstance): Promise<void> 
   await fastify.register(onboardingRoutes, { prefix: '/v1' });
   // Phase 11 (`global.p11.ai_memory_system`)
   await fastify.register(memoryRoutes, { prefix: '/v1' });
+  // Phase 13 (`global.p13.multi_agent_system`)
+  await fastify.register(agentRoutes, { prefix: '/v1' });
 }

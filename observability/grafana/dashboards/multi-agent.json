@@ -1,0 +1,87 @@
+{
+  "title": "NutriMind Multi-Agent System (Phase 13)",
+  "uid": "nutrimind-multi-agent",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "1m",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Agent Invocations per Minute, by Agent",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(nutrimind_agent_invocations_total[1m])) by (agent)",
+          "legendFormat": "{{agent}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Agent Error Rate, by Agent",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(nutrimind_agent_invocations_total{outcome=\"error\"}[5m])) by (agent) / sum(rate(nutrimind_agent_invocations_total[5m])) by (agent)",
+          "legendFormat": "{{agent}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "id": 3,
+      "title": "P95 Agent Latency (ms), by Agent",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nutrimind_agent_latency_ms_bucket[5m])) by (le, agent))",
+          "legendFormat": "p95 {{agent}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "id": 4,
+      "title": "P95 Tool Latency (ms), by Tool",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(nutrimind_tool_latency_ms_bucket[5m])) by (le, tool))",
+          "legendFormat": "p95 {{tool}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "id": 5,
+      "title": "Tool Calls per Minute, by Tool + Calling Agent",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(nutrimind_tool_invocations_total[1m])) by (tool, agent)",
+          "legendFormat": "{{agent}} -> {{tool}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "id": 6,
+      "title": "Output Guard Rejection Rate",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(nutrimind_guard_verdicts_total{allowed=\"false\"}[15m])) / sum(rate(nutrimind_guard_verdicts_total[15m]))",
+          "legendFormat": "reject rate"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    }
+  ]
+}

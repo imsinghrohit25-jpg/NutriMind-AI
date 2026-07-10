@@ -256,4 +256,95 @@ describe('GatewayRouter', () => {
     expect(providerA.complete).toHaveBeenCalledOnce();
     expect(response2.cached).toBe(true);
   });
+
+  // Phase 13 (§16.2) — real streaming ————————————————————————————————————————
+
+  async function* fakeStream(chunks: string[], finalResponse: Omit<LLMResponse, 'content'>): AsyncGenerator<string, LLMResponse, void> {
+    for (const chunk of chunks) yield chunk;
+    return { ...finalResponse, content: chunks.join('') };
+  }
+
+  it('completeStream yields real incremental chunks and returns the final response', async () => {
+    const streamingProvider = makeMockProvider('mock-a', {
+      completeStream: vi.fn(() => fakeStream(['Hello', ', ', 'world'], {
+        provider: 'mock-a', model: 'model-fast', promptTokens: 5, completionTokens: 3,
+        costUsd: 0.001, latencyMs: 40, cached: false, traceId: 'trace-123',
+      })),
+    });
+    const streamRouter = new GatewayRouter(
+      new Map([['mock-a', streamingProvider]]), ROUTING_CONFIG as never, costLogger as never, cache,
+    );
+
+    const received: string[] = [];
+    const gen = streamRouter.completeStream(BASE_REQUEST);
+    let result = await gen.next();
+    while (!result.done) {
+      received.push(result.value);
+      result = await gen.next();
+    }
+
+    expect(received).toEqual(['Hello', ', ', 'world']);
+    expect(result.value.content).toBe('Hello, world');
+    expect(costLogger.logFromLLMResponse).toHaveBeenCalledOnce();
+  });
+
+  it('T0 templates stream as a single chunk (nothing to stream — no provider call at all)', async () => {
+    const streamRouter = new GatewayRouter(
+      new Map([['mock-a', providerA]]), ROUTING_CONFIG as never, costLogger as never, new GatewayCache(),
+    );
+    const chunks: string[] = [];
+    const gen = streamRouter.completeStream({ ...BASE_REQUEST, intentTag: 'ack_received' });
+    let result = await gen.next();
+    while (!result.done) { chunks.push(result.value); result = await gen.next(); }
+
+    expect(chunks).toEqual(['Got it — noted.']);
+    expect(providerA.complete).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the next provider when the FIRST target fails before yielding any chunk', async () => {
+    const failingProvider = makeMockProvider('mock-a', {
+      completeStream: vi.fn(() => {
+        throw new Error('connection refused');
+      }) as never,
+    });
+    const workingProvider = makeMockProvider('mock-b', {
+      completeStream: vi.fn(() => fakeStream(['fallback', ' response'], {
+        provider: 'mock-b', model: 'model-slow', promptTokens: 5, completionTokens: 3,
+        costUsd: 0.001, latencyMs: 40, cached: false, traceId: 'trace-123',
+      })),
+    });
+    const streamRouter = new GatewayRouter(
+      new Map([['mock-a', failingProvider], ['mock-b', workingProvider]]),
+      ROUTING_CONFIG as never, costLogger as never, new GatewayCache(),
+    );
+
+    const chunks: string[] = [];
+    const gen = streamRouter.completeStream(BASE_REQUEST);
+    let result = await gen.next();
+    while (!result.done) { chunks.push(result.value); result = await gen.next(); }
+
+    expect(chunks.join('')).toBe('fallback response');
+    expect(result.value.provider).toBe('mock-b');
+  });
+
+  it('does NOT fall back once a chunk has already reached the caller — surfaces the interruption instead', async () => {
+    async function* partialThenFail(): AsyncGenerator<string, LLMResponse, void> {
+      yield 'partial ';
+      throw new Error('stream interrupted mid-flight');
+    }
+    const flakyProvider = makeMockProvider('mock-a', { completeStream: vi.fn(() => partialThenFail()) });
+    const neverCalledProvider = makeMockProvider('mock-b', { completeStream: vi.fn(() => fakeStream(['should not be reached'], {
+      provider: 'mock-b', model: 'model-slow', promptTokens: 1, completionTokens: 1, costUsd: 0, latencyMs: 1, cached: false, traceId: 't',
+    })) });
+    const streamRouter = new GatewayRouter(
+      new Map([['mock-a', flakyProvider], ['mock-b', neverCalledProvider]]),
+      ROUTING_CONFIG as never, costLogger as never, new GatewayCache(),
+    );
+
+    const gen = streamRouter.completeStream(BASE_REQUEST);
+    const first = await gen.next();
+    expect(first.value).toBe('partial ');
+    await expect(gen.next()).rejects.toThrow('stream interrupted mid-flight');
+    expect(neverCalledProvider.completeStream).not.toHaveBeenCalled();
+  });
 });

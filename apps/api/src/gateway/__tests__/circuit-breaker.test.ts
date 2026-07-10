@@ -87,4 +87,50 @@ describe('CircuitBreaker', () => {
     const result = await breaker.call(() => Promise.resolve(99));
     expect(result).toBe(99);
   });
+
+  // Phase 13 — callStream() (async-generator variant, used by GatewayRouter.completeStream)
+  describe('callStream', () => {
+    async function* okGen(): AsyncGenerator<string, string, void> {
+      yield 'a';
+      yield 'b';
+      return 'done';
+    }
+    async function* failGen(): AsyncGenerator<string, string, void> {
+      yield 'partial';
+      throw new Error('stream fail');
+    }
+
+    it('yields every chunk and returns the generator\'s return value on success', async () => {
+      const gen = breaker.callStream(okGen);
+      const chunks: string[] = [];
+      let result = await gen.next();
+      while (!result.done) { chunks.push(result.value); result = await gen.next(); }
+      expect(chunks).toEqual(['a', 'b']);
+      expect(result.value).toBe('done');
+      expect(breaker.currentState).toBe('CLOSED');
+    });
+
+    it('records a failure (counting toward the open threshold) when the generator throws mid-stream', async () => {
+      for (let i = 0; i < 3; i++) {
+        const gen = breaker.callStream(failGen);
+        await gen.next(); // 'partial'
+        await expect(gen.next()).rejects.toThrow('stream fail');
+      }
+      expect(breaker.currentState).toBe('OPEN');
+    });
+
+    it('rejects immediately without calling the generator function at all when OPEN', async () => {
+      for (let i = 0; i < 3; i++) {
+        const gen = breaker.callStream(failGen);
+        await gen.next();
+        await expect(gen.next()).rejects.toThrow('stream fail');
+      }
+      expect(breaker.currentState).toBe('OPEN');
+
+      const neverCalled = vi.fn(okGen);
+      const gen = breaker.callStream(neverCalled);
+      await expect(gen.next()).rejects.toThrow(/circuit breaker open/i);
+      expect(neverCalled).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -14,6 +14,8 @@ import '../../features/household/screens/household_screen.dart';
 import '../../features/scanner/screens/scanner_screen.dart' deferred as scanner_lib;
 import '../../features/home/home_screen.dart';
 import '../../features/memory/screens/memory_screen.dart';
+import '../../features/agent/agent_chat_screen.dart';
+import '../../features/voice/voice_log_screen.dart';
 import 'deferred_route.dart';
 import 'routes.dart';
 
@@ -82,6 +84,10 @@ GoRouter router(Ref ref) {
       // same gap as DataRightsScreen, ApiClient's lack of a DI seam, and most of
       // features/ — tracked, not fabricated as solved here).
       GoRoute(path: AppRoutes.memory, builder: (_, __) => const MemoryScreen()),
+      // Phase 13 (`global.p13.multi_agent_system`) — same "routed, not yet menu-linked" gap as
+      // MemoryScreen above.
+      GoRoute(path: AppRoutes.agentChat, builder: (_, __) => const AgentChatScreen()),
+      GoRoute(path: AppRoutes.voiceLog, builder: (_, __) => const VoiceLogScreen()),
     ],
   );
 }
