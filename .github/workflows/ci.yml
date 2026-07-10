@@ -65,23 +65,13 @@ jobs:
         run: npx vitest run src/agents/__eval__/__tests__/eval-suite.regression.test.ts --reporter=verbose
       # ── END REGRESSION GATE ──────────────────────────────────────────────────
 
-      # Gate: deterministic score engine — no LLM writes to score
-      - name: Score engine audit (no LLM calls in engine.ts)
-        run: |
-          if grep -rn "gateway\|llm\|complete\|embed" src/engines/score/engine.ts; then
-            echo "FAIL: LLM call found in score engine"
-            exit 1
-          fi
-          echo "PASS: score engine is deterministic"
-
-      # Gate: allergen engine — no LLM writes to allergen detection
-      - name: "GATE: Allergen engine LLM-write audit"
-        run: |
-          if grep -rn "gateway\|llm\|complete\|embed" src/engines/allergen/; then
-            echo "FAIL: LLM call found in allergen engine"
-            exit 1
-          fi
-          echo "PASS: allergen engine is deterministic"
+      # Gate: no LLM call path writes to a protected score/allergen field. Runs the real
+      # scripts/audit-llm-writes.ts analysis (call-site pattern matching, e.g. `gateway.complete(`)
+      # instead of a bare substring grep — a bare `grep "llm\|complete"` false-positives on any
+      # prose containing those substrings (e.g. this very audit's own filename "audit-llm-writes.ts",
+      # or the word "incomplete"), which is exactly why the old inline grep steps always failed here.
+      - name: "GATE: LLM-write audit (score & allergen engines stay deterministic)"
+        run: npx tsx ../../scripts/audit-llm-writes.ts
 
       # Gate: injection strings inert
       - name: Prompt injection test
@@ -175,7 +165,10 @@ jobs:
           cache: true
 
       - name: Install melos
-        run: dart pub global activate melos
+        # Pinned: melos >=3.0.0 requires a companion pubspec.yaml next to melos.yaml declaring
+        # melos as a dependency (this repo doesn't have one) — 2.9.0 is the last version
+        # installable via a plain global activation.
+        run: dart pub global activate melos 2.9.0
 
       - name: Melos bootstrap (link all packages)
         run: melos bootstrap

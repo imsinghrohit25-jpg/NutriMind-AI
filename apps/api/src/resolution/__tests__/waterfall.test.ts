@@ -165,7 +165,7 @@ describe('resolveBarcode', () => {
       expect(first.resolvedBy).toBe('cache');
       expect(sql).toHaveBeenCalled();
 
-      vi.mocked(sql).mockClear();
+      (sql as unknown as { mockClear: () => void }).mockClear();
       const second = await resolveBarcode('8901234567890', deps);
       expect(second.resolvedBy).toBe('cache');
       expect(second.product?.name).toBe('Test Product');
