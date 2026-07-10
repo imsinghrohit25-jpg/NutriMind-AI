@@ -160,7 +160,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          # 3.24.x's bundled flutter_localizations pins intl to 0.19.0, which conflicts with this
+          # app's intl ^0.20.2 (pub get fails: "version solving failed"). 3.44.x resolves cleanly.
+          flutter-version: '3.44.x'
           channel: stable
           cache: true
 
@@ -205,7 +207,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          # 3.24.x's bundled flutter_localizations pins intl to 0.19.0, which conflicts with this
+          # app's intl ^0.20.2 (pub get fails: "version solving failed"). 3.44.x resolves cleanly.
+          flutter-version: '3.44.x'
           channel: stable
           cache: true
 
@@ -273,7 +277,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          # 3.24.x's bundled flutter_localizations pins intl to 0.19.0, which conflicts with this
+          # app's intl ^0.20.2 (pub get fails: "version solving failed"). 3.44.x resolves cleanly.
+          flutter-version: '3.44.x'
           channel: stable
 
       - name: Flutter pub audit
