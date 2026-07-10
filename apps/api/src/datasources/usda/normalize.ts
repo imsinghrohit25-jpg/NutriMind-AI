@@ -90,6 +90,8 @@ export function normalizeUsdaFood(food: UsdaFoodDetail): CanonicalProduct {
     novaGroup: null,  // FDC does not provide NOVA classification
     confidence: 0.9,  // Foundation / SR Legacy data is high-confidence reference data
     notes: consistencyNote,
+    ashG: null,       // not extracted from FDC in this integration's scope
+    moistureG: null,
   };
 
   fillEnergyFields(nutrition);

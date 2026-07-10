@@ -1,12 +1,22 @@
 // IFCT 2017 dataset loader.
-// Loads CSV into memory on first use; searches by food code or name.
-// Degrades gracefully: isAvailable() returns false if dataset file is absent.
+// Loads the real book-derived data into memory on first use; searches by food code or name.
+// Degrades gracefully: isAvailable() returns false if the dataset file is absent.
 // At the Phase 3 gate, absence raises IfctDatasetMissingError (precise blocker, never faked).
+//
+// ADR-0031: the real dataset is the ICMR-NIN book (PDF), not the placeholder CSV this file
+// originally expected (that format was never actually delivered). The loader's own public
+// contract — isAvailable(), findByCode(), searchByName(), toCanonicalProduct(), getAll(), count —
+// is unchanged; every real call site (resolution/waterfall.ts, packs/sync-service.ts,
+// agents/tools/*) keeps working exactly as before. What changed internally: `load()` now reads
+// the real extracted-and-parsed Table 1 (Proximates) data; further tables are added incrementally
+// (ADR-0031 §5) without changing this class's public surface again.
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseIfctCsv, type IfctEntry } from './parser.js';
-import type { CanonicalProduct, NutritionPer100g } from '../../nutrition/canonical-model.js';
+import { parseTable1 } from './book-parser.js';
+import { validateTable1 } from './validate-table1.js';
+import { table1RowToEntry, buildTable1ImportReport, type IfctEntry, type Table1ImportReport } from './parser.js';
+import type { CanonicalProduct, NutritionPer100g, NutrientValueState } from '../../nutrition/canonical-model.js';
 import { estimateAddedSugar, energyConsistencyNote, fillEnergyFields } from '../../nutrition/derived.js';
 
 export class IfctDatasetMissingError extends Error {
@@ -47,7 +57,7 @@ export function entryToNutrition(entry: IfctEntry): NutritionPer100g {
   const nutrition: NutritionPer100g = {
     ...prov,
     energyKcal: entry.energyKcal,
-    energyKj: null,
+    energyKj: entry.energyKj,
     proteinG: entry.proteinG,
     fatTotalG: entry.fatTotalG,
     fatSaturatedG: null,
@@ -73,6 +83,12 @@ export function entryToNutrition(entry: IfctEntry): NutritionPer100g {
     novaGroup: null,
     confidence: 0.95,  // IFCT is authoritative for Indian foods
     notes: note,
+    ashG: entry.ashG,
+    moistureG: entry.moistureG,
+    nutrientSd: Object.keys(entry.sd).length > 0 ? entry.sd : undefined,
+    nutrientValueState: Object.keys(entry.valueState).length > 0
+      ? (entry.valueState as Record<string, NutrientValueState>)
+      : undefined,
   };
 
   fillEnergyFields(nutrition);
@@ -113,15 +129,26 @@ export class IfctLoader {
   private byCode = new Map<string, IfctEntry>();
   private loaded = false;
   private loadError: Error | null = null;
+  private lastImportReport: Table1ImportReport | null = null;
 
   async load(datasetDir: string): Promise<void> {
-    const csvPath = join(datasetDir, 'ifct2017.csv');
-    if (!existsSync(csvPath)) {
-      this.loadError = new IfctDatasetMissingError(csvPath);
+    // Real extracted-and-sliced Table 1 text — produced by a one-time offline step
+    // (`pdftotext -raw -enc UTF-8`, then slicing to the real Table 1 boundaries) documented in
+    // format.md. Kept outside the repo (gitignored), same placement convention the original
+    // (never-delivered) CSV format used.
+    const table1Path = join(datasetDir, 'table1_proximates_raw.txt');
+    if (!existsSync(table1Path)) {
+      this.loadError = new IfctDatasetMissingError(table1Path);
       return;
     }
     try {
-      this.entries = await parseIfctCsv(csvPath);
+      const rawText = readFileSync(table1Path, 'utf8');
+      const parsed = parseTable1(rawText);
+      const { valid, results } = validateTable1(parsed.rows);
+      const entries = valid.map(table1RowToEntry);
+
+      this.lastImportReport = buildTable1ImportReport(parsed.rejected, results, entries);
+      this.entries = entries;
       for (const e of this.entries) {
         this.byCode.set(e.foodCode.toLowerCase(), e);
       }
@@ -138,7 +165,7 @@ export class IfctLoader {
   // Precise blocker for the Phase 3 gate — thrown when gate test attempts IFCT lookup.
   requireAvailable(): void {
     if (!this.loaded) {
-      throw this.loadError ?? new IfctDatasetMissingError('data/ifct2017/ifct2017.csv');
+      throw this.loadError ?? new IfctDatasetMissingError('data/ifct2017/table1_proximates_raw.txt');
     }
   }
 
@@ -171,5 +198,11 @@ export class IfctLoader {
 
   get count(): number {
     return this.entries.length;
+  }
+
+  /** The real parse/validation report from the last load() — counts, rejections with reasons,
+   *  warnings. Null until load() has run. Used by the import script (ADR-0031 §4 stage 5). */
+  getImportReport(): Table1ImportReport | null {
+    return this.lastImportReport;
   }
 }

@@ -9,6 +9,8 @@
 # Licensed datasets — never committed (see docs/DATA_SOURCES.md)
 data/ifct2017/*
 !data/ifct2017/.gitkeep
+apps/api/data/ifct2017/*
+!apps/api/data/ifct2017/.gitkeep
 
 # Node / TypeScript
 node_modules/

@@ -1,59 +1,69 @@
 # IFCT 2017 Dataset Format
 
-**Source:** ICMR-National Institute of Nutrition, Hyderabad — Indian Food Composition Tables 2017.  
-**License:** Licensed from ICMR-NIN. Not redistributable. Drop file at `data/ifct2017/ifct2017.csv`.  
-**Acquisition:** https://www.nin.res.in — Risk R-01 (long lead time).
+**Source:** ICMR-National Institute of Nutrition, Hyderabad — Indian Food Composition Tables 2017
+(T. Longvah, R. Ananthan, K. Bhaskarachary, K. Venkaiah).
+**License:** Licensed from ICMR-NIN (`licensed_restricted`) — written permission for electronic
+storage/serving confirmed 2026-07-10 (see ADR-0031). Not redistributable.
+**Real file:** the official book, delivered as a PDF (~500 pages, 528 foods × ~151 nutrients across
+12 tables + a supplementary 13th for edible oils). This superseded a placeholder 25-column CSV
+format this file used to document — no such CSV was ever actually delivered; it was a stand-in for
+"whatever arrives," per `docs/DATA_SOURCES.md`'s Risk R-01. See ADR-0031 for the full story.
 
-## Expected CSV Format
+## Real structure, discovered by direct inspection (not assumed)
 
-The parser (`parser.ts`) expects a UTF-8 CSV file with the following columns in this order.
-Column headers are **required** and must match exactly (case-insensitive).
+- 20 food groups (letter-coded, A–T), 528 foods in groups A–S; group T (Edible Oils and Fats, 14
+  entries) has no proximate/vitamin/mineral data — it is covered only by Table 12's fatty-acid
+  profile. Seeded into the `food_groups` table (migration 0029).
+- 12 nutrient tables: Proximates & Dietary Fibre (1), Water-Soluble Vitamins (2), Fat-Soluble
+  Vitamins (3), Carotenoids (4), Minerals & Trace Elements (5), Starch & Individual Sugars (6),
+  Fatty Acid Profile (7), Amino Acid Profile (8), Organic Acids (9), Polyphenols (10),
+  Oligosaccharides/Phytosterols/Phytates/Saponins (11), Fatty Acid Profile of Edible Oils/Fats (12).
+  Integrated incrementally, table-by-table (ADR-0031 §5) — as of this writing, **only Table 1 is
+  integrated.**
+- Energy is tabulated in kJ only (no separate kcal column); kcal is derived
+  (`nutrition/derived.ts`'s `fillEnergyFields()`), same as any other source missing one of the pair.
+- Each value may carry a standard deviation (regional-composite variability) and a value-state
+  distinct from a plain missing value — see `NutrientValueState` in `canonical-model.ts`.
 
-| Column | Type | Unit | Description |
-|---|---|---|---|
-| `food_code` | string | — | Unique IFCT food code (e.g. "A001") |
-| `food_name_en` | string | — | English food name |
-| `food_name_hi` | string | — | Hindi food name (may be empty) |
-| `food_group` | string | — | Food group category |
-| `moisture_g` | number | g/100g | Moisture content |
-| `energy_kcal` | number | kcal/100g | Energy |
-| `protein_g` | number | g/100g | Total protein |
-| `fat_total_g` | number | g/100g | Total fat |
-| `carbohydrates_g` | number | g/100g | Total carbohydrates (by difference) |
-| `dietary_fiber_g` | number | g/100g | Total dietary fibre |
-| `sugars_g` | number | g/100g | Total sugars (may be empty for some entries) |
-| `ash_g` | number | g/100g | Total ash |
-| `calcium_mg` | number | mg/100g | Calcium |
-| `phosphorus_mg` | number | mg/100g | Phosphorus |
-| `iron_mg` | number | mg/100g | Iron |
-| `sodium_mg` | number | mg/100g | Sodium |
-| `potassium_mg` | number | mg/100g | Potassium |
-| `zinc_mg` | number | mg/100g | Zinc |
-| `vitamin_c_mg` | number | mg/100g | Vitamin C (total ascorbic acid) |
-| `beta_carotene_mcg` | number | mcg/100g | Beta-carotene (provitamin A) |
-| `thiamine_mg` | number | mg/100g | Thiamine (B1) |
-| `riboflavin_mg` | number | mg/100g | Riboflavin (B2) |
-| `niacin_mg` | number | mg/100g | Niacin (B3) |
-| `folate_mcg` | number | mcg/100g | Total folate |
-| `vitamin_b12_mcg` | number | mcg/100g | Vitamin B12 (0 for plant foods) |
-| `cholesterol_mg` | number | mg/100g | Cholesterol (0 for plant foods) |
+## Extraction method (real, verified — not assumed)
 
-## Notes
+`pdftotext -layout` (the naive default) badly jumbles this document's real multi-column-per-page
+layout — do not use it for any data value. `pdftotext -raw` (content-stream order) produces
+correctly-ordered, one-row-per-food text and is the **only** extraction mode this integration
+trusts. The encoding flag matters: without `-enc UTF-8`, the output is Latin-1 and every `±`
+(standard-deviation marker) silently becomes a corrupt byte that fails to parse as a number —
+found and fixed during Table 1's own development (ADR-0031).
 
-- Empty cells are treated as `null` (nutrient not measured for that food).
-- Rows with missing `food_code` or `food_name_en` are skipped.
-- Beta-carotene → Vitamin A IU conversion: 1 mcg beta-carotene = 0.167 mcg RAE = 0.556 IU
-  (WHO/IVACG recommendations; provitamin A bioactivity factor 6:1).
-- `added_sugars_g` is not in the IFCT dataset; the estimation rule from ADR-0007 applies
-  (total sugars used as conservative upper bound, `sugars_added_estimated = true`).
-- Energy validation: Atwater consistency check runs at normalisation time; deviations > 10%
-  produce a note in the `notes` field but the IFCT reported value is used.
+```
+pdftotext -raw -enc UTF-8 IFCT2017.pdf ifct2017_raw_utf8.txt
+```
+
+Each table's real text is then sliced out of that full dump between two content markers (the
+table's own repeating "A CEREALS AND MILLETS" section start, which recurs once per table) — not by
+page number, since the book's front matter makes PDF page numbers and printed page numbers diverge.
+`book-parser.ts`'s own header comment documents Table 1's exact real column shapes (9/6/5, not
+fixed per food group — a real, verified rule, not the addendum's assumption).
 
 ## File placement
 
 ```
 data/
   ifct2017/
-    ifct2017.csv      ← required (gitignored — licensed content)
-    README.md         ← acquisition instructions
+    IFCT2017.pdf                    ← the licensed source (gitignored)
+    ifct2017_raw_utf8.txt           ← full pdftotext -raw -enc UTF-8 extraction (gitignored)
+    table1_proximates_raw.txt       ← Table 1's sliced content, what IfctLoader.load() reads (gitignored)
+    README.md                      ← acquisition instructions
 ```
+
+## Parsing entry points
+
+- `book-parser.ts`'s `parseTable1(rawText)` — Table 1 only, for now. Rejects (never guesses) a
+  row whose value count doesn't match one of the three real shapes it discovered.
+- `validate-table1.ts`'s `validateTable1(rows)` — proximate-sum + Atwater-energy hard bounds,
+  reusing the existing `energyConsistencyNote()` (ADR-0007) for the soft note.
+- `parser.ts`'s `table1RowToEntry(row)` — assembles the validated row into the same `IfctEntry`
+  shape `loader.ts` has always exposed; every nutrient not covered by Table 1 stays `null`, never
+  guessed from adjacent tables.
+- `IfctLoader.load(datasetDir)` — reads `table1_proximates_raw.txt` from `datasetDir`, runs the
+  above pipeline, and exposes `getImportReport()` (counts, rejections with reasons, warnings) for
+  the real import script (`scripts/import-ifct-table1.ts`) to report on.

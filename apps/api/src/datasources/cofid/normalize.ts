@@ -47,6 +47,8 @@ export function normalizeCofidFood(food: CofidFood): CanonicalProduct {
     novaGroup: null,   // CoFID does not classify NOVA; engine will assign later
     confidence: 0.95,  // CoFID is a government-authoritative source
     notes: 'CoFID 2021 — UK government food composition dataset',
+    ashG: null,        // CoFID's public tables do not report ash/moisture
+    moistureG: null,
   };
 
   return {

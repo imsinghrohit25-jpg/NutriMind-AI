@@ -9,6 +9,13 @@ export interface Provenance {
   licenseClass: string;   // matches data_sources.license_class CHECK constraint
 }
 
+/** Per-nutrient value semantics — distinguishes "confirmed zero", "below detectable limit"
+ *  (trace), "sought but not present" (not detected), and "not analyzed for this food" from each
+ *  other and from a plain NULL. New with IFCT 2017 integration (ADR-0031, §1.3 of the addendum);
+ *  pre-existing sources never populate this (their NULLs remain ambiguous, not retroactively
+ *  reinterpreted). */
+export type NutrientValueState = 'measured' | 'zero' | 'trace' | 'not_detected' | 'not_analyzed';
+
 // All nutrient values are per 100 g (or per 100 ml for liquids).
 export interface NutritionPer100g extends Provenance {
   energyKcal: number | null;
@@ -38,6 +45,18 @@ export interface NutritionPer100g extends Provenance {
   novaGroup: 1 | 2 | 3 | 4 | null;
   confidence: number | null;  // 0–1; null if not assessed
   notes: string | null;       // energy consistency warnings, estimation notes, etc.
+  // New with IFCT 2017 integration (ADR-0031) — genuinely new proximates no prior source modeled.
+  ashG: number | null;
+  moistureG: number | null;
+  // Sidecar maps, keyed by the field name above they annotate (e.g. 'proteinG'). Absent key =
+  // unknown/not tracked for that nutrient (pre-existing sources never populate these).
+  nutrientSd?: Record<string, number>;
+  nutrientValueState?: Record<string, NutrientValueState>;
+  // The measured value itself for a nutrient with no dedicated column above (e.g.
+  // 'pantothenicAcidMg', 'biotinMcg') — added at ADR-0031 Table 2 once the wide-column approach
+  // stopped scaling past the handful of vitamins/minerals already modeled. Keyed the same way as
+  // nutrientSd/nutrientValueState.
+  nutrientExtra?: Record<string, number>;
 }
 
 export interface CanonicalProduct extends Provenance {

@@ -103,6 +103,8 @@ export function normalizeOffProduct(product: OFFProduct): CanonicalProduct {
     novaGroup,
     confidence: null,
     notes: consistencyNote,
+    ashG: null,       // OFF's nutriment fields don't reliably expose these; out of this change's scope
+    moistureG: null,
   };
 
   fillEnergyFields(nutrition);

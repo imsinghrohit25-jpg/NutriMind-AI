@@ -1,9 +1,15 @@
-// IFCT 2017 CSV parser.
-// Parses the expected format documented in format.md.
-// Uses Node's built-in readline — no external CSV dependency needed for this well-structured format.
+// IFCT 2017 entry model + assembly from the real book tables.
+//
+// Historical note: this file previously parsed a hand-designed placeholder CSV format
+// (`format.md`'s original 25-column spec) that was never actually delivered — no file matching it
+// ever existed in this environment. The real dataset arrived as the official ICMR-NIN book PDF
+// (ADR-0031); `book-parser.ts` parses its real per-table text, and this file assembles the
+// resulting rows into the same `IfctEntry` shape `loader.ts` has always exposed to its callers,
+// extended (additively) with the fields the real book provides that the placeholder format never
+// modeled (per-nutrient standard deviation, value-state, region/sample count, fibre sub-fractions).
 
-import { createReadStream } from 'node:fs';
-import { createInterface } from 'node:readline';
+import type { IfctValueState, Table1Row } from './book-parser.js';
+import type { Table1ValidationResult } from './validate-table1.js';
 
 export interface IfctEntry {
   foodCode: string;
@@ -32,112 +38,118 @@ export interface IfctEntry {
   folateMcg: number | null;
   vitaminB12Mcg: number | null;
   cholesterolMg: number | null;
+  // New, real fields the book actually provides that the never-delivered placeholder format did
+  // not model (ADR-0031):
+  energyKj: number | null;
+  fiberInsolubleG: number | null;
+  fiberSolubleG: number | null;
+  noOfRegions: number | null;
+  /** Per-field standard deviation, keyed by the IfctEntry field name it annotates (e.g.
+   *  'proteinG'). Only present for fields this entry's source table actually reported a real SD
+   *  for (a single-region sample has no SD to report). */
+  sd: Record<string, number>;
+  /** Per-field value-state, same keying convention as `sd`. */
+  valueState: Record<string, IfctValueState>;
+  /** True when this entry's name required best-effort cross-line reassembly during parsing —
+   *  never silently trusted as certainly correct; surfaced so an import report can flag it for a
+   *  human spot-check (ADR-0031). */
+  nameReconstructed: boolean;
 }
 
-type Row = Record<string, string>;
+function kjToKcal(kj: number | null): number | null {
+  return kj === null ? null : Math.round((kj / 4.184) * 100) / 100;
+}
 
-// Parse a CSV line respecting quoted fields (RFC 4180).
-function parseCsvLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]!;
-    if (inQuotes) {
-      if (ch === '"') {
-        // Peek for escaped quote
-        if (line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        current += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ',') {
-        fields.push(current);
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
+/** Builds a real IfctEntry from one validated Table 1 row. Only the proximate fields this table
+ *  covers are populated — every other field (minerals, vitamins, amino/fatty acid profiles, etc.)
+ *  stays null until its own table's import pass is built (ADR-0031 §5's sequencing), never
+ *  fabricated as zero or guessed from this table alone. */
+export function table1RowToEntry(row: Table1Row): IfctEntry {
+  const sd: Record<string, number> = {};
+  const valueState: Record<string, IfctValueState> = {};
+
+  const fields: Array<[keyof IfctEntry, { value: number | null; sd: number | null; state: IfctValueState }]> = [
+    ['moistureG', row.moisture],
+    ['proteinG', row.protein],
+    ['ashG', row.ash],
+    ['fatTotalG', row.fatTotal],
+    ['dietaryFiberG', row.fiberTotal],
+    ['carbohydratesG', row.carbohydrates],
+  ];
+  for (const [field, v] of fields) {
+    if (v.sd !== null) sd[field] = v.sd;
+    valueState[field] = v.state;
   }
-  fields.push(current);
-  return fields;
-}
-
-function num(row: Row, key: string): number | null {
-  const v = row[key.toLowerCase()]?.trim();
-  if (!v || v === '' || v === '-') return null;
-  const n = parseFloat(v);
-  return isFinite(n) ? n : null;
-}
-
-function str(row: Row, key: string): string {
-  return row[key.toLowerCase()]?.trim() ?? '';
-}
-
-function rowToEntry(row: Row): IfctEntry | null {
-  const foodCode = str(row, 'food_code');
-  const foodNameEn = str(row, 'food_name_en');
-  if (!foodCode || !foodNameEn) return null;
+  if (row.energyKj.sd !== null) sd.energyKj = row.energyKj.sd;
+  valueState.energyKj = row.energyKj.state;
 
   return {
-    foodCode,
-    foodNameEn,
-    foodNameHi: str(row, 'food_name_hi'),
-    foodGroup: str(row, 'food_group'),
-    moistureG: num(row, 'moisture_g'),
-    energyKcal: num(row, 'energy_kcal'),
-    proteinG: num(row, 'protein_g'),
-    fatTotalG: num(row, 'fat_total_g'),
-    carbohydratesG: num(row, 'carbohydrates_g'),
-    dietaryFiberG: num(row, 'dietary_fiber_g'),
-    sugarsG: num(row, 'sugars_g'),
-    ashG: num(row, 'ash_g'),
-    calciumMg: num(row, 'calcium_mg'),
-    phosphorusMg: num(row, 'phosphorus_mg'),
-    ironMg: num(row, 'iron_mg'),
-    sodiumMg: num(row, 'sodium_mg'),
-    potassiumMg: num(row, 'potassium_mg'),
-    zincMg: num(row, 'zinc_mg'),
-    vitaminCMg: num(row, 'vitamin_c_mg'),
-    betaCaroteneMcg: num(row, 'beta_carotene_mcg'),
-    thiamineMg: num(row, 'thiamine_mg'),
-    riboflavinMg: num(row, 'riboflavin_mg'),
-    niacinMg: num(row, 'niacin_mg'),
-    folateMcg: num(row, 'folate_mcg'),
-    vitaminB12Mcg: num(row, 'vitamin_b12_mcg'),
-    cholesterolMg: num(row, 'cholesterol_mg'),
+    foodCode: row.foodCode,
+    foodNameEn: row.foodNameEn,
+    foodNameHi: '', // Table 1 carries no Hindi names; a future regional-name pass fills this in
+    foodGroup: row.foodGroupCode,
+    moistureG: row.moisture.value,
+    proteinG: row.protein.value,
+    fatTotalG: row.fatTotal.value,
+    ashG: row.ash.value,
+    dietaryFiberG: row.fiberTotal.value,
+    carbohydratesG: row.carbohydrates.value,
+    energyKj: row.energyKj.value,
+    energyKcal: kjToKcal(row.energyKj.value),
+    fiberInsolubleG: row.fiberInsoluble.value,
+    fiberSolubleG: row.fiberSoluble.value,
+    noOfRegions: row.noOfRegions,
+    sd,
+    valueState,
+    nameReconstructed: row.nameReconstructed,
+    // Not covered by Table 1 — populated by future table passes (ADR-0031 §5), never guessed here.
+    sugarsG: null,
+    calciumMg: null,
+    phosphorusMg: null,
+    ironMg: null,
+    sodiumMg: null,
+    potassiumMg: null,
+    zincMg: null,
+    vitaminCMg: null,
+    betaCaroteneMcg: null,
+    thiamineMg: null,
+    riboflavinMg: null,
+    niacinMg: null,
+    folateMcg: null,
+    vitaminB12Mcg: null,
+    cholesterolMg: null,
   };
 }
 
-export async function parseIfctCsv(filePath: string): Promise<IfctEntry[]> {
-  const entries: IfctEntry[] = [];
-  const stream = createReadStream(filePath, { encoding: 'utf8' });
-  const rl = createInterface({ input: stream, crlfDelay: Infinity });
+export interface Table1ImportReport {
+  totalParsed: number;
+  totalRejectedAtParse: number;
+  totalValid: number;
+  totalRejectedAtValidation: number;
+  parseRejections: Array<{ foodCode: string | null; reason: string }>;
+  validationRejections: Array<{ foodCode: string; reason: string }>;
+  warnings: Array<{ foodCode: string; message: string }>;
+  nameReconstructedCodes: string[];
+}
 
-  let headers: string[] | null = null;
+export function buildTable1ImportReport(
+  parseRejections: Array<{ foodCode: string | null; reason: string }>,
+  validationResults: Table1ValidationResult[],
+  entries: IfctEntry[],
+): Table1ImportReport {
+  const validationRejections = validationResults.filter((r) => !r.ok);
+  const warnings = validationResults
+    .filter((r) => r.ok && r.warnings.length > 0)
+    .flatMap((r) => r.warnings.map((message) => ({ foodCode: r.foodCode, message })));
 
-  for await (const line of rl) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const fields = parseCsvLine(trimmed);
-    if (headers === null) {
-      headers = fields.map((h) => h.toLowerCase().trim());
-      continue;
-    }
-    const row: Row = {};
-    headers.forEach((h, i) => {
-      row[h] = fields[i] ?? '';
-    });
-    const entry = rowToEntry(row);
-    if (entry) entries.push(entry);
-  }
-
-  return entries;
+  return {
+    totalParsed: entries.length + validationRejections.length,
+    totalRejectedAtParse: parseRejections.length,
+    totalValid: entries.length,
+    totalRejectedAtValidation: validationRejections.length,
+    parseRejections,
+    validationRejections: validationRejections.map((r) => ({ foodCode: r.foodCode, reason: r.rejectionReason! })),
+    warnings,
+    nameReconstructedCodes: entries.filter((e) => e.nameReconstructed).map((e) => e.foodCode),
+  };
 }

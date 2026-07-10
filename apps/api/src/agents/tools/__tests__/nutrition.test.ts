@@ -15,6 +15,7 @@ function makeProduct(overrides: Partial<CanonicalProduct['nutrition']> = {}): Ca
       sugarsAddedEstimated: false, dietaryFiberG: 2, sodiumMg: 400, cholesterolMg: null, calciumMg: null,
       ironMg: null, potassiumMg: null, zincMg: null, vitaminCMg: null, vitaminAIu: null, vitaminDIu: null,
       vitaminB12Mcg: null, folateMcg: null, novaGroup: 4, confidence: 0.9, notes: null,
+      ashG: null, moistureG: null,
       ...overrides,
     },
   };
