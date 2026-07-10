@@ -19,7 +19,9 @@ android {
         applicationId = "com.nutrimind.nutrimind"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // The health plugin's own manifest requires minSdk 26 — Flutter's own default
+        // (flutter.minSdkVersion) is lower, which fails the manifest merge on any Android build.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
