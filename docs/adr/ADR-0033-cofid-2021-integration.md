@@ -195,21 +195,44 @@ The addendum's §A (`SourceSelectionPolicy`) is **substantially, but not fully, 
 `resolution/country-waterfall.ts` (built at Phase 3, extended nowhere since) already implements
 per-country source priority — GB → CoFID first, IN → IFCT first, both falling through to
 OpenFoodFacts then USDA — gated behind `global.p3.unified_food_schema`, tested
-(`country-waterfall.test.ts`), and now verified to work correctly against this integration's real
-`CofidLoader` (its `searchByName()`/`toCanonicalProduct()` contract is unchanged, and the full test
-suite for this file was re-run and passes). **However**, this file is not actually wired into any
-live route — `app.ts`'s own comment confirms "country-waterfall.ts (itself not wired into any
-route) constructed one ad hoc" — the real, currently-serving resolution path is the country-agnostic
-`resolution/waterfall.ts`. This is a pre-existing gap from Phase 3, not something this integration
-created or can respons­ibly close in this pass: wiring a new resolution path into production routes
-is a distinct, higher-risk change (route registration, request-path behavior for every country, not
-just GB) that deserves its own dedicated review rather than a rushed addition bundled into a data
-import. The addendum's §B (AI citation schema) and §C (performance baseline/comparison) both
-require a live route consuming CoFID data through the AI/search path to measure anything real —
-since that path isn't wired in, any citation or perf number produced now would be synthetic, not
-measured, violating this project's own "executed, not claimed" discipline. These are reported here
-as an honest, explicit gap — not fabricated as complete — for a follow-up pass once the resolution
-wiring itself is addressed.
+(`country-waterfall.test.ts`), and verified to work correctly against this integration's real
+`CofidLoader` (its `searchByName()`/`toCanonicalProduct()` contract is unchanged). At the time this
+ADR was first written, this file was not wired into any live route — `app.ts`'s own comment
+confirmed "country-waterfall.ts (itself not wired into any route) constructed one ad hoc" — the
+real, currently-serving resolution path was the country-agnostic `resolution/waterfall.ts`.
+
+**Addendum: wired into the live route (2026-07-11, same day, follow-up commit).** `routes/v1/
+resolve.ts` (`POST /v1/resolve/barcode` and `POST /v1/resolve/name`) now calls
+`resolution/country-waterfall.ts`'s `resolveBarcode`/`resolveByName` instead of the plain
+`waterfall.ts` versions directly. This required no new plumbing: `request.country` is already
+decorated on every request by the pre-existing `country/plugin.ts` (Phase 1), and `fastify.cofid`
+already existed as a decorator (added specifically for this file's own future use, per `app.ts`'s
+own comment). Added a module-level cached flag check for `global.p3.unified_food_schema`, following
+the exact same pattern already used by `country/plugin.ts` and `routes/v1/agent.ts` (`global` row
+only, 5-minute cache, fails closed to the existing default behavior on any DB error). Because
+`country-waterfall.ts`'s own two functions already delegate straight through to the plain waterfall
+when `engineEnabled` is false, `resolve.ts` always calls the country-aware entry point — there is no
+if/else — and the flag being OFF (its current default) makes the route byte-identical to its
+pre-wiring behavior, verified by a real test (`routes/v1/__tests__/resolve.test.ts`, new — no
+route-level test existed for this endpoint before): flag OFF ignores CoFID/IFCT entirely even when
+available; flag ON correctly resolves GB requests via CoFID, IN requests via IFCT, and falls through
+to OpenFoodFacts when the country's priority source has no match; a GB request never receives IFCT
+data even when the IFCT loader happens to be available (country-scoping is real, not just present).
+6 new tests, full suite re-run (1,015/1,015, 998 original baseline + 11 CoFID + 6 new route tests),
+zero regressions.
+
+**Deliberately left out of this pass:** `routes/v1/scans.ts`'s own direct call to
+`waterfall.ts`'s `resolveByName` (used for meal-photo dish-name resolution) and
+`agents/tools/food.ts`'s wrapper (used by the multi-agent system's nutrition tool) were not
+updated — the user's request was specifically the resolve route; extending the same country-aware
+wiring to these other two call sites is a natural, low-risk follow-up (same pattern, already proven
+here) but was not assumed to be in scope without being asked.
+
+The addendum's §B (AI citation schema) and §C (performance baseline/comparison) still require the AI
+pipeline itself to consume this now-wired resolution path and a real measured baseline/comparison
+run — neither exists yet as a live, request-driven path all the way through the agent/AI layer, so
+producing a citation payload or a performance number now would still be synthetic, not measured.
+These remain an honest, explicit gap for a further follow-up, not fabricated as complete.
 
 ## Consequences
 
@@ -220,14 +243,19 @@ wiring itself is addressed.
 - `NutrientValueState` gains one new member (`'estimated'`), JSONB-stored, zero migration.
 - The pre-existing `CofidLoader`/`packs/sync-service.ts`/`country-waterfall.ts` integration surface
   now serves real UK data for the first time, with its public contract unchanged.
+- `routes/v1/resolve.ts` now calls the country-aware waterfall (§11) — byte-identical when
+  `global.p3.unified_food_schema` is OFF (its current default), country-prioritized when ON.
 
 ## Follow-ups (tracked, not blocking)
 
 - Cross-source deduplication (CoFID ↔ USDA ↔ IFCT ↔ CNF for the same real-world food) — deferred
   per §9, same open item ADR-0032 already tracked.
-- Wiring `country-waterfall.ts` into a live route (§11) — the actual remaining piece of the
-  addendum's SourceSelectionPolicy ask; needs its own dedicated review.
-- AI citation schema (addendum §B) and performance baseline/comparison (addendum §C) — both need
-  the above wiring to produce a real, measured (not synthetic) result.
+- `routes/v1/scans.ts` (meal-photo dish-name resolution) and `agents/tools/food.ts` (multi-agent
+  nutrition tool) still call the plain, country-agnostic `waterfall.ts` directly — the same
+  country-aware wiring applied to `resolve.ts` (§11) is a natural, low-risk follow-up for these two
+  call sites, deliberately not done in this pass (out of the requested scope).
+- AI citation schema (addendum §B) and performance baseline/comparison (addendum §C) — both need a
+  live AI/agent path consuming the now-wired resolution route to produce a real, measured (not
+  synthetic) result.
 - The 10 deferred CoFID sheets (§2) remain a real, valuable, additive follow-up if a consumer needs
   fatty-acid-chain-level or phytosterol/organic-acid detail.
