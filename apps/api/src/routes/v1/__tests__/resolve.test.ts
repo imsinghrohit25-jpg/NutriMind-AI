@@ -8,11 +8,11 @@ import type { CanonicalProduct } from '../../../nutrition/canonical-model.js';
 import type { WaterfallDeps } from '../../../resolution/waterfall.js';
 
 // Real book-derived-style fixtures — each source's own product, distinguishable by `source`.
-function makeProduct(source: string, name: string): CanonicalProduct {
+function makeProduct(source: string, name: string, datasetVersion = 'v'): CanonicalProduct {
   return {
     source,
     sourceId: 'x',
-    datasetVersion: 'v',
+    datasetVersion,
     retrievedAt: new Date(),
     licenseClass: 'public_domain',
     barcode: null,
@@ -28,23 +28,44 @@ function makeProduct(source: string, name: string): CanonicalProduct {
     fssaiVegMark: null,
     imageUrl: null,
     thumbnailUrl: null,
-    nutrition: null,
+    nutrition: {
+      source, sourceId: 'x', datasetVersion, retrievedAt: new Date(), licenseClass: 'public_domain',
+      energyKcal: 400, energyKj: null, proteinG: 25, fatTotalG: 33, fatSaturatedG: null, fatTransG: null,
+      fatPolyunsaturatedG: null, fatMonounsaturatedG: null, carbohydratesG: 0.1, sugarsG: 0.1,
+      sugarsAddedG: null, sugarsAddedEstimated: false, dietaryFiberG: null, sodiumMg: 700,
+      cholesterolMg: null, calciumMg: null, ironMg: null, potassiumMg: null, zincMg: null,
+      vitaminCMg: null, vitaminAIu: null, vitaminDIu: null, vitaminB12Mcg: null, folateMcg: null,
+      novaGroup: null, confidence: 0.95, notes: null, ashG: null, moistureG: null,
+    },
     ingredientsRawText: null,
   };
 }
 
-const COFID_PRODUCT = makeProduct('cofid_2021', 'Cheddar Cheese');
+const COFID_PRODUCT = makeProduct('cofid_2021', 'Cheddar Cheese', '2021');
 const IFCT_PRODUCT = makeProduct('ifct_2017', 'Masoor Dal');
 const OFF_PRODUCT = makeProduct('openfoodfacts', 'Some Snack');
 
 function makeSql() {
   // Always a cache miss; INSERT ... RETURNING id returns a fake id — mirrors
   // resolution/__tests__/waterfall.test.ts's own makeSql helper.
-  return vi.fn().mockImplementation((strings: TemplateStringsArray) => {
+  const fn = vi.fn().mockImplementation((strings: TemplateStringsArray) => {
     const query = strings.join('?');
     if (query.includes('INSERT INTO public.products')) return Promise.resolve([{ id: 'product-uuid' }]);
+    if (query.includes('FROM public.data_sources')) {
+      return Promise.resolve([{
+        display_name: 'UK Composition of Foods Integrated Dataset (CoFID)',
+        license_class: 'public_domain',
+        attribution_text: 'Contains public sector information licensed under the Open Government Licence v3.0.',
+        terms_url: 'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/',
+      }]);
+    }
+    if (query.includes('FROM public.import_batches')) return Promise.resolve([{ id: 'batch-uuid-123' }]);
     return Promise.resolve([]);
-  }) as unknown as WaterfallDeps['sql'];
+  });
+  // postgres.js's real Sql tag function carries a `.json()` helper used by persistProduct to wrap
+  // JSONB columns — a plain vi.fn() mock doesn't have one, so attach a passthrough identity here.
+  (fn as unknown as { json: (v: unknown) => unknown }).json = (v: unknown) => v;
+  return fn as unknown as WaterfallDeps['sql'];
 }
 
 function makeSupabase(flagEnabled: boolean) {
@@ -66,12 +87,13 @@ function buildApp(opts: {
   country: string;
   cofidAvailable?: boolean;
   ifctAvailable?: boolean;
+  offBarcodeMatch?: boolean;
 }): FastifyInstance {
   const app = Fastify({ logger: false });
   app.decorate('supabase', makeSupabase(opts.flagEnabled) as never);
   app.decorate('sql', makeSql());
   app.decorate('offClient', {
-    getProduct: vi.fn().mockResolvedValue(null),
+    getProduct: vi.fn().mockResolvedValue(opts.offBarcodeMatch ? OFF_PRODUCT : null),
     searchByName: vi.fn().mockResolvedValue([OFF_PRODUCT]),
   } as never);
   app.decorate('usdaClient', null as never);
@@ -119,6 +141,23 @@ describe('POST /v1/resolve/name — country-aware wiring (global.p3.unified_food
     const body = JSON.parse(resp.body);
     expect(body.data.resolvedBy).toBe('cofid_2021');
     expect(body.data.product.name).toBe('Cheddar Cheese');
+    await app.close();
+  });
+
+  it('attaches a real citation (source display, licence, batch id, data quality grade) — never a placeholder', async () => {
+    const app = buildApp({ flagEnabled: true, country: 'GB', cofidAvailable: true });
+    await app.register(resolveRoutes, { prefix: '/v1' });
+    await app.ready();
+
+    const resp = await app.inject({ method: 'POST', url: '/v1/resolve/name', payload: { name: 'cheese' } });
+    const body = JSON.parse(resp.body);
+    expect(body.data.citation).toMatchObject({
+      source: 'cofid_2021',
+      sourceDisplay: 'UK Composition of Foods Integrated Dataset (CoFID)',
+      datasetVersion: '2021',
+      importBatchId: 'batch-uuid-123',
+      dataQualityGrade: 'A',
+    });
     await app.close();
   });
 
@@ -171,6 +210,19 @@ describe('POST /v1/resolve/barcode — country threaded through without breaking
     expect(resp.statusCode).toBe(404);
     const body = JSON.parse(resp.body);
     expect(body.data.found).toBe(false);
+    await app.close();
+  });
+
+  it('flag ON, GB request, OFF match found: attaches a real citation alongside the resolved product', async () => {
+    const app = buildApp({ flagEnabled: true, country: 'GB', offBarcodeMatch: true });
+    await app.register(resolveRoutes, { prefix: '/v1' });
+    await app.ready();
+
+    const resp = await app.inject({ method: 'POST', url: '/v1/resolve/barcode', payload: { barcode: '5000000000000' } });
+    expect(resp.statusCode).toBe(200);
+    const body = JSON.parse(resp.body);
+    expect(body.data.resolvedBy).toBe('openfoodfacts');
+    expect(body.data.citation).toMatchObject({ source: 'openfoodfacts' });
     await app.close();
   });
 });

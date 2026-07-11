@@ -266,17 +266,26 @@ showing.
 null` alongside the existing resolution fields (a new `FoodResolutionResult` type, additive —
 `agents/specialists/nutrition.ts`'s type-only import was updated to match, no logic changed there).
 `routes/v1/scans.ts`'s `/scans/meal` response gains a `topCandidateCitation` field built the same
-way. `routes/v1/resolve.ts` was **not** touched — the request was specifically scans.ts/food.ts, and
-extending the same pattern there is a natural, low-risk follow-up, not assumed. Neither existing
-test suite exercised a resolved product with real (non-null) `nutrition` data before this — updated
-both test files' `sql` mocks to include a `data_sources`/`import_batches` case and a `.json()`
-passthrough (postgres.js's real `Sql` tag carries this helper; a plain `vi.fn()` mock doesn't), and
-added `nutrition/__tests__/citation.test.ts` (6 tests covering: null on no-nutrition, null on a
-missing `data_sources` row rather than a fabricated fallback, a full real citation build, null
-`importBatchId` when no batch exists, the estimated-value-note filtering, and grade boundaries).
+way. Neither existing test suite exercised a resolved product with real (non-null) `nutrition` data
+before this — updated both test files' `sql` mocks to include a `data_sources`/`import_batches`
+case and a `.json()` passthrough (postgres.js's real `Sql` tag carries this helper; a plain
+`vi.fn()` mock doesn't), and added `nutrition/__tests__/citation.test.ts` (6 tests covering: null on
+no-nutrition, null on a missing `data_sources` row rather than a fabricated fallback, a full real
+citation build, null `importBatchId` when no batch exists, the estimated-value-note filtering, and
+grade boundaries).
 
-Full suite re-run: 1,031/1,031 (998 original baseline + 11 CoFID + 6 resolve-route + 6 scans/food
-country-wiring + 10 new citation tests), zero regressions.
+**§B extended to `routes/v1/resolve.ts` too (2026-07-11, fourth follow-up commit), on explicit
+request.** `POST /v1/resolve/barcode` and `POST /v1/resolve/name` now both attach the identical
+`citation` field, built the same way, whenever a product resolves — closing the one call site
+deliberately left out of the previous pass. Same test-fixture fix applied to
+`routes/v1/__tests__/resolve.test.ts` (real nutrition data + `data_sources`/`import_batches` mock
+cases), plus 2 new tests (a full citation match for the name-resolution path, and a citation
+attached to a real OFF barcode match). Every real caller that resolves a product to nutrition data
+anywhere in this codebase — `resolve.ts`, `scans.ts`, and `agents/tools/food.ts` — now surfaces a
+real, DB-verified citation.
+
+Full suite re-run: 1,033/1,033 (998 original baseline + 11 CoFID + 6 resolve-route country-wiring +
+6 scans/food country-wiring + 10 citation tests + 2 new here), zero regressions.
 
 **§C (performance baseline/comparison) remains an open, explicit gap** — it needs a real measured
 baseline/comparison run through the now-partially-wired AI path, which doesn't exist as a complete,

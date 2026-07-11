@@ -15,6 +15,7 @@ import { resolveBarcode, resolveByName } from '../../resolution/country-waterfal
 import { enqueueProductEmbedding } from '../../embeddings/product-pipeline.js';
 import { getBoss } from '../../jobs/boss.js';
 import { recordEventBestEffort } from '../../memory/events.js';
+import { buildNutritionCitation } from '../../nutrition/citation.js';
 import { ok, err } from '@nutrimind/shared';
 
 const FLAG_KEY = 'global.p3.unified_food_schema';
@@ -111,11 +112,16 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
       });
     }
 
+    // Real source citation (ADR-0033 addendum §B) — null only when the product has no nutrition
+    // data at all; never a placeholder attribution.
+    const citation = result.product ? await buildNutritionCitation(fastify.sql, result.product) : null;
+
     return reply.send(
       ok({
         found: true,
         resolvedBy: result.resolvedBy,
         product: result.product,
+        citation,
       }),
     );
   });
@@ -141,6 +147,8 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
       return reply.status(404).send(ok({ found: false, message: 'No matching food found.' }));
     }
 
-    return reply.send(ok({ found: true, resolvedBy: result.resolvedBy, product: result.product }));
+    const citation = result.product ? await buildNutritionCitation(fastify.sql, result.product) : null;
+
+    return reply.send(ok({ found: true, resolvedBy: result.resolvedBy, product: result.product, citation }));
   });
 }
