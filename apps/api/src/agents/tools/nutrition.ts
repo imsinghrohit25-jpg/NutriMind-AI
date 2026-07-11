@@ -45,8 +45,9 @@ function scaleToServing(per100g: NutritionPer100g, servingG: number): Partial<Nu
 /** Data quality grade from real provenance/confidence signals — never a guess. Mirrors the
  *  grading language already used across scan/restaurant "ESTIMATED" flows (confidence <=0.6 or
  *  no confidence recorded => C/D, matching the existing cloud-OCR-fallback confidence cap and
- *  menu-scanner's estimation confidence ceiling of 0.35). */
-function gradeDataQuality(per100g: NutritionPer100g | null): 'A' | 'B' | 'C' | 'D' {
+ *  menu-scanner's estimation confidence ceiling of 0.35). Exported for reuse by
+ *  nutrition/citation.ts (ADR-0033 addendum §B) — never re-derived. */
+export function gradeDataQuality(per100g: NutritionPer100g | null): 'A' | 'B' | 'C' | 'D' {
   if (!per100g) return 'D';
   if (per100g.confidence == null) return per100g.licenseClass === 'open' ? 'B' : 'C';
   if (per100g.confidence >= 0.9) return 'A';

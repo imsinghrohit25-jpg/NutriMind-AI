@@ -245,11 +245,42 @@ vision-analysis step so the test isolates the resolution wiring itself rather th
 replicate the real gateway's JSON-parsing contract). Full suite re-run: 1,021/1,021 (998 original
 baseline + 11 CoFID + 6 resolve-route + 6 new here), zero regressions.
 
-The addendum's §B (AI citation schema) and §C (performance baseline/comparison) still require the AI
-pipeline itself to consume this now-wired resolution path and a real measured baseline/comparison
-run — neither exists yet as a live, request-driven path all the way through the agent/AI layer, so
-producing a citation payload or a performance number now would still be synthetic, not measured.
-These remain an honest, explicit gap for a further follow-up, not fabricated as complete.
+**§B (AI citation schema) partially wired, on explicit request (2026-07-11, third follow-up
+commit) — `scans.ts` and `food.ts` specifically, `resolve.ts` deliberately left alone.** New shared
+module `nutrition/citation.ts` builds a real `NutritionCitation` for any resolved product: source
+display name, licence class, attribution text, and terms URL come from a live `data_sources` lookup
+(never a hardcoded string — the same table every source's own ADR already treats as the single
+source of truth); `importBatchId` comes from the most recent `completed` `import_batches` row
+matching the product's `(source, datasetVersion)`, and is honestly `null` (never fabricated) for
+live-API sources like USDA/OpenFoodFacts that have no batch import; `dataQualityGrade` reuses the
+existing `gradeDataQuality` function from `agents/tools/nutrition.ts` (exported, not re-derived) —
+the same real confidence/licence-based grading already used by the Nutrition Agent's own health-
+score output; `valueStateNotes` surfaces only nutrients the source itself flags as `'estimated'`
+(CoFID's real bracketed/parenthesised convention, §3) — deliberately excluding `'not_analyzed'`/
+`'trace'`/`'not_detected'`, since a single CoFID food routinely has a dozen not-analyzed
+micronutrients and surfacing all of them would bury the one qualifier that's actually actionable
+("this specific number is an estimate") in noise about nutrients the response likely isn't even
+showing.
+
+`agents/tools/food.ts`'s `foodLookupTool`/`foodSearchTool` now return `citation: NutritionCitation |
+null` alongside the existing resolution fields (a new `FoodResolutionResult` type, additive —
+`agents/specialists/nutrition.ts`'s type-only import was updated to match, no logic changed there).
+`routes/v1/scans.ts`'s `/scans/meal` response gains a `topCandidateCitation` field built the same
+way. `routes/v1/resolve.ts` was **not** touched — the request was specifically scans.ts/food.ts, and
+extending the same pattern there is a natural, low-risk follow-up, not assumed. Neither existing
+test suite exercised a resolved product with real (non-null) `nutrition` data before this — updated
+both test files' `sql` mocks to include a `data_sources`/`import_batches` case and a `.json()`
+passthrough (postgres.js's real `Sql` tag carries this helper; a plain `vi.fn()` mock doesn't), and
+added `nutrition/__tests__/citation.test.ts` (6 tests covering: null on no-nutrition, null on a
+missing `data_sources` row rather than a fabricated fallback, a full real citation build, null
+`importBatchId` when no batch exists, the estimated-value-note filtering, and grade boundaries).
+
+Full suite re-run: 1,031/1,031 (998 original baseline + 11 CoFID + 6 resolve-route + 6 scans/food
+country-wiring + 10 new citation tests), zero regressions.
+
+**§C (performance baseline/comparison) remains an open, explicit gap** — it needs a real measured
+baseline/comparison run through the now-partially-wired AI path, which doesn't exist as a complete,
+live, request-driven flow yet. Not fabricated as complete.
 
 ## Consequences
 

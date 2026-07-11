@@ -2,11 +2,18 @@
 // resolveBarcode/resolveByName exactly as routes/v1/resolve.ts calls them (ADR-0033 §11) — same
 // country-aware waterfall, same cache behavior, no parallel/duplicate resolution logic. Byte-
 // identical to the plain waterfall when `global.p3.unified_food_schema` is off (its default).
+//
+// Every result additionally carries a real `citation` (ADR-0033 addendum §B — "no nutrition
+// number leaves the AI layer without its provenance attached"), built from the resolved product's
+// own source/dataset fields against the live `data_sources`/`import_batches` tables — never a
+// hardcoded attribution string. `citation` is null only when there's no product to attribute
+// (not_found) or no nutrition data at all.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ToolDefinition, ToolContext } from '../types.js';
 import { resolveBarcode, resolveByName, type GlobalResolutionResult } from '../../resolution/country-waterfall.js';
 import { lookupCountryOrGlobal } from '../../country/registry.js';
+import { buildNutritionCitation, type NutritionCitation } from '../../nutrition/citation.js';
 
 const FLAG_KEY = 'global.p3.unified_food_schema';
 const FLAG_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -48,6 +55,8 @@ export interface FoodSearchInput {
   name: string;
 }
 
+export type FoodResolutionResult = GlobalResolutionResult & { citation: NutritionCitation | null };
+
 function toolDeps(ctx: ToolContext) {
   return {
     sql: ctx.sql,
@@ -59,30 +68,37 @@ function toolDeps(ctx: ToolContext) {
   };
 }
 
-export const foodLookupTool: ToolDefinition<FoodLookupInput, GlobalResolutionResult> = {
+async function withCitation(ctx: ToolContext, result: GlobalResolutionResult): Promise<FoodResolutionResult> {
+  const citation = result.product ? await buildNutritionCitation(ctx.sql, result.product) : null;
+  return { ...result, citation };
+}
+
+export const foodLookupTool: ToolDefinition<FoodLookupInput, FoodResolutionResult> = {
   name: 'food.lookup',
-  description: 'Resolve a scanned barcode to a canonical product (name, brand, per-100g nutrition, provenance).',
+  description: 'Resolve a scanned barcode to a canonical product (name, brand, per-100g nutrition, provenance, source citation).',
   execute: async (input, ctx) => {
     const engineEnabled = await isUnifiedFoodSchemaEnabled(ctx.supabase);
-    return resolveBarcode(
+    const result = await resolveBarcode(
       input.barcode,
       lookupCountryOrGlobal(ctx.countryCode ?? 'GLOBAL'),
       toolDeps(ctx),
       { userId: ctx.userId, persistResult: true, engineEnabled },
     );
+    return withCitation(ctx, result);
   },
 };
 
-export const foodSearchTool: ToolDefinition<FoodSearchInput, GlobalResolutionResult> = {
+export const foodSearchTool: ToolDefinition<FoodSearchInput, FoodResolutionResult> = {
   name: 'food.search',
-  description: 'Resolve a food/ingredient name to a canonical product when no barcode is available.',
+  description: 'Resolve a food/ingredient name to a canonical product when no barcode is available, with a source citation.',
   execute: async (input, ctx) => {
     const engineEnabled = await isUnifiedFoodSchemaEnabled(ctx.supabase);
-    return resolveByName(
+    const result = await resolveByName(
       input.name,
       lookupCountryOrGlobal(ctx.countryCode ?? 'GLOBAL'),
       toolDeps(ctx),
       { userId: ctx.userId, persistResult: true, engineEnabled },
     );
+    return withCitation(ctx, result);
   },
 };

@@ -15,6 +15,7 @@ import { estimatePortion } from '../../scan/meal-photo/portioning.js';
 import { resolveByName } from '../../resolution/country-waterfall.js';
 import { detectScript, needsCloudOcrFallback } from '../../scan/label-parser/script-detector.js';
 import { extractLabelViaCloudVision } from '../../scan/label-parser/cloud-ocr-fallback.js';
+import { buildNutritionCitation } from '../../nutrition/citation.js';
 import { ok, err } from '@nutrimind/shared';
 
 // Same country-aware wiring as routes/v1/resolve.ts (ADR-0033 §11) — byte-identical to the plain
@@ -219,6 +220,9 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
     const top = vision.candidates[0];
     let nutrition = null;
     let resolvedBy = null;
+    // Real source citation (ADR-0033 addendum §B) — null when nothing was resolved, never a
+    // placeholder attribution.
+    let citation = null;
     if (top && top.confidence >= 0.4) {
       try {
         const engineEnabled = await isUnifiedFoodSchemaEnabled(fastify.supabase);
@@ -232,6 +236,7 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
         if (result.resolvedBy !== 'not_found' && result.product?.nutrition) {
           nutrition = result.product.nutrition;
           resolvedBy = result.resolvedBy;
+          citation = await buildNutritionCitation(fastify.sql, result.product);
         }
       } catch (e) {
         fastify.log.warn({ err: e }, '[meal-scan] nutrition resolution failed for top dish');
@@ -252,6 +257,7 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
         })),
         topCandidateNutrition: nutrition,
         topCandidateResolvedBy: resolvedBy,
+        topCandidateCitation: citation,
         needsUserConfirmation: !top || top.confidence < 0.75,
         notes: vision.notes,
         disclaimerRequired: true,
