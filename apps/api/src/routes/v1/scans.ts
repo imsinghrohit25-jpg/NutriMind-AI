@@ -5,16 +5,51 @@
 // POST /v1/scans/meal   — identify dishes in a meal photo + estimate portions
 
 import type { FastifyInstance } from 'fastify';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { parseLabelText } from '../../scan/label-parser/parser.js';
 import { tokenizeIngredients } from '../../scan/ingredient-parser/tokenizer.js';
 import { parseAssist } from '../../scan/parse-assist.js';
 import { analyseMealPhoto } from '../../scan/meal-photo/vision.js';
 import { estimatePortion } from '../../scan/meal-photo/portioning.js';
-import { resolveByName } from '../../resolution/waterfall.js';
+import { resolveByName } from '../../resolution/country-waterfall.js';
 import { detectScript, needsCloudOcrFallback } from '../../scan/label-parser/script-detector.js';
 import { extractLabelViaCloudVision } from '../../scan/label-parser/cloud-ocr-fallback.js';
 import { ok, err } from '@nutrimind/shared';
+
+// Same country-aware wiring as routes/v1/resolve.ts (ADR-0033 §11) — byte-identical to the plain
+// waterfall when `global.p3.unified_food_schema` is off (its default).
+const FLAG_KEY = 'global.p3.unified_food_schema';
+const FLAG_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let _flagEnabled = false;
+let _cacheExpiry = 0;
+
+async function isUnifiedFoodSchemaEnabled(supabase: SupabaseClient): Promise<boolean> {
+  if (Date.now() < _cacheExpiry) return _flagEnabled;
+
+  try {
+    const { data } = await supabase
+      .from('feature_flags')
+      .select('enabled')
+      .eq('key', FLAG_KEY)
+      .is('country_code', null)
+      .maybeSingle();
+
+    _flagEnabled = data?.enabled ?? false;
+  } catch {
+    _flagEnabled = false; // fail closed: default to the existing, already-live behavior
+  }
+
+  _cacheExpiry = Date.now() + FLAG_CACHE_TTL_MS;
+  return _flagEnabled;
+}
+
+/** Reset the flag cache — for testing only. */
+export function _resetScansUnifiedFoodSchemaFlagCache(): void {
+  _flagEnabled = false;
+  _cacheExpiry = 0;
+}
 
 const OcrBodySchema = z.object({
   rawText: z.string().min(10).max(8000),
@@ -186,12 +221,14 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
     let resolvedBy = null;
     if (top && top.confidence >= 0.4) {
       try {
-        const result = await resolveByName(top.searchQuery, {
+        const engineEnabled = await isUnifiedFoodSchemaEnabled(fastify.supabase);
+        const result = await resolveByName(top.searchQuery, request.country, {
           sql: fastify.sql,
           offClient: fastify.offClient,
           ifct: fastify.ifct,
           usdaClient: fastify.usdaClient,
-        });
+          cofid: fastify.cofid,
+        }, { engineEnabled });
         if (result.resolvedBy !== 'not_found' && result.product?.nutrition) {
           nutrition = result.product.nutrition;
           resolvedBy = result.resolvedBy;

@@ -221,12 +221,29 @@ data even when the IFCT loader happens to be available (country-scoping is real,
 6 new tests, full suite re-run (1,015/1,015, 998 original baseline + 11 CoFID + 6 new route tests),
 zero regressions.
 
-**Deliberately left out of this pass:** `routes/v1/scans.ts`'s own direct call to
-`waterfall.ts`'s `resolveByName` (used for meal-photo dish-name resolution) and
-`agents/tools/food.ts`'s wrapper (used by the multi-agent system's nutrition tool) were not
-updated — the user's request was specifically the resolve route; extending the same country-aware
-wiring to these other two call sites is a natural, low-risk follow-up (same pattern, already proven
-here) but was not assumed to be in scope without being asked.
+**Extended to the remaining two call sites (2026-07-11, same day, second follow-up commit), on
+explicit request.** `routes/v1/scans.ts`'s `/scans/meal` handler (dish-name resolution for a
+photographed meal's top candidate) and `agents/tools/food.ts`'s `food.lookup`/`food.search` tools
+(used by the multi-agent system's Nutrition Agent) now call `country-waterfall.ts` the same way,
+with the identical flag-check pattern duplicated per-file (matching this codebase's own established
+convention of `country/plugin.ts`/`routes/v1/agent.ts` — no shared helper module exists for this
+elsewhere either, so none was introduced here). `agents/types.ts`'s `ToolContext` already carried
+`cofid: CofidLoader` and `countryCode?: string` (populated from `request.country.isoCode` in
+`routes/v1/agent.ts`) — `agents/tools/food.ts` converts that ISO code to a full `CountryProfile` via
+the existing `lookupCountryOrGlobal` helper (already used by `agents/tools/country.ts`), defaulting
+to `'GLOBAL'` when absent. `agents/specialists/nutrition.ts`'s type-only import was widened from
+`ResolutionResult` to `GlobalResolutionResult` (aliased to the same local name, zero other line
+changed) since the tool's actual return type now includes `'cofid_2021'` as a possible `resolvedBy`
+value — the `product`/`productId` shape is otherwise identical, so this is a pure widening, not a
+breaking change.
+
+Neither call site had any existing test coverage before this — added
+`agents/tools/__tests__/food.test.ts` (4 tests: flag-off parity, GB→CoFID-first, IN→IFCT-first,
+GB-falls-through-when-CoFID-unavailable) and `routes/v1/__tests__/scans-meal.test.ts` (2 tests:
+flag-off parity, GB→CoFID-first for the meal-photo top-dish resolution, using a module mock for the
+vision-analysis step so the test isolates the resolution wiring itself rather than needing to
+replicate the real gateway's JSON-parsing contract). Full suite re-run: 1,021/1,021 (998 original
+baseline + 11 CoFID + 6 resolve-route + 6 new here), zero regressions.
 
 The addendum's §B (AI citation schema) and §C (performance baseline/comparison) still require the AI
 pipeline itself to consume this now-wired resolution path and a real measured baseline/comparison
@@ -243,17 +260,16 @@ These remain an honest, explicit gap for a further follow-up, not fabricated as 
 - `NutrientValueState` gains one new member (`'estimated'`), JSONB-stored, zero migration.
 - The pre-existing `CofidLoader`/`packs/sync-service.ts`/`country-waterfall.ts` integration surface
   now serves real UK data for the first time, with its public contract unchanged.
-- `routes/v1/resolve.ts` now calls the country-aware waterfall (§11) — byte-identical when
-  `global.p3.unified_food_schema` is OFF (its current default), country-prioritized when ON.
+- `routes/v1/resolve.ts`, `routes/v1/scans.ts` (meal-photo resolution), and
+  `agents/tools/food.ts` (the multi-agent system's `food.lookup`/`food.search` tools) all now call
+  the country-aware waterfall (§11) — byte-identical when `global.p3.unified_food_schema` is OFF
+  (its current default), country-prioritized when ON. Every real caller of the plain
+  `resolution/waterfall.ts` in this codebase has now been migrated to the country-aware entry point.
 
 ## Follow-ups (tracked, not blocking)
 
 - Cross-source deduplication (CoFID ↔ USDA ↔ IFCT ↔ CNF for the same real-world food) — deferred
   per §9, same open item ADR-0032 already tracked.
-- `routes/v1/scans.ts` (meal-photo dish-name resolution) and `agents/tools/food.ts` (multi-agent
-  nutrition tool) still call the plain, country-agnostic `waterfall.ts` directly — the same
-  country-aware wiring applied to `resolve.ts` (§11) is a natural, low-risk follow-up for these two
-  call sites, deliberately not done in this pass (out of the requested scope).
 - AI citation schema (addendum §B) and performance baseline/comparison (addendum §C) — both need a
   live AI/agent path consuming the now-wired resolution route to produce a real, measured (not
   synthetic) result.

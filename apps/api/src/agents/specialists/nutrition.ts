@@ -5,7 +5,7 @@
 
 import type { SpecialistAgentRunner } from '../agent-runner.js';
 import { makeAgentToolCaller } from '../agent-runner.js';
-import type { ResolutionResult } from '../../resolution/waterfall.js';
+import type { GlobalResolutionResult as ResolutionResult } from '../../resolution/country-waterfall.js';
 import type { NutritionComputeOutput } from '../tools/nutrition.js';
 import type { AllergenRecheckInput } from '../output-guard.js';
 import { explainWithFallback } from '../explain.js';
