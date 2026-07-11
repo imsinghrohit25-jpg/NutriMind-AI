@@ -32,6 +32,13 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 (minifyEnabled, on by default for release) fails hard on unresolved MLKit
+            // script-recognizer references without this — see proguard-rules.pro's own header
+            // for why (found by actually running a release build).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

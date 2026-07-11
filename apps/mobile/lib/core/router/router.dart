@@ -44,17 +44,38 @@ GoRouter router(Ref ref) {
         return AppRoutes.login;
       }
 
-      // Onboarding gates — must complete in order
-      if (!hasConsent && path != AppRoutes.consent) return AppRoutes.consent;
-      if (!hasDisclaimer && path != AppRoutes.disclaimer) return AppRoutes.disclaimer;
-      // Phase 10 (`global.p10.country_onboarding_v2`)
-      if (!hasCountry && path != AppRoutes.countrySetup) return AppRoutes.countrySetup;
-      if (!hasProfile && path != AppRoutes.profileSetup) return AppRoutes.profileSetup;
+      // Onboarding gates — must complete in order. Computed as a single target (the first unmet
+      // gate, from state alone) before ever comparing against the current path — four independent
+      // `if (!hasX && path != x) return x` checks in sequence caused a real redirect loop: sitting
+      // on the consent screen with hasDisclaimer also still false satisfied the second check's
+      // `path != disclaimer` on the very same pass and redirected straight to disclaimer, which
+      // then bounced back to consent, forever. Hits every brand-new user (nothing onboarded yet
+      // means every hasX is false at once) — found by actually signing in as one.
+      String? requiredOnboardingPath;
+      if (!hasConsent) {
+        requiredOnboardingPath = AppRoutes.consent;
+      } else if (!hasDisclaimer) {
+        requiredOnboardingPath = AppRoutes.disclaimer;
+      } else if (!hasCountry) {
+        // Phase 10 (`global.p10.country_onboarding_v2`)
+        requiredOnboardingPath = AppRoutes.countrySetup;
+      } else if (!hasProfile) {
+        requiredOnboardingPath = AppRoutes.profileSetup;
+      }
+      if (requiredOnboardingPath != null && path != requiredOnboardingPath) {
+        return requiredOnboardingPath;
+      }
 
-      // Redirect away from auth/onboarding screens once complete
-      if (path == AppRoutes.login || path == AppRoutes.splash ||
-          path == AppRoutes.consent || path == AppRoutes.disclaimer ||
-          path == AppRoutes.countrySetup || path == AppRoutes.profileSetup) {
+      // Redirect away from auth/onboarding screens once complete — only once every gate above is
+      // actually satisfied (requiredOnboardingPath null). Without this guard, a user legitimately
+      // parked on their current required onboarding step (path == requiredOnboardingPath, so the
+      // block above didn't redirect) would still match one of the paths below and get bounced to
+      // home before finishing onboarding — the same class of bug as the loop above, just latent
+      // until that one was fixed.
+      if (requiredOnboardingPath == null &&
+          (path == AppRoutes.login || path == AppRoutes.splash ||
+              path == AppRoutes.consent || path == AppRoutes.disclaimer ||
+              path == AppRoutes.countrySetup || path == AppRoutes.profileSetup)) {
         return AppRoutes.home;
       }
 
