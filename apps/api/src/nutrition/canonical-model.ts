@@ -13,8 +13,12 @@ export interface Provenance {
  *  (trace), "sought but not present" (not detected), and "not analyzed for this food" from each
  *  other and from a plain NULL. New with IFCT 2017 integration (ADR-0031, §1.3 of the addendum);
  *  pre-existing sources never populate this (their NULLs remain ambiguous, not retroactively
- *  reinterpreted). */
-export type NutrientValueState = 'measured' | 'zero' | 'trace' | 'not_detected' | 'not_analyzed';
+ *  reinterpreted).
+ *  'estimated' added with the CoFID integration (ADR-0033) — a real, measured value the source
+ *  itself flags as a borderline/estimated figure (CoFID's bracketed "[value]" convention), distinct
+ *  from 'measured' (source has full confidence) and requiring disclosure wherever the value is
+ *  surfaced, not silent treatment as an ordinary measured value. */
+export type NutrientValueState = 'measured' | 'zero' | 'trace' | 'not_detected' | 'not_analyzed' | 'estimated';
 
 // All nutrient values are per 100 g (or per 100 ml for liquids).
 export interface NutritionPer100g extends Provenance {

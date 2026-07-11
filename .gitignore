@@ -13,6 +13,8 @@ apps/api/data/ifct2017/*
 !apps/api/data/ifct2017/.gitkeep
 apps/api/data/cnf/*
 !apps/api/data/cnf/.gitkeep
+apps/api/data/cofid/*
+!apps/api/data/cofid/.gitkeep
 
 # Node / TypeScript
 node_modules/

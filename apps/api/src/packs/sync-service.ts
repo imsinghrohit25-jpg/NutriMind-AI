@@ -39,8 +39,8 @@ function itemsFor(packId: string, deps: PackSyncDeps): PackSyncItem[] {
   }
   if (packId === 'cofid_gb_2021') {
     return deps.cofid.getAll().map((food) => ({
-      sourceId: food.food_code,
-      name: food.food_name,
+      sourceId: food.sourceId,
+      name: food.name,
       nutrition: deps.cofid.toCanonicalProduct(food).nutrition ?? {},
     }));
   }

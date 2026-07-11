@@ -4,7 +4,7 @@ import { PackNotFoundError } from '../types.js';
 import type { PackSyncDeps } from '../sync-service.js';
 
 const IFCT_ENTRY = { foodCode: 'A001', foodNameEn: 'Masoor Dal' };
-const COFID_FOOD = { food_code: 'UK001', food_name: 'Cheddar Cheese' };
+const COFID_FOOD = { sourceId: 'UK001', name: 'Cheddar Cheese' };
 
 function makeDeps(opts: { ifctAvailable?: boolean; cofidAvailable?: boolean } = {}): PackSyncDeps {
   const ifctAvailable = opts.ifctAvailable ?? true;
