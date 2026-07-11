@@ -347,4 +347,18 @@ describe('GatewayRouter', () => {
     await expect(gen.next()).rejects.toThrow('stream interrupted mid-flight');
     expect(neverCalledProvider.completeStream).not.toHaveBeenCalled();
   });
+
+  it('redacts PII from the request before ANY provider sees it (gateway/pii-redaction.ts)', async () => {
+    const piiRequest: LLMRequest = {
+      tier: 'parse_assist',
+      messages: [{ role: 'user', content: 'my email is asha@example.com and phone is 9876543210' }],
+      systemPrompt: 'user PAN: ABCDE1234F',
+      traceId: 'trace-pii',
+    };
+    await router.complete(piiRequest);
+
+    const seenRequest = (providerA.complete as ReturnType<typeof vi.fn>).mock.calls[0]![0] as LLMRequest;
+    expect(seenRequest.messages[0]!.content).toBe('my email is [redacted-email] and phone is [redacted-phone]');
+    expect(seenRequest.systemPrompt).toBe('user PAN: [redacted-pan]');
+  });
 });

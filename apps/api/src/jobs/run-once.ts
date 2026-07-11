@@ -4,8 +4,12 @@
 // or scheduleRecurringJobs() — this process runs one job and exits, it is not a long-running
 // pg-boss consumer), then invokes runJobOnce() and exits with the handler's outcome.
 
-import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import { loadEnv } from '../load-env.js';
 import { runJobOnce } from './registry.js';
+
+loadEnv(dirname(fileURLToPath(import.meta.url)));
 
 const jobName = process.argv[2];
 if (!jobName) {

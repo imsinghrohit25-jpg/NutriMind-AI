@@ -149,6 +149,21 @@ jobs:
       - name: Lint newly-added migrations for destructive DDL
         run: npx tsx scripts/lint-migrations.ts --since ${{ steps.base.outputs.ref }}
 
+  # ── Secret scan (Gemini integration, Gate 0 §4) ───────────────────────────────
+  # scripts/secret-scan.sh already existed with a real Google API key pattern but was never
+  # wired into CI before this — see the script's own header for the false-positive fix that
+  # running it for the first time surfaced. scripts/__tests__/secret-scan.test.ts proves the
+  # guard actually catches a planted key (runs the real script against a disposable repo).
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan tracked files for committed secrets
+        run: bash scripts/secret-scan.sh
+
   # ── Mobile ───────────────────────────────────────────────────────────────────
   mobile:
     name: Mobile — Flutter analyze + tests

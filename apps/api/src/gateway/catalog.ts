@@ -62,32 +62,40 @@ export const MODEL_CATALOG: Record<string, ModelSpec> = {
     supportsVision: false,
     supportsEmbeddings: true,
   },
-  'gemini/gemini-1.5-flash': {
+  // gemini-1.5-flash/pro and text-embedding-004 (the entries these replace) were retired by
+  // Google — confirmed via a real ListModels call against a live key (404 "no longer available")
+  // during the Gemini/Vision integration session. Renamed to the "-latest" aliases Google
+  // recommends (verified reachable via a real generateContent/embedContent call against the same
+  // key). Pricing below is freshly pulled from ai.google.dev/gemini-api/docs/pricing (per-1M-token
+  // figures converted to per-1K); contextWindow/maxOutputTokens are carried forward from the
+  // prior generation's values (not independently re-verified — Google's model-list page doesn't
+  // publish them) and embeddingDimensions is empirically measured from a real API response.
+  'gemini/gemini-flash-latest': {
     provider: 'gemini',
-    model: 'gemini-1.5-flash',
-    inputCostPer1KTokens: 0.000075,
-    outputCostPer1KTokens: 0.0003,
+    model: 'gemini-flash-latest',
+    inputCostPer1KTokens: 0.0015,
+    outputCostPer1KTokens: 0.009,
     contextWindow: 1_000_000,
     maxOutputTokens: 8_192,
     supportsVision: true,
     supportsEmbeddings: false,
   },
-  'gemini/gemini-1.5-pro': {
+  'gemini/gemini-pro-latest': {
     provider: 'gemini',
-    model: 'gemini-1.5-pro',
-    inputCostPer1KTokens: 0.00125,
-    outputCostPer1KTokens: 0.005,
+    model: 'gemini-pro-latest',
+    inputCostPer1KTokens: 0.002,
+    outputCostPer1KTokens: 0.012,
     contextWindow: 2_000_000,
     maxOutputTokens: 8_192,
     supportsVision: true,
     supportsEmbeddings: false,
   },
-  'gemini/text-embedding-004': {
+  'gemini/gemini-embedding-001': {
     provider: 'gemini',
-    model: 'text-embedding-004',
-    inputCostPer1KTokens: 0.000025,
+    model: 'gemini-embedding-001',
+    inputCostPer1KTokens: 0.00015,
     outputCostPer1KTokens: 0,
-    embeddingCostPer1KTokens: 0.000025,
+    embeddingCostPer1KTokens: 0.00015,
     contextWindow: 2_048,
     maxOutputTokens: 0,
     supportsVision: false,

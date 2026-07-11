@@ -4,10 +4,10 @@
 //                          to cloud vision OCR (Phase 6, ADR-0019)
 // POST /v1/scans/meal   — identify dishes in a meal photo + estimate portions
 
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { parseLabelText } from '../../scan/label-parser/parser.js';
+import { parseLabelText, type ParsedLabel } from '../../scan/label-parser/parser.js';
 import { tokenizeIngredients } from '../../scan/ingredient-parser/tokenizer.js';
 import { parseAssist } from '../../scan/parse-assist.js';
 import { analyseMealPhoto } from '../../scan/meal-photo/vision.js';
@@ -15,6 +15,12 @@ import { estimatePortion } from '../../scan/meal-photo/portioning.js';
 import { resolveByName } from '../../resolution/country-waterfall.js';
 import { detectScript, needsCloudOcrFallback } from '../../scan/label-parser/script-detector.js';
 import { extractLabelViaCloudVision } from '../../scan/label-parser/cloud-ocr-fallback.js';
+import { extractTextViaGoogleVision } from '../../scan/label-parser/google-vision-ocr.js';
+import {
+  enrichLabelWithGemini,
+  extractSearchQueryHeuristic,
+  type LabelEnrichmentResult,
+} from '../../scan/label-parser/gemini-enrichment.js';
 import { buildNutritionCitation } from '../../nutrition/citation.js';
 import { ok, err } from '@nutrimind/shared';
 
@@ -52,6 +58,71 @@ export function _resetScansUnifiedFoodSchemaFlagCache(): void {
   _cacheExpiry = 0;
 }
 
+// Gemini label-enrichment flag (Gemini integration, migration 0033) — same cache pattern as
+// isUnifiedFoodSchemaEnabled above. Default off: byte-identical to the pre-enrichment response.
+const ENRICHMENT_FLAG_KEY = 'global.p14.gemini_label_enrichment';
+let _enrichmentFlagEnabled = false;
+let _enrichmentCacheExpiry = 0;
+
+async function isGeminiLabelEnrichmentEnabled(supabase: SupabaseClient): Promise<boolean> {
+  if (Date.now() < _enrichmentCacheExpiry) return _enrichmentFlagEnabled;
+
+  try {
+    const { data } = await supabase
+      .from('feature_flags')
+      .select('enabled')
+      .eq('key', ENRICHMENT_FLAG_KEY)
+      .is('country_code', null)
+      .maybeSingle();
+
+    _enrichmentFlagEnabled = data?.enabled ?? false;
+  } catch {
+    _enrichmentFlagEnabled = false; // fail closed
+  }
+
+  _enrichmentCacheExpiry = Date.now() + FLAG_CACHE_TTL_MS;
+  return _enrichmentFlagEnabled;
+}
+
+/** Reset the flag cache — for testing only. */
+export function _resetGeminiLabelEnrichmentFlagCache(): void {
+  _enrichmentFlagEnabled = false;
+  _enrichmentCacheExpiry = 0;
+}
+
+// Google Vision OCR flag (Gemini/Vision integration, migration 0034) — same cache pattern as
+// above. Default off, and additionally gated on `fastify.googleVisionApiKey` being configured:
+// byte-identical to the pre-Vision gateway-based cloud-OCR path otherwise.
+const VISION_OCR_FLAG_KEY = 'global.p14.google_vision_ocr';
+let _visionOcrFlagEnabled = false;
+let _visionOcrCacheExpiry = 0;
+
+async function isGoogleVisionOcrEnabled(supabase: SupabaseClient): Promise<boolean> {
+  if (Date.now() < _visionOcrCacheExpiry) return _visionOcrFlagEnabled;
+
+  try {
+    const { data } = await supabase
+      .from('feature_flags')
+      .select('enabled')
+      .eq('key', VISION_OCR_FLAG_KEY)
+      .is('country_code', null)
+      .maybeSingle();
+
+    _visionOcrFlagEnabled = data?.enabled ?? false;
+  } catch {
+    _visionOcrFlagEnabled = false; // fail closed
+  }
+
+  _visionOcrCacheExpiry = Date.now() + FLAG_CACHE_TTL_MS;
+  return _visionOcrFlagEnabled;
+}
+
+/** Reset the flag cache — for testing only. */
+export function _resetGoogleVisionOcrFlagCache(): void {
+  _visionOcrFlagEnabled = false;
+  _visionOcrCacheExpiry = 0;
+}
+
 const OcrBodySchema = z.object({
   rawText: z.string().min(10).max(8000),
   ingredientsText: z.string().max(2000).optional(),
@@ -76,6 +147,59 @@ const LabelImageBodySchema = z.object({
   onDeviceOcrText: z.string().max(8000).optional(),
   scanId: z.string().uuid().optional(),
 });
+
+/** Shared by both the on-device-OCR path and the (flagged) Google Vision OCR path: runs the
+ *  deterministic dataset match FIRST (resolveByName + buildNutritionCitation, real citation or
+ *  null), then the Gemini enrichment call — identical logic either way, since neither cares
+ *  which OCR source produced the text. Returns null (never throws) when the enrichment flag is
+ *  off, the gateway isn't configured, or anything in the chain fails — callers simply omit the
+ *  `enrichment` key from their response in that case. */
+async function buildGeminiEnrichment(opts: {
+  fastify: FastifyInstance;
+  request: FastifyRequest;
+  ocrText: string;
+  parsed: ParsedLabel;
+  imageBase64: string;
+  imageMediaType: 'image/jpeg' | 'image/png' | 'image/webp';
+  traceId: string;
+}): Promise<LabelEnrichmentResult | null> {
+  const { fastify, request, ocrText, parsed, imageBase64, imageMediaType, traceId } = opts;
+  if (!fastify.gateway || !(await isGeminiLabelEnrichmentEnabled(fastify.supabase))) return null;
+
+  try {
+    const searchQuery = extractSearchQueryHeuristic(ocrText);
+    let citation = null;
+    let matchedProductName: string | null = null;
+    if (searchQuery) {
+      const engineEnabled = await isUnifiedFoodSchemaEnabled(fastify.supabase);
+      const matchResult = await resolveByName(searchQuery, request.country, {
+        sql: fastify.sql,
+        offClient: fastify.offClient,
+        ifct: fastify.ifct,
+        usdaClient: fastify.usdaClient,
+        cofid: fastify.cofid,
+      }, { engineEnabled });
+      if (matchResult.resolvedBy !== 'not_found' && matchResult.product) {
+        matchedProductName = matchResult.product.name;
+        citation = await buildNutritionCitation(fastify.sql, matchResult.product);
+      }
+    }
+    return await enrichLabelWithGemini({
+      imageBase64,
+      imageMediaType,
+      ocrText,
+      parsedLabel: parsed,
+      citation,
+      matchedProductName,
+      locale: request.country.locale,
+      gateway: fastify.gateway,
+      traceId,
+    });
+  } catch (e) {
+    fastify.log.warn({ err: e }, '[gemini-enrichment] failed; continuing without AI enrichment');
+    return null;
+  }
+}
 
 export default async function scanRoutes(fastify: FastifyInstance): Promise<void> {
 
@@ -146,6 +270,15 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
     const script = onDeviceOcrText ? detectScript(onDeviceOcrText) : null;
     if (onDeviceOcrText && script && !needsCloudOcrFallback(script)) {
       const parsed = parseLabelText(onDeviceOcrText);
+
+      // Optional Gemini enrichment (Gemini integration, flag `global.p14.gemini_label_enrichment`,
+      // default off) — layered on top of the deterministic parse above, never replacing it. Flag
+      // off (or gateway unconfigured) skips this block entirely: response is byte-identical to
+      // the pre-enrichment shape.
+      const enrichment = await buildGeminiEnrichment({
+        fastify, request, ocrText: onDeviceOcrText, parsed, imageBase64, imageMediaType, traceId,
+      });
+
       return reply.send(
         ok({
           nutrition: parsed.nutrition,
@@ -158,12 +291,56 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
           needsUserConfirmation: parsed.overallConfidence < 0.5,
           detectedScript: script,
           usedCloudOcr: false,
+          ...(enrichment ? { enrichment } : {}),
         }),
       );
     }
 
     // Step 2: cloud OCR fallback — no usable on-device text, or its script isn't
     // ML-Kit-supported (e.g. Arabic, Tamil, Telugu packaging).
+
+    // Optional Google Vision OCR path (Gemini/Vision integration, flag
+    // `global.p14.google_vision_ocr`, default off, additionally gated on
+    // `fastify.googleVisionApiKey` being configured). Real OCR text extraction runs through the
+    // SAME deterministic parseLabelText() the on-device path uses above — a more verifiable path
+    // than asking an LLM to read+parse the image in one call — then the same Gemini enrichment
+    // helper as Step 1. Flag off, key absent, no text found, or any failure: falls through
+    // unchanged to the existing gateway-based cloud-OCR path below — byte-identical to current
+    // behavior in every one of those cases.
+    if (fastify.googleVisionApiKey && (await isGoogleVisionOcrEnabled(fastify.supabase))) {
+      try {
+        const visionResult = await extractTextViaGoogleVision({
+          imageBase64, apiKey: fastify.googleVisionApiKey,
+        });
+        if (visionResult.available && visionResult.text) {
+          const parsed = parseLabelText(visionResult.text);
+          const enrichment = await buildGeminiEnrichment({
+            fastify, request, ocrText: visionResult.text, parsed, imageBase64, imageMediaType, traceId,
+          });
+
+          return reply.send(
+            ok({
+              nutrition: parsed.nutrition,
+              fieldConfidence: parsed.fieldConfidence,
+              overallConfidence: parsed.overallConfidence,
+              wasPerServing: parsed.wasPerServing,
+              servingSizeG: parsed.servingSizeG,
+              lowConfidenceFields: parsed.lowConfidenceFields,
+              labelFormat: parsed.labelFormat,
+              needsUserConfirmation: true, // Vision-derived OCR is always a suggestion, never auto-trusted
+              detectedScript: script,
+              usedCloudOcr: true,
+              usedGoogleVisionOcr: true,
+              ...(enrichment ? { enrichment } : {}),
+            }),
+          );
+        }
+        fastify.log.warn({ traceId, note: visionResult.note }, '[google-vision-ocr] no text extracted; falling back to gateway-based cloud OCR');
+      } catch (e) {
+        fastify.log.warn({ err: e }, '[google-vision-ocr] failed; falling back to gateway-based cloud OCR');
+      }
+    }
+
     if (!fastify.gateway) {
       return reply
         .status(503)

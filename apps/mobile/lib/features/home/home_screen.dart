@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/design_system/tokens.dart';
 import '../../core/router/routes.dart';
@@ -22,6 +23,15 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.person_outline),
             onPressed: () => context.go(AppRoutes.profile),
             tooltip: 'Profile',
+          ),
+          // No settings shell exists yet (see router.dart's own comment on that gap) — sign out
+          // lives here for now, the one place every authenticated user already passes through.
+          // GoRouter's redirect (core/router/router.dart) sends the user back to /login
+          // automatically once onAuthStateChange reports no session — no manual nav needed.
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => Supabase.instance.client.auth.signOut(),
+            tooltip: 'Sign out',
           ),
         ],
       ),

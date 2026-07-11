@@ -1,5 +1,9 @@
-import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import { loadEnv } from './load-env.js';
 import { initTelemetry } from './telemetry/otel.js';
+
+loadEnv(dirname(fileURLToPath(import.meta.url)));
 import { env } from './env.js';
 import { startAllWorkers, scheduleRecurringJobs } from './jobs/registry.js';
 import { getBoss, shutdownBoss } from './jobs/boss.js';
