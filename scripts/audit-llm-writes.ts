@@ -61,12 +61,24 @@ function isAllowedPath(filePath: string): boolean {
   return ALLOWED_WRITE_PATHS.some((allowed) => filePath.includes(allowed));
 }
 
+/**
+ * Strip `//` line comments and `/* *\/` block comments before scanning. The gateway-call check is a
+ * substring match, so a file that merely *mentions* `gateway.complete()` in a comment (e.g. a
+ * diagnostic note about a rate-limit bug) would otherwise be treated as if it made the call — a
+ * false positive. Comments are documentation, not call sites. (Heuristic: also strips `//` inside
+ * string literals such as URLs, which is harmless here since the scanned patterns never appear
+ * inside such strings.)
+ */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+}
+
 for (const file of getSourceFiles()) {
   if (isAllowedPath(file)) continue;
 
   let content: string;
   try {
-    content = readFileSync(file, 'utf8');
+    content = stripComments(readFileSync(file, 'utf8'));
   } catch {
     continue;
   }

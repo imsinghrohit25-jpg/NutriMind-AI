@@ -52,6 +52,7 @@ for pattern in "${PATTERNS[@]}"; do
     ':!*.env' ':!*.env.*' ':!node_modules' ':!dist' ':!.git' \
     ':!*.png' ':!*.jpg' ':!*.lock' ':!package-lock.json' \
     ':!scripts/secret-scan.sh' \
+    ':!scripts/__tests__/secret-scan.test.ts' \
     2>/dev/null || true)
 
   for safe in "${SAFE_VALUE_PATTERNS[@]}"; do
