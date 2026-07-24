@@ -109,4 +109,45 @@ describe('Allergen detector — regression golden tests', () => {
     expect(typeof result.hasPossibleAllergen).toBe('boolean');
     expect(Array.isArray(result.matches)).toBe(true);
   });
+
+  // Found via live verification against a real product (Nutella) during the premium redesign's
+  // Phase 3 wiring — "Gluten free" text on a genuinely gluten-free product was substring-matching
+  // the bare "gluten" keyword and producing a false, unsuppressible "Contains Gluten" warning.
+  it('GOLDEN-ALLERGEN-010 "gluten free" declaration does not produce a false declared-gluten match', () => {
+    const result = detectAllergens(
+      ['sugar', 'palm oil', 'hazelnuts', 'skimmed milk powder', 'cocoa', 'lecithin', 'vanillin', 'gluten free'],
+      '',
+      ['gluten' as AllergenId],
+    );
+    expect(result.hasDeclaredAllergen).toBe(false);
+    expect(result.matches).toHaveLength(0);
+  });
+
+  it('GOLDEN-ALLERGEN-011 "gluten-free" (hyphenated) also does not false-positive', () => {
+    // Deliberately no other gluten-family keyword ("oat", "wheat", etc.) in the ingredient text —
+    // this isolates the hyphenated-negation guard from the (separate, correct) fact that "oat" is
+    // itself its own declared keyword in the gluten taxonomy entry, independent of any "gluten"
+    // mention.
+    const result = detectAllergens(['rice', 'sugar', 'gluten-free certified'], '', ['gluten' as AllergenId]);
+    expect(result.hasDeclaredAllergen).toBe(false);
+  });
+
+  it('GOLDEN-ALLERGEN-012 a genuine gluten ingredient still matches even when "gluten free" also appears elsewhere', () => {
+    const result = detectAllergens(
+      ['wheat flour', 'this facility also makes gluten free products'],
+      '',
+      ['gluten' as AllergenId],
+    );
+    expect(result.hasDeclaredAllergen).toBe(true);
+  });
+
+  it('GOLDEN-ALLERGEN-013 the negation guard applies generically, not just to gluten (e.g. "milk free")', () => {
+    const result = detectAllergens(['rice', 'sugar', 'milk free chocolate'], '', ['milk' as AllergenId]);
+    expect(result.hasDeclaredAllergen).toBe(false);
+  });
+
+  it('GOLDEN-ALLERGEN-014 sanity: a genuine milk ingredient ("rice milk") still matches normally', () => {
+    const result = detectAllergens(['rice milk', 'sugar'], '', ['milk' as AllergenId]);
+    expect(result.hasDeclaredAllergen).toBe(true);
+  });
 });

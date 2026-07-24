@@ -71,4 +71,52 @@ export const CITATIONS: Record<string, Citation> = {
     source: 'Food Safety and Standards Authority of India',
     year: 2023,
   },
+  'who-satfat-2023': {
+    id: 'who-satfat-2023',
+    title: 'WHO Guideline: Saturated fatty acid and trans-fatty acid intake for adults and children',
+    source: 'World Health Organization',
+    year: 2023,
+  },
+  'kdoqi-nutrition-ckd-2020': {
+    id: 'kdoqi-nutrition-ckd-2020',
+    title: 'KDOQI Clinical Practice Guideline for Nutrition in CKD: 2020 Update',
+    source: 'National Kidney Foundation — American Journal of Kidney Diseases',
+    year: 2020,
+  },
+  'easl-nafld-2016': {
+    id: 'easl-nafld-2016',
+    title: 'EASL–EASD–EASO Clinical Practice Guidelines for the Management of Non-Alcoholic Fatty Liver Disease',
+    source: 'European Association for the Study of the Liver',
+    year: 2016,
+  },
+  'eshre-pcos-2023': {
+    id: 'eshre-pcos-2023',
+    title: 'International Evidence-based Guideline for the Assessment and Management of Polycystic Ovary Syndrome',
+    source: 'ESHRE / Monash University',
+    year: 2023,
+  },
+  'ata-hypothyroidism-2014': {
+    id: 'ata-hypothyroidism-2014',
+    title: 'Guidelines for the Treatment of Hypothyroidism (drug–food interactions incl. soy)',
+    source: 'American Thyroid Association — Thyroid, 2014',
+    year: 2014,
+  },
+  'who-antenatal-2016': {
+    id: 'who-antenatal-2016',
+    title: 'WHO Recommendations on Antenatal Care for a Positive Pregnancy Experience',
+    source: 'World Health Organization',
+    year: 2016,
+  },
+  'who-healthy-diet-2020': {
+    id: 'who-healthy-diet-2020',
+    title: 'WHO Fact Sheet: Healthy Diet',
+    source: 'World Health Organization',
+    year: 2020,
+  },
+  'esc-cvd-prevention-2021': {
+    id: 'esc-cvd-prevention-2021',
+    title: 'ESC Guidelines on Cardiovascular Disease Prevention in Clinical Practice',
+    source: 'European Society of Cardiology — European Heart Journal',
+    year: 2021,
+  },
 };

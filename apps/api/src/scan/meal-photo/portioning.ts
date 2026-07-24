@@ -70,6 +70,36 @@ const STANDARD_SERVINGS_G: Record<string, number> = {
   'chai': 150,
   'lassi': 200,
   'milk': 200,
+  // International (10-condition/meal-photo expansion, audit 2026-07) — typical single servings,
+  // conservative like the Indian entries above; USDA household-measure conventions.
+  'pizza': 110,        // one slice
+  'burger': 220,
+  'sandwich': 150,
+  'pasta': 200,
+  'spaghetti': 200,
+  'noodles': 200,
+  'fried rice': 200,
+  'french fries': 120,
+  'fries': 120,
+  'salad': 100,
+  'soup': 240,
+  'sushi': 30,         // one piece
+  'taco': 100,
+  'burrito': 250,
+  'omelette': 90,
+  'scrambled eggs': 100,
+  'pancake': 60,
+  'toast': 30,
+  'oatmeal': 240,
+  'porridge': 240,
+  'yogurt': 170,
+  'steak': 170,
+  'grilled chicken': 150,
+  'momos': 40,         // one piece
+  'spring roll': 60,
+  'cake': 80,
+  'ice cream': 65,
+  'cookie': 25,
 };
 
 // Modifier words that scale the standard serving.

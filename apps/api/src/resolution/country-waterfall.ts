@@ -72,16 +72,24 @@ export async function resolveBarcode(
   const ttl = opts.ttlHours ?? 168;
   const persist = opts.persistResult ?? true;
 
+  console.info(`[resolve:barcode] lookup requested barcode=${barcode} country=${country.isoCode}`);
+
   // Step 0: in-process edge cache (Phase 7, `global.p7.edge_caching`)
   const edgeHit = edgeCache?.get(barcode);
-  if (edgeHit) return { product: edgeHit, resolvedBy: 'cache', productId: edgeHit.id };
+  if (edgeHit) {
+    console.info(`[resolve:barcode] edge cache hit barcode=${barcode} productId=${edgeHit.id}`);
+    return { product: edgeHit, resolvedBy: 'cache', productId: edgeHit.id };
+  }
 
   // Step 1: DB cache (always first, regardless of country)
+  console.info(`[resolve:barcode] supabase lookup barcode=${barcode}`);
   const cached = await getProductFromCache(sql, barcode, ttl);
   if (cached) {
+    console.info(`[resolve:barcode] supabase lookup hit barcode=${barcode} productId=${cached.id}`);
     edgeCache?.set(barcode, cached);
     return { product: cached, resolvedBy: 'cache', productId: cached.id };
   }
+  console.info(`[resolve:barcode] supabase lookup miss barcode=${barcode}`);
 
   // Step 2 (UK): CoFID — authoritative for UK food composition
   if (country.isoCode === 'GB' && cofid.isAvailable()) {
@@ -91,17 +99,28 @@ export async function resolveBarcode(
   }
 
   // Step 3: OpenFoodFacts with country-appropriate filter
+  console.info(`[resolve:barcode] OFF fallback request barcode=${barcode} country=${country.isoCode}`);
   try {
     const offProduct = await offClient.getProduct(barcode);
     if (offProduct) {
+      console.info(
+        `[resolve:barcode] OFF fallback response: found barcode=${barcode} ` +
+        `name=${offProduct.product_name ?? offProduct.product_name_en ?? 'unknown'}`,
+      );
       const product = normalizeOffProduct(offProduct);
       product.countryCodes = [country.isoCode];
       product.sourceRegion = country.isoCode;
       let productId: string | undefined;
-      if (persist) { productId = await persistProduct(sql, product); product.id = productId; }
+      if (persist) {
+        productId = await persistProduct(sql, product);
+        product.id = productId;
+        console.info(`[resolve:barcode] cache insert barcode=${barcode} productId=${productId} source=openfoodfacts`);
+      }
       edgeCache?.set(barcode, product);
+      console.info(`[resolve:barcode] resolved barcode=${barcode} resolvedBy=openfoodfacts`);
       return { product, resolvedBy: 'openfoodfacts', productId };
     }
+    console.info(`[resolve:barcode] OFF fallback response: not found barcode=${barcode}`);
   } catch (err) {
     console.warn('[country-waterfall] OFF lookup failed for', barcode, err instanceof Error ? err.message : err);
   }
@@ -117,6 +136,7 @@ export async function resolveBarcode(
 
   // Not found — enqueue curation with country context
   const { curationQueueId } = await legacyResolveBarcode(barcode, deps, { ...opts, persistResult: false });
+  console.info(`[resolve:barcode] resolved barcode=${barcode} resolvedBy=not_found curationQueueId=${curationQueueId}`);
   return { product: null, resolvedBy: 'not_found', curationQueueId };
 }
 

@@ -68,17 +68,38 @@ function makeSql() {
   return fn as unknown as WaterfallDeps['sql'];
 }
 
-function makeSupabase(flagEnabled: boolean) {
+function makeSupabase(flagEnabled: boolean, profile?: { conditions?: string[]; allergens?: string[] }) {
   return {
-    from: vi.fn(() => ({
-      select: () => ({
-        eq: () => ({
-          is: () => ({
-            maybeSingle: () => Promise.resolve({ data: { enabled: flagEnabled }, error: null }),
+    // Two distinct chain shapes hit this mock: the feature-flag lookup
+    // (select().eq().is().maybeSingle()) and fetchProfileSlice's users_profiles lookup
+    // (select().eq().maybeSingle(), no `.is()`) — both terminate in `.maybeSingle()`, so a single
+    // chainable that supports either call order (and answers with whichever payload the caller
+    // actually wants) covers both without needing to know which query is running.
+    from: vi.fn((table: string) => {
+      if (table === 'users_profiles') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({
+                data: profile
+                  ? { conditions: profile.conditions ?? [], medications: [], reproductive_status: null, allergens: profile.allergens ?? [] }
+                  : null,
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            is: () => ({
+              maybeSingle: () => Promise.resolve({ data: { enabled: flagEnabled }, error: null }),
+            }),
           }),
         }),
-      }),
-    })),
+      };
+    }),
   };
 }
 
@@ -88,9 +109,11 @@ function buildApp(opts: {
   cofidAvailable?: boolean;
   ifctAvailable?: boolean;
   offBarcodeMatch?: boolean;
+  profile?: { conditions?: string[]; allergens?: string[] };
+  userId?: string;
 }): FastifyInstance {
   const app = Fastify({ logger: false });
-  app.decorate('supabase', makeSupabase(opts.flagEnabled) as never);
+  app.decorate('supabase', makeSupabase(opts.flagEnabled, opts.profile) as never);
   app.decorate('sql', makeSql());
   app.decorate('offClient', {
     getProduct: vi.fn().mockResolvedValue(opts.offBarcodeMatch ? OFF_PRODUCT : null),
@@ -112,6 +135,7 @@ function buildApp(opts: {
   app.decorateRequest('user', null);
   app.addHook('onRequest', async (request: FastifyRequest) => {
     request.country = opts.country === 'IN' ? INDIA_PROFILE : lookupCountryOrGlobal(opts.country);
+    if (opts.userId) request.user = { id: opts.userId, role: 'authenticated' };
   });
   return app;
 }
@@ -223,6 +247,56 @@ describe('POST /v1/resolve/barcode — country threaded through without breaking
     const body = JSON.parse(resp.body);
     expect(body.data.resolvedBy).toBe('openfoodfacts');
     expect(body.data.citation).toMatchObject({ source: 'openfoodfacts' });
+    await app.close();
+  });
+
+  // Premium redesign Phase 3 — before this, a resolved product never carried a Health Score or
+  // allergen safety data at all, even though engines/score/engine.ts and engines/allergen/
+  // detector.ts were fully built and tested. These pin the new fields onto the real response.
+  it('attaches a real computed Health Score alongside the resolved product (anonymous caller)', async () => {
+    const app = buildApp({ flagEnabled: true, country: 'GB', offBarcodeMatch: true });
+    await app.register(resolveRoutes, { prefix: '/v1' });
+    await app.ready();
+
+    const resp = await app.inject({ method: 'POST', url: '/v1/resolve/barcode', payload: { barcode: '5000000000000' } });
+    const body = JSON.parse(resp.body);
+    expect(body.data.healthScore).toBeTruthy();
+    expect(typeof body.data.healthScore.score).toBe('number');
+    expect(body.data.healthScore.subscores.sodium).toBeTruthy();
+    // Anonymous caller — no profile, so every taxonomy allergen is checked (the engine's own
+    // safer default), and disease guidance is null (no conditions to evaluate against).
+    expect(body.data.safety).toBeTruthy();
+    expect(Array.isArray(body.data.safety.allergenMatches)).toBe(true);
+    expect(body.data.diseaseGuidance).toBeNull();
+    await app.close();
+  });
+
+  it('fetches the signed-in user\'s profile (conditions + allergens) via users_profiles, not a mock persona', async () => {
+    const app = buildApp({
+      flagEnabled: true,
+      country: 'GB',
+      offBarcodeMatch: true,
+      userId: 'user-1',
+      profile: { conditions: ['diabetes_type2'], allergens: ['milk'] },
+    });
+    await app.register(resolveRoutes, { prefix: '/v1' });
+    await app.ready();
+
+    const resp = await app.inject({
+      method: 'POST',
+      url: '/v1/resolve/barcode',
+      payload: { barcode: '5000000000000' },
+    });
+    const body = JSON.parse(resp.body);
+    // The fixture product (OFF_PRODUCT) has ingredientsRawText: null — no allergen keywords to
+    // match — so the correct result is an empty (not null/undefined) allergenMatches array, which
+    // only happens if the profile fetch + detector call actually ran end-to-end without throwing.
+    expect(body.data.safety.allergenMatches).toEqual([]);
+    expect(body.data.safety.hasFailSafe).toBe(false);
+    // Real nutrition + a declared condition → diseaseGuidance must be a real evaluation, not null.
+    expect(Array.isArray(body.data.diseaseGuidance)).toBe(true);
+    const supabase = (app as unknown as { supabase: { from: ReturnType<typeof vi.fn> } }).supabase;
+    expect(supabase.from).toHaveBeenCalledWith('users_profiles');
     await app.close();
   });
 });

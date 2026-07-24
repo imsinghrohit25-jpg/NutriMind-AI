@@ -16,6 +16,12 @@ import { enqueueProductEmbedding } from '../../embeddings/product-pipeline.js';
 import { getBoss } from '../../jobs/boss.js';
 import { recordEventBestEffort } from '../../memory/events.js';
 import { buildNutritionCitation } from '../../nutrition/citation.js';
+import { evaluateDiseaseRules, type DiseaseRuleEvaluation } from '../../engines/disease/index.js';
+import { computeHealthScore, type HealthScoreResult } from '../../engines/score/engine.js';
+import { detectAllergens } from '../../engines/allergen/detector.js';
+import { allergenFailSafe } from '../../engines/allergen/fail-safe.js';
+import type { AllergenId } from '../../engines/allergen/taxonomy.js';
+import type { CanonicalProduct } from '../../nutrition/canonical-model.js';
 import { ok, err } from '@nutrimind/shared';
 
 const FLAG_KEY = 'global.p3.unified_food_schema';
@@ -48,6 +54,108 @@ async function isUnifiedFoodSchemaEnabled(supabase: SupabaseClient): Promise<boo
 export function _resetUnifiedFoodSchemaFlagCache(): void {
   _flagEnabled = false;
   _cacheExpiry = 0;
+}
+
+export interface ProfileSlice {
+  conditions: string[];
+  medications: string[];
+  reproductiveStatus: string | null;
+  allergens: AllergenId[];
+}
+
+/** One shared profile fetch for every per-user personalization below (disease guidance +
+ *  allergen matching) — avoids a second Supabase round-trip on the scan-result hot path.
+ *  Best-effort by design: a profile-fetch failure must never break product resolution. */
+async function fetchProfileSlice(
+  supabase: SupabaseClient,
+  userId: string | undefined,
+): Promise<ProfileSlice | null> {
+  if (!userId) return null;
+  try {
+    const { data } = await supabase
+      .from('users_profiles')
+      .select('conditions, medications, reproductive_status, allergens')
+      .eq('id', userId)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      conditions: (data.conditions as string[] | null) ?? [],
+      medications: (data.medications as string[] | null) ?? [],
+      reproductiveStatus: (data.reproductive_status as string | null) ?? null,
+      allergens: (data.allergens as AllergenId[] | null) ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Disease-aware guidance for a resolved product (10-condition expansion, audit 2026-07).
+ *  Authenticated callers only — anonymous resolves return null (no conditions to evaluate). */
+export function buildDiseaseGuidance(
+  profile: ProfileSlice | null,
+  product: CanonicalProduct | null,
+): DiseaseRuleEvaluation[] | null {
+  if (!profile || !product?.nutrition) return null;
+  if (profile.conditions.length === 0 && !profile.reproductiveStatus) return null;
+  return evaluateDiseaseRules({
+    nutrition: product.nutrition,
+    ingredientsText: product.ingredientsRawText,
+    conditions: profile.conditions,
+    medications: profile.medications,
+    reproductiveStatus: profile.reproductiveStatus,
+  });
+}
+
+/** Real deterministic Health Score (engines/score/engine.ts) — null only when the product has
+ *  no nutrition data at all to score. */
+export function buildHealthScore(product: CanonicalProduct | null): HealthScoreResult | null {
+  const n = product?.nutrition;
+  if (!n) return null;
+  const ingredientNames = product?.ingredientsRawText ? [product.ingredientsRawText] : [];
+  return computeHealthScore({
+    sodiumMg: n.sodiumMg,
+    sugarsG: n.sugarsG,
+    sugarsAddedG: n.sugarsAddedG,
+    sugarsAddedEstimated: n.sugarsAddedEstimated,
+    fatSaturatedG: n.fatSaturatedG,
+    fatTransG: n.fatTransG,
+    dietaryFiberG: n.dietaryFiberG,
+    proteinG: n.proteinG,
+    novaGroup: n.novaGroup,
+    ingredientNames,
+  });
+}
+
+export interface ProductSafety {
+  allergenMatches: ReturnType<typeof detectAllergens>['matches'];
+  childWarnings: never[];
+  hasFailSafe: boolean;
+  failSafeReason: string | null;
+}
+
+/** Allergen Hard Gate (engines/allergen/detector.ts + fail-safe.ts) — matched against the
+ *  signed-in user's own declared allergens, or every taxonomy allergen for an anonymous caller
+ *  (detectAllergens' own designed fallback — the safer default, not a gap). `ingredientsRawText`
+ *  here is structured DB text (OFF/IFCT/USDA), never an OCR extraction, so `ocrConfidence`/
+ *  `parseQuality` are left at their "known-clean text" defaults (1.0/'high') per the same
+ *  convention already documented in agents/tools/allergen.ts — the fail-safe is for label-OCR
+ *  uncertainty, which doesn't apply to a barcode-resolved structured product.
+ *  `childWarnings` is deliberately always empty here: child safety is inherently scoped to a
+ *  specific family member's age (engines/child-safety/engine.ts), which only has meaning in the
+ *  Household/Family Guardian flow, not a single generic product resolve. */
+export function buildSafety(profile: ProfileSlice | null, product: CanonicalProduct | null): ProductSafety | null {
+  if (!product) return null;
+  const ingredientNames = product.ingredientsRawText ? [product.ingredientsRawText] : [];
+  const rawLabelText = product.ingredientsRawText ?? '';
+  const profileAllergens = profile?.allergens ?? [];
+  const detection = detectAllergens(ingredientNames, rawLabelText, profileAllergens);
+  const failSafe = allergenFailSafe(1.0, 'high', profileAllergens);
+  return {
+    allergenMatches: detection.matches,
+    childWarnings: [],
+    hasFailSafe: failSafe.triggered,
+    failSafeReason: failSafe.reason,
+  };
 }
 
 const BarcodeBodySchema = z.object({
@@ -116,12 +224,20 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
     // data at all; never a placeholder attribution.
     const citation = result.product ? await buildNutritionCitation(fastify.sql, result.product) : null;
 
+    const profile = await fetchProfileSlice(fastify.supabase, userId);
+    const diseaseGuidance = buildDiseaseGuidance(profile, result.product);
+    const healthScore = buildHealthScore(result.product);
+    const safety = buildSafety(profile, result.product);
+
     return reply.send(
       ok({
         found: true,
         resolvedBy: result.resolvedBy,
         product: result.product,
         citation,
+        diseaseGuidance,
+        healthScore,
+        safety,
       }),
     );
   });
@@ -149,6 +265,20 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
 
     const citation = result.product ? await buildNutritionCitation(fastify.sql, result.product) : null;
 
-    return reply.send(ok({ found: true, resolvedBy: result.resolvedBy, product: result.product, citation }));
+    const nameUserId = (request as { user?: { id?: string } }).user?.id;
+    const nameProfile = await fetchProfileSlice(fastify.supabase, nameUserId);
+    const diseaseGuidance = buildDiseaseGuidance(nameProfile, result.product);
+    const healthScore = buildHealthScore(result.product);
+    const safety = buildSafety(nameProfile, result.product);
+
+    return reply.send(ok({
+      found: true,
+      resolvedBy: result.resolvedBy,
+      product: result.product,
+      citation,
+      diseaseGuidance,
+      healthScore,
+      safety,
+    }));
   });
 }

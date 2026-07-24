@@ -12,6 +12,12 @@ import { tokenizeIngredients } from '../../scan/ingredient-parser/tokenizer.js';
 import { parseAssist } from '../../scan/parse-assist.js';
 import { analyseMealPhoto } from '../../scan/meal-photo/vision.js';
 import { estimatePortion } from '../../scan/meal-photo/portioning.js';
+import {
+  scaleNutritionToPortion,
+  sumMealNutrition,
+  type PortionNutrition,
+} from '../../scan/meal-photo/nutrient-scaling.js';
+import { evaluateDiseaseRules, worstSeverity } from '../../engines/disease/index.js';
 import { resolveByName } from '../../resolution/country-waterfall.js';
 import { detectScript, needsCloudOcrFallback } from '../../scan/label-parser/script-detector.js';
 import { extractLabelViaCloudVision } from '../../scan/label-parser/cloud-ocr-fallback.js';
@@ -393,32 +399,114 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
       estimatePortion(c.name, c.portionSizeHint),
     );
 
-    // Step 3: resolve nutrition for top candidate (by confidence)
-    const top = vision.candidates[0];
-    let nutrition = null;
-    let resolvedBy = null;
-    // Real source citation (ADR-0033 addendum §B) — null when nothing was resolved, never a
-    // placeholder attribution.
-    let citation = null;
-    if (top && top.confidence >= 0.4) {
-      try {
-        const engineEnabled = await isUnifiedFoodSchemaEnabled(fastify.supabase);
-        const result = await resolveByName(top.searchQuery, request.country, {
-          sql: fastify.sql,
-          offClient: fastify.offClient,
-          ifct: fastify.ifct,
-          usdaClient: fastify.usdaClient,
-          cofid: fastify.cofid,
-        }, { engineEnabled });
-        if (result.resolvedBy !== 'not_found' && result.product?.nutrition) {
-          nutrition = result.product.nutrition;
-          resolvedBy = result.resolvedBy;
-          citation = await buildNutritionCitation(fastify.sql, result.product);
+    // Step 3: resolve nutrition for EVERY candidate above the confidence floor (in parallel) —
+    // a meal photo usually contains several dishes, and per-dish + whole-meal nutrition is the
+    // entire point of the feature. Previously only the top candidate was resolved.
+    const RESOLVE_CONFIDENCE_FLOOR = 0.4;
+    const engineEnabled = await isUnifiedFoodSchemaEnabled(fastify.supabase);
+    const resolutions = await Promise.all(
+      vision.candidates.map(async (c) => {
+        if (c.confidence < RESOLVE_CONFIDENCE_FLOOR) return null;
+        try {
+          const result = await resolveByName(c.searchQuery, request.country, {
+            sql: fastify.sql,
+            offClient: fastify.offClient,
+            ifct: fastify.ifct,
+            usdaClient: fastify.usdaClient,
+            cofid: fastify.cofid,
+          }, { engineEnabled });
+          if (result.resolvedBy !== 'not_found' && result.product?.nutrition) {
+            return {
+              nutrition: result.product.nutrition,
+              ingredientsText: result.product.ingredientsRawText,
+              resolvedBy: result.resolvedBy,
+              citation: await buildNutritionCitation(fastify.sql, result.product),
+            };
+          }
+        } catch (e) {
+          fastify.log.warn({ err: e, dish: c.name }, '[meal-scan] nutrition resolution failed for dish');
         }
-      } catch (e) {
-        fastify.log.warn({ err: e }, '[meal-scan] nutrition resolution failed for top dish');
-      }
+        return null;
+      }),
+    );
+
+    // Step 4: scale each resolved dish's per-100g panel to its estimated portion, then total.
+    const portionPanels: PortionNutrition[] = [];
+    const scaledByIndex: (PortionNutrition | null)[] = resolutions.map((r, i) => {
+      const grams = portionEstimates[i]?.portionGrams;
+      if (!r || !grams) return null;
+      const panel = scaleNutritionToPortion(r.nutrition, grams);
+      portionPanels.push(panel);
+      return panel;
+    });
+    const mealTotals = portionPanels.length > 0 ? sumMealNutrition(portionPanels) : null;
+
+    // Step 5 (disease-aware, authenticated callers only): evaluate the user's stored conditions
+    // per dish and against the whole-meal totals. Best-effort — never blocks the scan result.
+    const userId = (request as { user?: { id?: string } }).user?.id;
+    let userConditions: string[] = [];
+    let userMedications: string[] = [];
+    let userReproductiveStatus: string | null = null;
+    if (userId) {
+      try {
+        const { data } = await fastify.supabase
+          .from('users_profiles')
+          .select('conditions, medications, reproductive_status')
+          .eq('id', userId)
+          .maybeSingle();
+        userConditions = (data?.conditions as string[] | null) ?? [];
+        userMedications = (data?.medications as string[] | null) ?? [];
+        userReproductiveStatus = (data?.reproductive_status as string | null) ?? null;
+      } catch { /* profile fetch is best-effort */ }
     }
+    const hasDiseaseSignal = userConditions.length > 0 || Boolean(userReproductiveStatus);
+    const diseaseNotesByIndex = resolutions.map((r) => {
+      if (!r || !hasDiseaseSignal) return null;
+      const evals = evaluateDiseaseRules({
+        nutrition: r.nutrition,
+        ingredientsText: r.ingredientsText,
+        conditions: userConditions,
+        medications: userMedications,
+        reproductiveStatus: userReproductiveStatus,
+      });
+      const triggered = evals.filter((e) => e.triggered);
+      return triggered.length > 0 ? triggered : null;
+    });
+    const mealSuitability = (() => {
+      if (!hasDiseaseSignal || !mealTotals) return null;
+      // Totals are per-meal, and the rules read per-100g — normalise back so thresholds hold.
+      const factor = mealTotals.totalPortionGrams > 0 ? 100 / mealTotals.totalPortionGrams : 0;
+      if (factor === 0) return null;
+      const per100g = {
+        energyKcal: mealTotals.energyKcal != null ? mealTotals.energyKcal * factor : null,
+        proteinG: mealTotals.proteinG != null ? mealTotals.proteinG * factor : null,
+        carbohydratesG: mealTotals.carbohydratesG != null ? mealTotals.carbohydratesG * factor : null,
+        sugarsG: mealTotals.sugarsG != null ? mealTotals.sugarsG * factor : null,
+        sugarsAddedG: mealTotals.sugarsAddedG != null ? mealTotals.sugarsAddedG * factor : null,
+        dietaryFiberG: mealTotals.dietaryFiberG != null ? mealTotals.dietaryFiberG * factor : null,
+        fatSaturatedG: mealTotals.fatSaturatedG != null ? mealTotals.fatSaturatedG * factor : null,
+        fatTransG: mealTotals.fatTransG != null ? mealTotals.fatTransG * factor : null,
+        sodiumMg: mealTotals.sodiumMg != null ? mealTotals.sodiumMg * factor : null,
+        potassiumMg: mealTotals.potassiumMg != null ? mealTotals.potassiumMg * factor : null,
+        cholesterolMg: mealTotals.cholesterolMg != null ? mealTotals.cholesterolMg * factor : null,
+        vitaminAIu: mealTotals.vitaminAIu != null ? mealTotals.vitaminAIu * factor : null,
+      };
+      const evals = evaluateDiseaseRules({
+        nutrition: per100g,
+        conditions: userConditions,
+        medications: userMedications,
+        reproductiveStatus: userReproductiveStatus,
+      });
+      const triggered = evals.filter((e) => e.triggered);
+      return {
+        overall: worstSeverity(evals) ?? 'ok',
+        notes: triggered,
+      };
+    })();
+
+    // Backward compatibility: the original top-candidate fields are preserved verbatim.
+    const top = vision.candidates[0];
+    const topResolution = resolutions[0];
 
     return reply.send(
       ok({
@@ -431,10 +519,18 @@ export default async function scanRoutes(fastify: FastifyInstance): Promise<void
           confidence: c.confidence,
           cuisine: c.cuisine,
           portionEstimate: portionEstimates[i],
+          // Per-dish nutrition (10-condition/meal-photo expansion, audit 2026-07)
+          nutritionPer100g: resolutions[i]?.nutrition ?? null,
+          nutritionForPortion: scaledByIndex[i],
+          resolvedBy: resolutions[i]?.resolvedBy ?? null,
+          citation: resolutions[i]?.citation ?? null,
+          diseaseNotes: diseaseNotesByIndex[i],
         })),
-        topCandidateNutrition: nutrition,
-        topCandidateResolvedBy: resolvedBy,
-        topCandidateCitation: citation,
+        mealTotals,
+        mealSuitability,
+        topCandidateNutrition: topResolution?.nutrition ?? null,
+        topCandidateResolvedBy: topResolution?.resolvedBy ?? null,
+        topCandidateCitation: topResolution?.citation ?? null,
         needsUserConfirmation: !top || top.confidence < 0.75,
         notes: vision.notes,
         disclaimerRequired: true,

@@ -53,33 +53,47 @@ export async function resolveBarcode(
   const ttl = opts.ttlHours ?? 168;
   const persist = opts.persistResult ?? true;
 
+  console.info(`[resolve:barcode] lookup requested barcode=${barcode}`);
+
   // Step 0: in-process edge cache (Phase 7, `global.p7.edge_caching`) — skips the DB round-trip
   // entirely for a barcode looked up again within the TTL window.
   const edgeHit = edgeCache?.get(barcode);
   if (edgeHit) {
+    console.info(`[resolve:barcode] edge cache hit barcode=${barcode} productId=${edgeHit.id}`);
     return { product: edgeHit, resolvedBy: 'cache', productId: edgeHit.id };
   }
 
-  // Step 1: DB cache
+  // Step 1: DB cache (Supabase)
+  console.info(`[resolve:barcode] supabase lookup barcode=${barcode}`);
   const cached = await getProductFromCache(sql, barcode, ttl);
   if (cached) {
+    console.info(`[resolve:barcode] supabase lookup hit barcode=${barcode} productId=${cached.id}`);
     edgeCache?.set(barcode, cached);
     return { product: cached, resolvedBy: 'cache', productId: cached.id };
   }
+  console.info(`[resolve:barcode] supabase lookup miss barcode=${barcode}`);
 
-  // Step 2: OpenFoodFacts
+  // Step 2: OpenFoodFacts fallback
+  console.info(`[resolve:barcode] OFF fallback request barcode=${barcode}`);
   try {
     const offProduct = await offClient.getProduct(barcode);
     if (offProduct) {
+      console.info(
+        `[resolve:barcode] OFF fallback response: found barcode=${barcode} ` +
+        `name=${offProduct.product_name ?? offProduct.product_name_en ?? 'unknown'}`,
+      );
       const product = normalizeOffProduct(offProduct);
       let productId: string | undefined;
       if (persist) {
         productId = await persistProduct(sql, product);
         product.id = productId;
+        console.info(`[resolve:barcode] cache insert barcode=${barcode} productId=${productId} source=openfoodfacts`);
       }
       edgeCache?.set(barcode, product);
+      console.info(`[resolve:barcode] resolved barcode=${barcode} resolvedBy=openfoodfacts`);
       return { product, resolvedBy: 'openfoodfacts', productId };
     }
+    console.info(`[resolve:barcode] OFF fallback response: not found barcode=${barcode}`);
   } catch (err) {
     console.warn('[waterfall] OFF lookup failed for', barcode, err instanceof Error ? err.message : err);
   }
@@ -103,6 +117,7 @@ export async function resolveBarcode(
 
   // Step 5: Not found — enqueue curation entry
   const curationQueueId = await enqueueCuration(sql, barcode, opts.userId);
+  console.info(`[resolve:barcode] resolved barcode=${barcode} resolvedBy=not_found curationQueueId=${curationQueueId}`);
   return { product: null, resolvedBy: 'not_found', curationQueueId };
 }
 
