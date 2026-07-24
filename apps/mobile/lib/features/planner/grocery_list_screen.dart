@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -29,7 +30,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final api  = ref.read(apiClientProvider);
-      final resp = await api.get<Map<String, dynamic>>('/api/v1/planner/grocery/${widget.listId}');
+      final resp = await api.get<Map<String, dynamic>>('/v1/planner/grocery/${widget.listId}');
       if (mounted) {
         setState(() {
           _list    = resp.data?['list'] as Map<String, dynamic>?;
@@ -47,7 +48,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
   Future<void> _toggle(String itemId) async {
     try {
       final api = ref.read(apiClientProvider);
-      await api.post<void>('/api/v1/planner/grocery/items/$itemId/toggle', data: {});
+      await api.patch<void>('/v1/planner/grocery/items/$itemId/toggle', data: {});
       final idx = _items.indexWhere((i) => i['id'] == itemId);
       if (idx >= 0 && mounted) {
         setState(() {
@@ -88,7 +89,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: context.colors.primary.withValues(alpha: 0.08),
             child: Row(
               children: [
                 Text(
@@ -98,7 +99,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
                 const Spacer(),
                 Text(
                   'Est. $currencySymbol${totalPrice.toStringAsFixed(2)}',
-                  style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                  style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                 ),
               ],
             ),
@@ -120,7 +121,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
                           const SizedBox(width: 8),
                           Text(
                             cat[0].toUpperCase() + cat.substring(1),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: AppType.titleSmall.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -163,7 +164,7 @@ class _CategoryIcon extends StatelessWidget {
       'spices':   Icons.spa,
       'other':    Icons.category,
     };
-    return Icon(icons[category] ?? Icons.category, size: 16, color: AppColors.subtle);
+    return Icon(icons[category] ?? Icons.category, size: 16, color: context.colors.subtle);
   }
 }
 
@@ -190,9 +191,9 @@ class _GroceryItemTile extends StatelessWidget {
         name,
         style: TextStyle(decoration: purchased ? TextDecoration.lineThrough : null),
       ),
-      subtitle: Text('$qty $unit', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+      subtitle: Text('$qty $unit', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
       trailing: price != null
-          ? Text('$symbol$price', style: AppType.bodySmall.copyWith(color: AppColors.subtle))
+          ? Text('$symbol$price', style: AppType.bodySmall.copyWith(color: context.colors.subtle))
           : null,
     );
   }

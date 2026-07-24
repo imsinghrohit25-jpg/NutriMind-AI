@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Grocery cart screen — shows cart score, expandable per-item math,
@@ -65,7 +66,7 @@ class _HouseholdScoreCard extends StatelessWidget {
               child: CircularProgressIndicator(
                 value: score / 100,
                 strokeWidth: 6,
-                backgroundColor: AppColors.divider,
+                backgroundColor: context.colors.divider,
                 color: color,
               ),
             ),
@@ -101,7 +102,7 @@ class _AllergenConflictCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasUnsuppressible = unsuppressibleCount > 0;
-    final color = hasUnsuppressible ? AppColors.scoreBad : AppColors.warning;
+    final color = hasUnsuppressible ? AppColors.scoreBad : context.colors.warning;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.m),
@@ -178,7 +179,7 @@ class _MemberCartCardState extends State<_MemberCartCard> {
                 Icon(
                   _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: 16,
-                  color: AppColors.subtle,
+                  color: context.colors.subtle,
                 ),
               ]),
               if (_expanded) ...[
@@ -197,7 +198,7 @@ class _MemberCartCardState extends State<_MemberCartCard> {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Score = Σ(product_score × quantity / total_units)',
-                  style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                  style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                 ),
               ],
             ],
@@ -241,7 +242,7 @@ class _CartItemRow extends StatelessWidget {
         ),
         Text(
           '${score.toStringAsFixed(0)} × ${weight.toStringAsFixed(3)} = ${contribution.toStringAsFixed(1)}',
-          style: AppType.bodySmall.copyWith(color: AppColors.subtle, fontFamily: 'monospace'),
+          style: AppType.bodySmall.copyWith(color: context.colors.subtle, fontFamily: 'monospace'),
         ),
       ]),
     );

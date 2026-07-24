@@ -1,5 +1,5 @@
 name: nutrimind
-description: "NutriMind AI — India-first nutrition scanner"
+description: "NutriMind AI — your AI-powered global nutrition companion"
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -10,6 +10,15 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+
+  # Premium redesign (ADR-0034, ADR-0035, ADR-0036) — presentation-layer only.
+  google_fonts: ^8.1.0
+  flutter_animate: ^4.5.2
+  fl_chart: ^1.2.0
+  # Premium redesign Phase 4 (ADR-0040) — markdown rendering for the AI Diet Chat's real,
+  # Output-Guard-validated finalText. `flutter_markdown` is discontinued upstream; this is its
+  # actively-maintained pub.dev-listed replacement (verified live, not from training data).
+  flutter_markdown_plus: ^1.0.12
 
   # State management
   flutter_riverpod: ^2.5.1

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Weekly nutrition report screen — shown when user taps the push notification
@@ -22,7 +23,7 @@ class WeeklyReportScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.m),
         children: [
-          Text(weekStart, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+          Text(weekStart, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
           const SizedBox(height: AppSpacing.xs),
           Text(headline, style: AppType.titleLarge),
           const SizedBox(height: AppSpacing.m),
@@ -89,7 +90,7 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+            Text(label, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
             const SizedBox(height: 4),
             Text(value, style: AppType.bodySmall),
           ],
@@ -107,13 +108,13 @@ class _Disclaimer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         'This report is based on products you scanned during the week. '
         'It is not a substitute for advice from a registered dietitian.',
-        style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+        style: AppType.bodySmall.copyWith(color: context.colors.subtle),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design_system/app_palette.dart';
 import '../../../core/design_system/tokens.dart';
 import '../../../core/offline/local_db.dart';
 
@@ -75,7 +76,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                 onChanged: (v) => setState(() => _accepted = v ?? false),
                 title: const Text('I have read and agree to the data usage policy'),
                 controlAffinity: ListTileControlAffinity.leading,
-                activeColor: AppColors.primary,
+                activeColor: context.colors.primary,
               ),
               const SizedBox(height: AppSpacing.l),
               FilledButton(
@@ -105,7 +106,7 @@ class _ConsentPoint extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primary, size: 24),
+          Icon(icon, color: context.colors.primary, size: 24),
           const SizedBox(width: AppSpacing.l),
           Expanded(
             child: Column(
@@ -113,7 +114,7 @@ class _ConsentPoint extends StatelessWidget {
               children: [
                 Text(title, style: AppType.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
-                Text(body, style: AppType.bodyMedium.copyWith(color: AppColors.subtle)),
+                Text(body, style: AppType.bodyMedium.copyWith(color: context.colors.subtle)),
               ],
             ),
           ),

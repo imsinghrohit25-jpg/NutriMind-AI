@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -80,9 +81,9 @@ class _EnergyAdjustmentCardState extends ConsumerState<EnergyAdjustmentCard> {
               children: [
                 const Icon(Icons.local_fire_department, color: Colors.orange),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Activity Bonus',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppType.titleMedium.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (_data!.cappedAtMaximum) ...[
                   const SizedBox(width: 6),
@@ -92,14 +93,14 @@ class _EnergyAdjustmentCardState extends ConsumerState<EnergyAdjustmentCard> {
                       color: Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text('Capped', style: TextStyle(fontSize: 10)),
+                    child: const Text('Capped', style: AppType.labelSmall),
                   ),
                 ],
                 const Spacer(),
                 Text(
                   '+${_data!.adjustmentKcal} kcal',
-                  style: const TextStyle(
-                    color: AppColors.primary,
+                  style: TextStyle(
+                    color: context.colors.primary,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
@@ -114,7 +115,7 @@ class _EnergyAdjustmentCardState extends ConsumerState<EnergyAdjustmentCard> {
             const SizedBox(height: 4),
             Text(
               _data!.explanation,
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
           ],
         ),

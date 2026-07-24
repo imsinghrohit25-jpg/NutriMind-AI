@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -119,7 +120,7 @@ class _GarminConnectScreenState extends ConsumerState<GarminConnectScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Garmin', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('Garmin', style: AppType.headlineMedium.copyWith(fontWeight: FontWeight.bold)),
                     Text(
                       _connected ? 'Connected' : 'Pending partner approval',
                       style: TextStyle(color: _connected ? Colors.green : Colors.orange),
@@ -137,7 +138,7 @@ class _GarminConnectScreenState extends ConsumerState<GarminConnectScreen> {
             Text(
               'Garmin integration uses the Garmin Health API (OAuth 2.0). '
               'Pending Garmin Developer Program partner approval.',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),

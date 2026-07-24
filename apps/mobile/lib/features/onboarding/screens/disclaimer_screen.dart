@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design_system/app_palette.dart';
 import '../../../core/design_system/tokens.dart';
 import '../../../core/offline/local_db.dart';
 
@@ -40,18 +41,18 @@ class _DisclaimerScreenState extends ConsumerState<DisclaimerScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.l),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withAlpha(20),
+                  color: context.colors.warning.withAlpha(20),
                   borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
-                  border: Border.all(color: AppColors.warning.withAlpha(60)),
+                  border: Border.all(color: context.colors.warning.withAlpha(60)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+                    Icon(Icons.warning_amber_rounded, color: context.colors.warning),
                     const SizedBox(width: AppSpacing.m),
                     Expanded(
                       child: Text(
                         'NutriMind provides nutrition information, not medical advice.',
-                        style: AppType.bodyMedium.copyWith(color: AppColors.warning),
+                        style: AppType.bodyMedium.copyWith(color: context.colors.warning),
                       ),
                     ),
                   ],
@@ -78,7 +79,7 @@ IMPORTANT — PLEASE READ:
 • Do NOT use NutriMind to manage, treat, or diagnose any medical condition.
 
 By continuing, you confirm that you understand and accept these limitations.''',
-                    style: AppType.bodyMedium.copyWith(color: AppColors.onSurface),
+                    style: AppType.bodyMedium.copyWith(color: context.colors.onSurface),
                   ),
                 ),
               ),
@@ -88,7 +89,7 @@ By continuing, you confirm that you understand and accept these limitations.''',
                 onChanged: (v) => setState(() => _accepted = v ?? false),
                 title: const Text('I understand this is not medical advice and I accept the disclaimer'),
                 controlAffinity: ListTileControlAffinity.leading,
-                activeColor: AppColors.primary,
+                activeColor: context.colors.primary,
               ),
               const SizedBox(height: AppSpacing.l),
               FilledButton(

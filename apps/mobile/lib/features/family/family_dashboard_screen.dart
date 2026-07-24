@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -211,7 +212,7 @@ class _FamilyDashboardScreenState extends ConsumerState<FamilyDashboardScreen> {
                         Text(
                           'No family groups yet.\nCreate one to start tracking together.',
                           textAlign: TextAlign.center,
-                          style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                          style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                         ),
                         const SizedBox(height: 16),
                         FilledButton(onPressed: _createGroup, child: const Text('Create Group')),
@@ -241,14 +242,14 @@ class _FamilyDashboardScreenState extends ConsumerState<FamilyDashboardScreen> {
                             padding: const EdgeInsets.all(12),
                             children: [
                               if (_memberStats.isNotEmpty) ...[
-                                const Text('Today\'s Nutrition', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text('Today\'s Nutrition', style: AppType.titleMedium.copyWith(fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 8),
                                 ..._memberStats.map((m) => _MemberStatCard(stat: m)),
                                 const SizedBox(height: 16),
                               ],
                               Row(
                                 children: [
-                                  const Text('Shopping List', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  Text('Shopping List', style: AppType.titleMedium.copyWith(fontWeight: FontWeight.bold)),
                                   const Spacer(),
                                   IconButton(icon: const Icon(Icons.add_shopping_cart), onPressed: _addShoppingItem),
                                 ],
@@ -256,7 +257,7 @@ class _FamilyDashboardScreenState extends ConsumerState<FamilyDashboardScreen> {
                               if (_shoppingItems.isEmpty)
                                 Padding(
                                   padding: const EdgeInsets.all(16),
-                                  child: Text('No items. Tap + to add.', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+                                  child: Text('No items. Tap + to add.', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
                                 )
                               else
                                 ..._shoppingItems.map((item) => _ShoppingItemTile(
@@ -291,10 +292,10 @@ class _MemberStatCard extends StatelessWidget {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: context.colors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text('$kcal kcal', style: const TextStyle(color: AppColors.primary, fontSize: 12)),
+          child: Text('$kcal kcal', style: AppType.bodySmall.copyWith(color: context.colors.primary)),
         ),
       ),
     );
@@ -318,12 +319,12 @@ class _ShoppingItemTile extends StatelessWidget {
         item['name'] as String,
         style: TextStyle(
           decoration: purchased ? TextDecoration.lineThrough : null,
-          color: purchased ? AppColors.subtle : null,
+          color: purchased ? context.colors.subtle : null,
         ),
       ),
       subtitle: Text(
         '${item['quantity']} ${item['unit']}',
-        style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+        style: AppType.bodySmall.copyWith(color: context.colors.subtle),
       ),
     );
   }

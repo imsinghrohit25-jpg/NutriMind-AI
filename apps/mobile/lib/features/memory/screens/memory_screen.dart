@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrimind_ai_agent_layer/nutrimind_ai_agent_layer.dart';
 
+import '../../../core/design_system/app_palette.dart';
 import '../../../core/design_system/tokens.dart';
 import '../../../core/network/api_client.dart';
 
@@ -98,7 +99,7 @@ class MemoryTransparencyView extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.l),
           child: Text(
             'NutriMind hasn’t learned anything about you yet — this fills in as you use the app.',
-            style: AppType.bodyMedium.copyWith(color: AppColors.subtle),
+            style: AppType.bodyMedium.copyWith(color: context.colors.subtle),
             textAlign: TextAlign.center,
           ),
         ),

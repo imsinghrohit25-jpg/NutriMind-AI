@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/sse_event.dart';
@@ -164,7 +165,7 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
           children: [
             Text(
               'Hold the button and say what you ate',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -172,12 +173,12 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
               onLongPressStart: (_) => _startListening(),
               onLongPressEnd:   (_) => _stopListening(),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: AppMotion.micro,
                 width:  _listening ? 100 : 80,
                 height: _listening ? 100 : 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _listening ? Colors.red : AppColors.primary,
+                  color: _listening ? Colors.red : context.colors.primary,
                   boxShadow: _listening
                       ? [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 5)]
                       : [],
@@ -216,9 +217,9 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withAlpha(15),
+                  color: context.colors.warning.withAlpha(15),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.warning.withAlpha(60)),
+                  border: Border.all(color: context.colors.warning.withAlpha(60)),
                 ),
                 child: Column(children: [
                   Text(_responseText!, textAlign: TextAlign.center),
@@ -236,7 +237,7 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
             if (_pendingFoods.isNotEmpty && !_foodLogConfirmed) ...[
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Did you have:', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+                child: Text('Did you have:', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -261,7 +262,7 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
 
             if (_foodLogConfirmed) ...[
               const SizedBox(height: 16),
-              const Icon(Icons.check_circle, color: AppColors.success, size: 32),
+              Icon(Icons.check_circle, color: context.colors.success, size: 32),
               const SizedBox(height: 8),
               const Text('Confirmed'),
             ],

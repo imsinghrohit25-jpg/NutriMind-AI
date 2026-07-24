@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Data rights screen — GDPR/DPDP-compliant export and full account deletion.
@@ -130,7 +131,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.surface,
+      color: context.colors.surface,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
@@ -141,7 +142,7 @@ class _InfoCard extends StatelessWidget {
             Text(
               'Under the Digital Personal Data Protection Act 2023 (India) and GDPR, '
               'you have the right to export or delete all personal data we hold about you.',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
           ],
         ),

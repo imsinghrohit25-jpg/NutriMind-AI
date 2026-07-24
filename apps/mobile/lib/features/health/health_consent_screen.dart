@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -107,11 +108,11 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
                 final entry   = _kMetrics[i];
                 final granted = _consentState[entry.type] ?? false;
                 return SwitchListTile(
-                  secondary: Icon(entry.icon, color: AppColors.primary),
+                  secondary: Icon(entry.icon, color: context.colors.primary),
                   title:    Text(entry.label),
                   subtitle: Text(
                     granted ? 'Syncing • tap to revoke & delete' : 'Not syncing',
-                    style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                    style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                   ),
                   value:    granted,
                   onChanged: (v) => _toggle(entry.type, v),

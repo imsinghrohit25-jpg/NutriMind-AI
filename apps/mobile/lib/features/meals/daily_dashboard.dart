@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Daily nutrition dashboard — visualises nutrient gaps vs budget.
@@ -83,7 +84,7 @@ class _NutrientGapBar extends StatelessWidget {
             Expanded(child: Text(nutrient, style: AppType.labelMedium)),
             Text(
               '${consumed.toStringAsFixed(unit == 'mg' ? 0 : 1)}$unit / ${budget.toStringAsFixed(unit == 'mg' ? 0 : 0)}$unit',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
             const SizedBox(width: AppSpacing.xs),
             Text('$pct%', style: AppType.labelSmall.copyWith(color: color)),
@@ -91,7 +92,7 @@ class _NutrientGapBar extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           LinearProgressIndicator(
             value: fraction.clamp(0.0, 1.0),
-            backgroundColor: AppColors.divider,
+            backgroundColor: context.colors.divider,
             color: color,
             minHeight: 6,
             borderRadius: BorderRadius.circular(3),

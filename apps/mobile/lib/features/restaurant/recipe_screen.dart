@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -168,18 +169,18 @@ class _RecipeCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(recipe.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        Text(recipe.name, style: AppType.headlineLarge.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Row(
           children: [
             const Icon(Icons.timer, size: 14, color: Colors.grey),
-            Text(' ${recipe.prepTime + recipe.cookTime} min', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+            Text(' ${recipe.prepTime + recipe.cookTime} min', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
             const SizedBox(width: 12),
             const Icon(Icons.people, size: 14, color: Colors.grey),
-            Text(' ${recipe.servings} servings', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+            Text(' ${recipe.servings} servings', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
             const SizedBox(width: 12),
             const Icon(Icons.local_fire_department, size: 14, color: Colors.orange),
-            Text(' ${recipe.kcalPerServing} kcal/serving', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+            Text(' ${recipe.kcalPerServing} kcal/serving', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
           ],
         ),
         if (recipe.tags.isNotEmpty) ...[
@@ -187,13 +188,13 @@ class _RecipeCard extends StatelessWidget {
           Wrap(
             spacing: 6,
             children: recipe.tags.map((t) => Chip(
-              label: Text(t, style: const TextStyle(fontSize: 11)),
+              label: Text(t, style: AppType.labelSmall),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             )).toList(),
           ),
         ],
         const SizedBox(height: 16),
-        const Text('Ingredients', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text('Ingredients', style: AppType.titleMedium.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...recipe.ingredients.map((i) => Padding(
           padding: const EdgeInsets.only(bottom: 4),
@@ -206,7 +207,7 @@ class _RecipeCard extends StatelessWidget {
           ),
         )),
         const SizedBox(height: 16),
-        const Text('Method', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text('Method', style: AppType.titleMedium.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...recipe.steps.asMap().entries.map((e) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -217,12 +218,12 @@ class _RecipeCard extends StatelessWidget {
                 width: 24, height: 24,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: context.colors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '${e.key + 1}',
-                  style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                  style: AppType.labelSmall.copyWith(color: context.colors.primary, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 10),
