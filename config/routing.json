@@ -3,7 +3,7 @@
     "primary": { "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
     "fallbacks": [
       { "provider": "openai", "model": "gpt-4o-mini" },
-      { "provider": "gemini", "model": "gemini-1.5-flash" }
+      { "provider": "gemini", "model": "gemini-flash-latest" }
     ],
     "maxRetries": 3,
     "timeoutMs": 15000
@@ -11,7 +11,8 @@
   "vision_analysis": {
     "primary": { "provider": "anthropic", "model": "claude-sonnet-4-6" },
     "fallbacks": [
-      { "provider": "openai", "model": "gpt-4o" }
+      { "provider": "openai", "model": "gpt-4o" },
+      { "provider": "gemini", "model": "gemini-flash-latest" }
     ],
     "maxRetries": 2,
     "timeoutMs": 30000
@@ -21,7 +22,7 @@
     "fast": { "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
     "fallbacks": [
       { "provider": "openai", "model": "gpt-4o" },
-      { "provider": "gemini", "model": "gemini-1.5-pro" }
+      { "provider": "gemini", "model": "gemini-pro-latest" }
     ],
     "maxRetries": 2,
     "timeoutMs": 60000
@@ -38,7 +39,7 @@
   "embeddings": {
     "primary": { "provider": "openai", "model": "text-embedding-3-small" },
     "fallbacks": [
-      { "provider": "gemini", "model": "text-embedding-004" }
+      { "provider": "gemini", "model": "gemini-embedding-001" }
     ],
     "maxRetries": 3,
     "timeoutMs": 10000

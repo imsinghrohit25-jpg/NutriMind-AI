@@ -33,6 +33,10 @@ declare module 'fastify' {
     ifct: IfctLoader;
     cofid: CofidLoader;
     productCache: EdgeCache<CanonicalProduct>;
+    /** Google Cloud Vision — OCR text extraction only (Gemini/Vision integration). null when
+     *  GOOGLE_VISION_API_KEY isn't configured; consumers must treat that as "path unavailable",
+     *  same as `gateway: null`. */
+    googleVisionApiKey: string | null;
   }
 }
 
@@ -107,6 +111,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   }
   fastify.decorate('gateway', gateway);
+  fastify.decorate('googleVisionApiKey', env.GOOGLE_VISION_API_KEY ?? null);
 
   // Phase 3 — datasource clients
   const offClient = new OpenFoodFactsClient(env.OFF_BASE_URL, env.OFF_USER_AGENT);

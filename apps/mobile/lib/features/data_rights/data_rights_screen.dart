@@ -1,4 +1,6 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Data rights screen — GDPR/DPDP-compliant export and full account deletion.
@@ -99,7 +101,7 @@ class _DataRightsScreenState extends State<DataRightsScreen> {
             title: const Text('Export my data'),
             subtitle: const Text('Download a JSON file with all your scans, meals, and profile.'),
             trailing: _exporting
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2))
                 : const Icon(Icons.chevron_right),
             onTap: _exporting ? null : _export,
           ),
@@ -114,7 +116,7 @@ class _DataRightsScreenState extends State<DataRightsScreen> {
             ),
             subtitle: const Text('Permanently removes all your data from NutriMind servers.'),
             trailing: _deleting
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2))
                 : const Icon(Icons.chevron_right, color: AppColors.scorePoor),
             onTap: _deleting ? null : _confirmDelete,
           ),
@@ -130,7 +132,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.surface,
+      color: context.colors.surface,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
@@ -141,7 +143,7 @@ class _InfoCard extends StatelessWidget {
             Text(
               'Under the Digital Personal Data Protection Act 2023 (India) and GDPR, '
               'you have the right to export or delete all personal data we hold about you.',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
           ],
         ),

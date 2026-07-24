@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Disease-specific guidance chips shown below the health score.
@@ -47,7 +48,7 @@ class _DiseaseChipState extends State<_DiseaseChip> {
     final message     = widget.result['message'] as String? ?? '';
     final citationIds = (widget.result['citationIds'] as List<dynamic>?)
         ?.cast<String>() ?? [];
-    final color       = severity == 'warning' ? AppColors.scorePoor : AppColors.warning;
+    final color       = severity == 'warning' ? AppColors.scorePoor : context.colors.warning;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s),
@@ -85,27 +86,27 @@ class _DiseaseChipState extends State<_DiseaseChip> {
                 Icon(
                   _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: 16,
-                  color: AppColors.subtle,
+                  color: context.colors.subtle,
                 ),
               ]),
               if (_expanded) ...[
                 const SizedBox(height: AppSpacing.s),
-                Text(message, style: const TextStyle(fontSize: 12)),
+                Text(message, style: AppType.bodySmall),
                 if (citationIds.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Source: ${citationIds.join(', ')}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.subtle,
+                      color: context.colors.subtle,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.xs),
-                const Text(
+                Text(
                   'This is general nutrition information, not medical advice. Consult your doctor for personalised guidance.',
-                  style: TextStyle(fontSize: 11, color: AppColors.subtle),
+                  style: AppType.labelSmall.copyWith(color: context.colors.subtle),
                 ),
               ],
             ],

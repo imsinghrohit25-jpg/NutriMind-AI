@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Alternatives screen — ranked healthier swaps for the scanned product.
@@ -61,7 +62,7 @@ class _OriginalCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Scanned product', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+                  Text('Scanned product', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
                   Text(name, style: AppType.titleMedium),
                 ],
               ),
@@ -82,12 +83,12 @@ class _ThinCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.surface,
+      color: context.colors.surface,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
           children: [
-            const Icon(Icons.info_outline, size: 40, color: AppColors.subtle),
+            Icon(Icons.info_outline, size: 40, color: context.colors.subtle),
             const SizedBox(height: AppSpacing.s),
             Text(
               message ?? 'No better-scoring alternatives found in this category.',
@@ -124,7 +125,7 @@ class _AlternativeCard extends StatelessWidget {
         subtitle: Row(
           children: [
             if (brand != null) ...[
-              Text(brand, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+              Text(brand, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
               const SizedBox(width: AppSpacing.s),
             ],
             if (isBudget)
@@ -225,7 +226,7 @@ class _DeltaRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: AppType.bodySmall.copyWith(color: AppColors.subtle))),
+          Expanded(child: Text(label, style: AppType.bodySmall.copyWith(color: context.colors.subtle))),
           Text(value, style: AppType.bodySmall),
           const SizedBox(width: AppSpacing.xs),
           Text(

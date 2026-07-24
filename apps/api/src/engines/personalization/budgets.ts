@@ -22,15 +22,25 @@ export interface BudgetRemaining {
   remaining: DailyBudget;
 }
 
+export interface BudgetOptions {
+  /** g protein per kg body weight — overrides the ICMR-NIN general-population default of
+   *  0.83g/kg. Athlete-aware callers (agents/personalization-context.ts) pass a higher value per
+   *  the ISSN Position Stand: Protein and Exercise (2017) ranges — endurance ~1.2-1.4g/kg,
+   *  strength/power ~1.6-2.0g/kg. Left undefined for the general population. */
+  proteinGPerKg?: number;
+}
+
 export function computeDailyBudget(
   profile: UserProfile,
   energy: EnergyTarget,
+  opts: BudgetOptions = {},
 ): DailyBudget {
   const tdee = energy.tdeeKcal;
+  const proteinGPerKg = opts.proteinGPerKg ?? 0.83;
 
   return {
     energyKcal:     tdee,
-    proteinG:       Math.round(profile.weightKg * 0.83),      // ICMR-NIN 0.83g/kg
+    proteinG:       Math.round(profile.weightKg * proteinGPerKg),
     fatTotalG:      Math.round((tdee * 0.30) / 9),            // 30% of energy
     fatSaturatedG:  Math.round((tdee * 0.10) / 9),            // < 10% of energy
     fatTransG:      Math.round((tdee * 0.01) / 9),            // < 1% of energy

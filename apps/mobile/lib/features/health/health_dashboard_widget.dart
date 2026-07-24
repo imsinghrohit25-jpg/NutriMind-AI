@@ -1,5 +1,7 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -63,7 +65,7 @@ class _HealthDashboardWidgetState extends ConsumerState<HealthDashboardWidget> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+      return const SizedBox(height: 120, child: Center(child: AppLoader()));
     }
 
     if (_metrics.isEmpty) return const SizedBox.shrink();
@@ -161,23 +163,23 @@ class _MetricChip extends StatelessWidget {
       width: 88,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: context.colors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_icon, color: AppColors.primary, size: 20),
+          Icon(_icon, color: context.colors.primary, size: 20),
           const SizedBox(height: 4),
           Text(
             '$v$_unit',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            style: AppType.titleSmall.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 2),
           Text(
             _label,
-            style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+            style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

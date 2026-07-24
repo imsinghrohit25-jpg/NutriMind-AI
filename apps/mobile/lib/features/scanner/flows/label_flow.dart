@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design_system/app_palette.dart';
 import '../../../core/design_system/tokens.dart';
 import '../ocr_mlkit.dart';
 
@@ -36,7 +37,7 @@ class _LabelFlowResultState extends ConsumerState<LabelFlowResult> {
                 child: Container(
                   padding: const EdgeInsets.all(AppSpacing.l),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
+                    color: context.colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
                   ),
                   child: SingleChildScrollView(
@@ -70,7 +71,7 @@ class _LabelFlowResultState extends ConsumerState<LabelFlowResult> {
     setState(() => _submitting = true);
     // Phase 5: submit to POST /v1/scans/ocr — implemented via api_client
     // For now: show "submitted" confirmation
-    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 500)); // design-governance:ignore: UX settle delay, not an animation
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Label submitted for analysis — results coming soon')),
@@ -83,10 +84,10 @@ class _ConfidenceBanner extends StatelessWidget {
   const _ConfidenceBanner({required this.confidence});
   final double confidence;
 
-  Color get _color {
-    if (confidence >= 0.7) return AppColors.success;
-    if (confidence >= 0.4) return AppColors.warning;
-    return AppColors.error;
+  Color _color(BuildContext context) {
+    if (confidence >= 0.7) return context.colors.success;
+    if (confidence >= 0.4) return context.colors.warning;
+    return context.colors.error;
   }
 
   String get _label {
@@ -100,19 +101,19 @@ class _ConfidenceBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: _color.withAlpha(15),
+        color: _color(context).withAlpha(15),
         borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
-        border: Border.all(color: _color.withAlpha(60)),
+        border: Border.all(color: _color(context).withAlpha(60)),
       ),
       child: Row(children: [
         Icon(
           confidence >= 0.7 ? Icons.check_circle_outline : Icons.info_outline,
-          color: _color, size: 20,
+          color: _color(context), size: 20,
         ),
         const SizedBox(width: AppSpacing.m),
-        Expanded(child: Text(_label, style: AppType.bodySmall.copyWith(color: _color))),
+        Expanded(child: Text(_label, style: AppType.bodySmall.copyWith(color: _color(context)))),
         Text('${(confidence * 100).toStringAsFixed(0)}%',
-          style: AppType.labelMedium.copyWith(color: _color)),
+          style: AppType.labelMedium.copyWith(color: _color(context))),
       ]),
     );
   }
@@ -127,7 +128,7 @@ class _LowConfidenceWarning extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: AppColors.warning.withAlpha(15),
+        color: context.colors.warning.withAlpha(15),
         borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
       ),
       child: Column(

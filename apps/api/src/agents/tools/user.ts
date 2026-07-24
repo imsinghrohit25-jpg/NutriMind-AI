@@ -16,6 +16,19 @@ export interface UserProfileOutput {
   allergens: string[];
   preferredLanguage: string;
   preferredCountry: string | null;
+  // Advanced personalization fields (migration 0036) — all optional; a null/empty value means
+  // "not provided", never "not applicable". See that migration's header for why `religion` is
+  // deliberately not used to auto-exclude foods.
+  medications: string[];
+  budgetLevel: string | null;
+  sleepHoursAvg: number | null;
+  stressLevel: string | null;
+  mealTimingPattern: string | null;
+  religion: string | null;
+  reproductiveStatus: string | null;
+  athleteStatus: string | null;
+  bodyFatPct: number | null;
+  waistCircumferenceCm: number | null;
 }
 
 export interface UserGoalsOutput {
@@ -53,6 +66,16 @@ export const userProfileTool: ToolDefinition<Record<string, never>, UserProfileO
       allergens: (row.allergens as string[] | null) ?? [],
       preferredLanguage: row.preferred_language as string,
       preferredCountry: row.preferred_country as string | null,
+      medications: (row.medications as string[] | null) ?? [],
+      budgetLevel: row.budget_level as string | null,
+      sleepHoursAvg: row.sleep_hours_avg as number | null,
+      stressLevel: row.stress_level as string | null,
+      mealTimingPattern: row.meal_timing_pattern as string | null,
+      religion: row.religion as string | null,
+      reproductiveStatus: row.reproductive_status as string | null,
+      athleteStatus: row.athlete_status as string | null,
+      bodyFatPct: row.body_fat_pct as number | null,
+      waistCircumferenceCm: row.waist_circumference_cm as number | null,
     };
   },
 };

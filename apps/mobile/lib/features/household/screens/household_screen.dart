@@ -1,6 +1,8 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design_system/app_palette.dart';
 import '../../../core/design_system/tokens.dart';
 import '../household_repository.dart';
 
@@ -23,7 +25,7 @@ class HouseholdScreen extends ConsumerWidget {
         ],
       ),
       body: membersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppLoader()),
         error: (e, _) => Center(child: Text('Error: $e', style: AppType.bodyMedium)),
         data: (members) => members.isEmpty
             ? _EmptyState(onAdd: () => _showAddMemberSheet(context, ref))
@@ -59,11 +61,11 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.family_restroom, size: 64, color: AppColors.subtle),
+            Icon(Icons.family_restroom, size: 64, color: context.colors.subtle),
             const SizedBox(height: AppSpacing.xl),
             const Text('No household members', style: AppType.headlineMedium),
             const SizedBox(height: AppSpacing.s),
-            Text('Add family members to track nutrition for everyone', style: AppType.bodyMedium.copyWith(color: AppColors.subtle), textAlign: TextAlign.center),
+            Text('Add family members to track nutrition for everyone', style: AppType.bodyMedium.copyWith(color: context.colors.subtle), textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.xl),
             FilledButton.icon(
               onPressed: onAdd,
@@ -87,10 +89,10 @@ class _MemberCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppColors.primary.withAlpha(20),
+          backgroundColor: context.colors.primary.withAlpha(20),
           child: Text(
             member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-            style: AppType.titleMedium.copyWith(color: AppColors.primary),
+            style: AppType.titleMedium.copyWith(color: context.colors.primary),
           ),
         ),
         title: Text(member.name, style: AppType.titleMedium),
@@ -99,7 +101,7 @@ class _MemberCard extends StatelessWidget {
             if (member.ageYears != null) '${member.ageYears} yrs',
             if (member.tdeeKcal != null) '${member.tdeeKcal!.toStringAsFixed(0)} kcal/day',
           ].join(' · '),
-          style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+          style: AppType.bodySmall.copyWith(color: context.colors.subtle),
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
@@ -198,7 +200,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           ]),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.m),
-            Text(_error!, style: AppType.bodySmall.copyWith(color: AppColors.error)),
+            Text(_error!, style: AppType.bodySmall.copyWith(color: context.colors.error)),
           ],
           const SizedBox(height: AppSpacing.xl),
           FilledButton(

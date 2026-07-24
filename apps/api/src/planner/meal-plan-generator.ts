@@ -124,8 +124,15 @@ async function generateMeal(opts: {
       proteinG:     recipe.perServingNutrition.protein,
       mealType,
     };
-  } catch {
-    // Fallback to a simple meal if generation fails
+  } catch (e) {
+    // Deliberately not silent: this fallback returns recipeData: {} (no ingredients), which looks
+    // like a normal plan on the plan screen but silently produces an empty grocery list downstream
+    // (buildGroceryList filters out any recipe with no ingredients — see planner.ts's
+    // `/plans/:planId/grocery` handler). Found on a real device: every meal in a generated plan had
+    // exactly this fallback's shape (recipeName === prompt, kcalEstimate === the rounded target kcal)
+    // because gateway.complete() was hitting Gemini's real rate limit for every single recipe call,
+    // and with no logging here that was indistinguishable from "recipe generation isn't wired up".
+    console.error(`[meal-plan-generator] generateRecipe failed for "${prompt}" (${mealType}), falling back to placeholder meal:`, e);
     return {
       recipeName:   prompt,
       recipeData:   {},

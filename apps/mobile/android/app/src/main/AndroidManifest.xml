@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Explicit even though the `camera` plugin's own manifest merges this in too — makes the
+         requirement visible in source rather than relying entirely on plugin manifest merging. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="true"/>
     <application
         android:label="nutrimind"
         android:name="${applicationName}"
@@ -11,7 +15,8 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:enableOnBackInvokedCallback="true">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
@@ -23,6 +28,16 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- OAuth redirect callback (Google/Apple Sign In via Supabase Auth) — catches the
+                 browser redirect back into the app after the user completes sign-in on the
+                 provider's page. Android-only; iOS needs its own separate URL-scheme entry in
+                 Info.plist, not touched here. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="nutrimind" android:host="login-callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

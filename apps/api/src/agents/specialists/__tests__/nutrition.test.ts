@@ -88,6 +88,23 @@ describe('runNutritionAgent', () => {
     expect(result.responseText).toMatch(/couldn't find/i);
   });
 
+  it('answers a general dietary-advice question directly instead of misreading it as a product name search — found on a real device: "what should I eat for breakfast to get more protein" resolved to an unrelated cereal every time, because a few stopwords stripped from a full sentence still isn\'t a real food name', async () => {
+    const searchSpy = vi.fn(async () => PRODUCT_OFF_RESULT);
+    const ctx = makeCtx({ offClient: { searchByName: searchSpy } as never });
+    const registry = new ToolRegistry();
+
+    const result = await runNutritionAgent({
+      message: 'What should I eat for breakfast to get more protein?',
+      ctx, registry, locale: 'en-IN', handoffState: {},
+    });
+
+    expect(searchSpy).not.toHaveBeenCalled();
+    // Personalization tools (user.profile/user.goals/memory.facts) ARE expected to be called now
+    // (AI Nutrition Intelligence upgrade) — the invariant that matters is no food.search/food.lookup.
+    expect(result.toolTrace.some((t) => t.tool === 'food.search' || t.tool === 'food.lookup')).toBe(false);
+    expect(result.responseText).not.toMatch(/\/100/); // no product health score leaked in
+  });
+
   it('extracts a barcode when the message contains a long digit run instead of doing a name search — product not found short-circuits before any other tool call', async () => {
     const lookupSpy = vi.fn(async () => ({ product: null, resolvedBy: 'not_found' as const }));
     const ctx = makeCtx();

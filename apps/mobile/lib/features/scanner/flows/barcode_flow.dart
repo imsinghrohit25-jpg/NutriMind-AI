@@ -1,12 +1,17 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/design_system/app_palette.dart';
 import '../../../core/design_system/tokens.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../pipeline.dart';
 import '../../product/product_screen.dart';
 
+final _log = getLogger('scanner.barcode_flow');
+
 // Barcode scan result flow — shown after a successful barcode scan.
-// Displays the product result or an offline-queued confirmation.
+// Displays the product result, a genuine "not found" state, or an offline-queued confirmation.
 
 class BarcodeFlowResult extends ConsumerWidget {
   const BarcodeFlowResult({super.key, required this.result});
@@ -24,11 +29,21 @@ class BarcodeFlowResult extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
-            builder: (_) => ProductScreen(productJson: product),
+            builder: (_) => ProductScreen(
+              productJson: product,
+              diseaseGuidance: result.diseaseGuidance,
+              healthScore: result.healthScore,
+              safety: result.safety,
+            ),
           ),
         );
       });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: AppLoader()));
+    }
+
+    if (result.notFound) {
+      _log.info('Rendering not-found screen for barcode ${result.barcode}');
+      return _NotFoundState(barcode: result.barcode);
     }
 
     // Offline: product not yet resolved
@@ -42,11 +57,11 @@ class BarcodeFlowResult extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.l),
               decoration: BoxDecoration(
-                color: AppColors.info.withAlpha(15),
+                color: context.colors.info.withAlpha(15),
                 borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
               ),
               child: Row(children: [
-                const Icon(Icons.cloud_off, color: AppColors.info),
+                Icon(Icons.cloud_off, color: context.colors.info),
                 const SizedBox(width: AppSpacing.m),
                 Expanded(child: Text(
                   'You\'re offline. The barcode (${result.barcode}) has been saved and will sync when you reconnect.',
@@ -56,8 +71,55 @@ class BarcodeFlowResult extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             if (result.barcode != null)
-              Text('Barcode: ${result.barcode}', style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+              Text('Barcode: ${result.barcode}', style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotFoundState extends StatelessWidget {
+  const _NotFoundState({required this.barcode});
+  final String? barcode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Product not found')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off, color: context.colors.subtle, size: 48),
+              const SizedBox(height: AppSpacing.l),
+              const Text(
+                'We couldn\'t find this product in our database or Open Food Facts.',
+                style: AppType.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              if (barcode != null) ...[
+                const SizedBox(height: AppSpacing.m),
+                Text(
+                  'Barcode: $barcode',
+                  style: AppType.bodySmall.copyWith(color: context.colors.subtle),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.m),
+              Text(
+                'We\'ve queued it for review so it can be added.',
+                style: AppType.bodySmall.copyWith(color: context.colors.subtle),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.l),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Scan another product'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -78,7 +140,7 @@ class _ErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+              Icon(Icons.error_outline, color: context.colors.error, size: 48),
               const SizedBox(height: AppSpacing.l),
               Text(message, style: AppType.bodyMedium, textAlign: TextAlign.center),
               const SizedBox(height: AppSpacing.l),

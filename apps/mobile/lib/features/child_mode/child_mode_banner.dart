@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Child mode banner — shown at the top of product screen when the active
@@ -22,19 +23,19 @@ class ChildModeBanner extends StatelessWidget {
         horizontal: AppSpacing.m,
         vertical: AppSpacing.s,
       ),
-      color: AppColors.accent.withAlpha(25),
+      color: context.colors.accent.withAlpha(25),
       child: Row(
         children: [
-          const Icon(Icons.child_care, color: AppColors.accent, size: 18),
+          Icon(Icons.child_care, color: context.colors.accent, size: 18),
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Text(
               'Child safety mode — $memberName ($ageYears y). '
               'Stricter sodium, sugar, and additive thresholds apply.',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.accent,
+                color: context.colors.accent,
               ),
             ),
           ),

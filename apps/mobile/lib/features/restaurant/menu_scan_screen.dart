@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -142,7 +143,7 @@ class _MenuScanScreenState extends ConsumerState<MenuScanScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'Scan a restaurant menu to see\nhealth scores for each item.',
-                      style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                      style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -220,7 +221,7 @@ class _MenuItemTile extends StatelessWidget {
               style: AppType.bodySmall.copyWith(color: Colors.red),
             )
           : item.category != null
-              ? Text(item.category!, style: AppType.bodySmall.copyWith(color: AppColors.subtle))
+              ? Text(item.category!, style: AppType.bodySmall.copyWith(color: context.colors.subtle))
               : null,
       trailing: item.priceRs != null
           ? Text('₹${item.priceRs!.toStringAsFixed(0)}')

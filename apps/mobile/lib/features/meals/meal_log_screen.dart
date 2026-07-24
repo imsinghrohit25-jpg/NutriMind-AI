@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Meal log screen — shows all meals logged today with their nutrition totals.
@@ -77,8 +78,8 @@ class _StatPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: AppType.titleSmall.copyWith(color: AppColors.primary)),
-        Text(label, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+        Text(value, style: AppType.titleSmall.copyWith(color: context.colors.primary)),
+        Text(label, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
       ],
     );
   }
@@ -118,12 +119,12 @@ class _MealEntryCardState extends State<_MealEntryCard> {
                 Expanded(child: Text(name, style: AppType.titleSmall)),
                 Text(
                   '${servingG.toStringAsFixed(0)}g',
-                  style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                  style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                 ),
                 Icon(
                   _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: 16,
-                  color: AppColors.subtle,
+                  color: context.colors.subtle,
                 ),
               ]),
               if (_expanded) ...[

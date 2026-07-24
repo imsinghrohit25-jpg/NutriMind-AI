@@ -1,8 +1,10 @@
 // CGM glucose chart — visualises Dexcom/Libre readings with time-in-range bands.
 // Chart rendered using CustomPainter (no external chart library dependency).
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -101,7 +103,7 @@ class _GlucoseChartScreenState extends ConsumerState<GlucoseChartScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
               : _readings.isEmpty
@@ -180,7 +182,7 @@ class _TIRSummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Time in Range: ${tir.inRange}%  •  Target: ≥70%',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
           ],
         ),
@@ -196,7 +198,7 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+      Text(label, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
       Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
     ],
   );
@@ -227,7 +229,7 @@ class _EmptyState extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Connect a CGM device to see your glucose trends.',
-          style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+          style: AppType.bodySmall.copyWith(color: context.colors.subtle),
           textAlign: TextAlign.center,
         ),
       ],

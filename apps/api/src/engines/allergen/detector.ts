@@ -105,9 +105,35 @@ export function detectAllergens(
   };
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Cache of compiled negation patterns — one per distinct keyword across every call, since the
+ *  same ~14-allergen taxonomy is reused for every product resolved. */
+const _negationPatternCache = new Map<string, RegExp>();
+function negationPatternFor(keyword: string): RegExp {
+  let pattern = _negationPatternCache.get(keyword);
+  if (!pattern) {
+    // "gluten free" / "gluten-free" / "gluten - free" is a declaration of ABSENCE, not presence —
+    // matching the bare keyword there produced a real, confirmed false "Contains Gluten" warning
+    // on a genuinely gluten-free product (found via live verification, premium redesign Phase 3).
+    // Guarded generically for every keyword (not just gluten), since the same "X free"/"X-free"
+    // claim pattern applies to any allergen ("nut-free", "dairy free", etc).
+    pattern = new RegExp(`${escapeRegExp(keyword)}\\s*-?\\s*free\\b`, 'gi');
+    _negationPatternCache.set(keyword, pattern);
+  }
+  return pattern;
+}
+
 function findKeyword(keywords: readonly string[], text: string): string | null {
   for (const kw of keywords) {
-    if (text.includes(kw.toLowerCase())) return kw;
+    const lower = kw.toLowerCase();
+    // Strip only the negated occurrences ("<keyword> free") before checking — a product whose
+    // text contains the keyword BOTH as a genuine ingredient AND as an unrelated "free" claim
+    // elsewhere must still match on the genuine occurrence.
+    const withoutNegations = text.replace(negationPatternFor(lower), '');
+    if (withoutNegations.includes(lower)) return kw;
   }
   return null;
 }

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/components/gradient_scaffold.dart';
+import '../../core/design_system/components/nutrient_ring.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Full expandable health score screen.
@@ -23,8 +26,8 @@ class ScoreScreen extends StatelessWidget {
     final subscores = scoreJson['subscores'] as Map<String, dynamic>? ?? {};
     final explain  = scoreJson['explain'] as Map<String, dynamic>?;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(productName)),
+    return GradientScaffold(
+      appBar: AppBar(title: Text(productName), backgroundColor: Colors.transparent),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.m),
         children: [
@@ -99,24 +102,12 @@ class _ScoreGauge extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.l),
         child: Row(
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: CircularProgressIndicator(
-                    value: score / 100,
-                    strokeWidth: 8,
-                    backgroundColor: AppColors.divider,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  score.toStringAsFixed(0),
-                  style: AppType.displaySmall.copyWith(color: color),
-                ),
-              ],
+            AnimatedNutrientRing(
+              value: score,
+              maxValue: 100,
+              color: color,
+              size: 80,
+              strokeWidth: 8,
             ),
             const SizedBox(width: AppSpacing.l),
             Expanded(
@@ -174,7 +165,7 @@ class _ExplainCard extends StatelessWidget {
     final disclaimer = explain['disclaimer'] as String? ?? '';
 
     return Card(
-      color: AppColors.primary.withAlpha(8),
+      color: context.colors.primary.withAlpha(8),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.m),
         child: Column(
@@ -202,7 +193,7 @@ class _ExplainCard extends StatelessWidget {
             )),
             if (disclaimer.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.s),
-              Text(disclaimer, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+              Text(disclaimer, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
             ],
           ],
         ),
@@ -262,20 +253,20 @@ class _SubScoreCardState extends State<_SubScoreCard> {
                 Icon(
                   _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: 18,
-                  color: AppColors.subtle,
+                  color: context.colors.subtle,
                 ),
               ]),
               const SizedBox(height: AppSpacing.xs),
               LinearProgressIndicator(
                 value: score / 100,
-                backgroundColor: AppColors.divider,
+                backgroundColor: context.colors.divider,
                 color: color,
                 minHeight: 4,
                 borderRadius: BorderRadius.circular(2),
               ),
               if (_expanded && notes.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.s),
-                Text(notes, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+                Text(notes, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
               ],
             ],
           ),
@@ -350,13 +341,13 @@ class _NovaCardState extends State<_NovaCard> {
                 Icon(
                   _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: 18,
-                  color: AppColors.subtle,
+                  color: context.colors.subtle,
                 ),
               ]),
               const SizedBox(height: AppSpacing.xs),
               LinearProgressIndicator(
                 value: score / 100,
-                backgroundColor: AppColors.divider,
+                backgroundColor: context.colors.divider,
                 color: color,
                 minHeight: 4,
                 borderRadius: BorderRadius.circular(2),
@@ -368,7 +359,7 @@ class _NovaCardState extends State<_NovaCard> {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     '${_confidenceLabel(confidence)}: $reason',
-                    style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                    style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                   ),
                 ],
               ],
@@ -417,9 +408,9 @@ class _MathFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: context.colors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,7 +422,7 @@ class _MathFooter extends StatelessWidget {
             'No AI model sets any score value. '
             'Weights: Sodium 20%, Sugar 20%, Sat. fat 15%, Trans fat 10%, Fibre 15%, Protein 10%, NOVA 10%. '
             'Thresholds: ICMR-NIN RDA 2020, WHO 2023, FSSAI Labelling Regulations 2022.',
-            style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+            style: AppType.bodySmall.copyWith(color: context.colors.subtle),
           ),
         ],
       ),
@@ -449,7 +440,7 @@ class _Disclaimer extends StatelessWidget {
     return Text(
       'This score is for general food literacy only and does not constitute medical advice. '
       'Consult a registered dietitian or physician for personalised dietary guidance.',
-      style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+      style: AppType.bodySmall.copyWith(color: context.colors.subtle),
       textAlign: TextAlign.center,
     );
   }

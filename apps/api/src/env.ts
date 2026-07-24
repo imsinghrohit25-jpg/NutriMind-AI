@@ -1,5 +1,15 @@
-import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import { loadEnv } from './load-env.js';
 import { z } from 'zod';
+
+loadEnv(dirname(fileURLToPath(import.meta.url)));
+
+// .env.example ships every optional var blank (e.g. `OPENAI_COMPAT_BASE_URL=`) — a blank value
+// must mean "not set", not "set to the invalid empty string". Only needed for optional fields
+// with an extra constraint beyond bare string (.url()/.positive()); a plain `.string().optional()`
+// already accepts "" without complaint.
+const blankToUndefined = (v: unknown) => (v === '' ? undefined : v);
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
@@ -16,10 +26,14 @@ const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
-  OPENAI_COMPAT_BASE_URL: z.string().url().optional(),
+  // Google Cloud Vision — OCR text extraction only (Gemini/Vision integration). Optional, same
+  // pattern as every other provider key: absent means the Vision OCR path is simply never used,
+  // never a startup failure.
+  GOOGLE_VISION_API_KEY: z.string().optional(),
+  OPENAI_COMPAT_BASE_URL: z.preprocess(blankToUndefined, z.string().url().optional()),
   OPENAI_COMPAT_API_KEY: z.string().optional(),
   LLM_ROUTING_CONFIG: z.string().default('config/routing.json'),
-  LLM_MONTHLY_BUDGET_USD: z.coerce.number().positive().optional(),
+  LLM_MONTHLY_BUDGET_USD: z.preprocess(blankToUndefined, z.coerce.number().positive().optional()),
 
   USDA_FDC_API_KEY: z.string().optional(),
   OFF_BASE_URL: z.string().url().default('https://world.openfoodfacts.org'),

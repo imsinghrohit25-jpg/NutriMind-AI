@@ -1,9 +1,11 @@
 // Lab report upload screen — captures image, runs on-device OCR (ML Kit), uploads.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -112,7 +114,7 @@ class _LabReportUploadScreenState extends ConsumerState<LabReportUploadScreen> {
             ),
             if (_scanning) ...[
               const SizedBox(height: 16),
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: AppLoader()),
               const Center(child: Text('Reading report...')),
             ],
             if (_extractedText != null && !_scanning) ...[
@@ -156,7 +158,7 @@ class _LabReportUploadScreenState extends ConsumerState<LabReportUploadScreen> {
               const SizedBox(height: 12),
               Text(
                 'Extracted text preview',
-                style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                style: AppType.bodySmall.copyWith(color: context.colors.subtle),
               ),
               const SizedBox(height: 4),
               Container(
@@ -170,7 +172,7 @@ class _LabReportUploadScreenState extends ConsumerState<LabReportUploadScreen> {
                 child: SingleChildScrollView(
                   child: Text(
                     _extractedText!,
-                    style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                    style: AppType.labelSmall.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
               ),
@@ -180,7 +182,7 @@ class _LabReportUploadScreenState extends ConsumerState<LabReportUploadScreen> {
                 icon: _uploading
                     ? const SizedBox(
                         width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoader(size: 20, strokeWidth: 2),
                       )
                     : const Icon(Icons.upload),
                 label: const Text('Upload & Parse'),
@@ -194,7 +196,7 @@ class _LabReportUploadScreenState extends ConsumerState<LabReportUploadScreen> {
               const Text('Report uploaded! Values are being extracted.'),
               Text(
                 'Results will appear in your lab history within a few seconds.',
-                style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                style: AppType.bodySmall.copyWith(color: context.colors.subtle),
               ),
             ],
             if (_error != null) ...[

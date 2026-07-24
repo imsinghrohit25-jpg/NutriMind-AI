@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Design tokens — single source of truth for colors, spacing, type scale.
-// India-first palette: deep green (health) + saffron accent.
+// Global brand palette: deep green (health) + saffron accent.
+//
+// Premium redesign (ADR-0034/0035/0036): extends this file in place rather than replacing it —
+// every name below existed before the redesign and is used, unchanged, by ~50 screens. New
+// tokens (AppColorsDark, AppGlass, AppMotion, AppElevation) are additive only.
 
 abstract final class AppColors {
   // Brand
@@ -36,6 +41,104 @@ abstract final class AppColors {
   // Veg marks
   static const vegGreen = Color(0xFF2E7D32);
   static const vegRed   = Color(0xFFC62828);
+}
+
+/// Dark-theme semantic palette (ADR-0034) — same brand hues as [AppColors], re-tuned for
+/// dark surfaces (Oura-style "premium calm" rather than a naive black-on-white inversion).
+/// Score bands and veg marks are brightness-agnostic (kept from [AppColors] directly) since
+/// they carry regulatory/food-safety meaning that must not shift between themes.
+abstract final class AppColorsDark {
+  static const primary = Color(0xFF4C9E6B);
+  static const primaryLight = Color(0xFF7BC493);
+  static const primaryDark = Color(0xFF1B6B3A);
+  static const accent = Color(0xFFFFA94D);
+  static const accentLight = Color(0xFFFFC078);
+
+  static const success = Color(0xFF66BB6A);
+  static const warning = Color(0xFFFFB74D);
+  static const error = Color(0xFFEF5350);
+  static const info = Color(0xFF64B5F6);
+
+  static const background = Color(0xFF0B120D);
+  static const surface = Color(0xFF12190F); // deep, not pure black
+  static const surfaceVariant = Color(0xFF1B241A);
+  static const onBackground = Color(0xFFE8EDE6);
+  static const onSurface = Color(0xFFE8EDE6);
+  static const subtle = Color(0xFF9BAE9B);
+  static const divider = Color(0xFF2A342A);
+}
+
+/// Glassmorphism tokens (ADR-0034) — the ONLY place blur sigma / glass border / glass fill
+/// values are defined. Governance rule: no screen may hardcode a `BackdropFilter` sigma or glass
+/// border color; consume these. Kept deliberately small (perf budget: max 2-3 active blur layers
+/// per screen — see docs/design/MOTION.md and the Phase 0 gallery for the enforced ceiling).
+abstract final class AppGlass {
+  // Sigma/opacity values match the original auth-screen GlassCard exactly (features/auth/
+  // widgets/auth_ui.dart, pre-redesign) — promoting the component to the design system must not
+  // shift how the already-shipped, already-tested auth screens look.
+  static const blurSigma = 20.0;
+  static const blurSigmaLight = 10.0; // for smaller/secondary glass panels
+  static const fillOpacityDark = 0.14;
+  static const fillOpacityLight = 0.55;
+  static const borderOpacityDark = 0.25;
+  static const borderOpacityLight = 0.35;
+
+  static Color fill(Brightness b) => b == Brightness.dark
+      ? Colors.white.withValues(alpha: fillOpacityDark)
+      : Colors.white.withValues(alpha: fillOpacityLight);
+
+  static Color border(Brightness b) => b == Brightness.dark
+      ? Colors.white.withValues(alpha: borderOpacityDark)
+      : Colors.white.withValues(alpha: borderOpacityLight);
+}
+
+/// Elevation / shadow scale (ADR-0034) — replaces ad-hoc `BoxShadow(...)` literals in screens.
+abstract final class AppElevation {
+  static List<BoxShadow> card(Brightness b) => [
+    BoxShadow(
+      color: (b == Brightness.dark ? Colors.black : AppColors.primaryDark).withValues(alpha: b == Brightness.dark ? 0.4 : 0.08),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
+  ];
+
+  static List<BoxShadow> floating(Brightness b) => [
+    BoxShadow(
+      color: (b == Brightness.dark ? Colors.black : AppColors.primaryDark).withValues(alpha: b == Brightness.dark ? 0.5 : 0.12),
+      blurRadius: 32,
+      offset: const Offset(0, 12),
+    ),
+  ];
+}
+
+/// Motion tokens (ADR-0035, docs/design/MOTION.md) — the ONLY place animation durations/curves
+/// are defined. Governance rule: no screen may write a raw `Duration(milliseconds: ...)` for an
+/// animation; consume these named tiers instead.
+abstract final class AppMotion {
+  // Duration tiers
+  static const micro = Duration(milliseconds: 150);       // press states, toggles
+  static const standard = Duration(milliseconds: 300);    // page elements, card entrances
+  static const cinematic = Duration(milliseconds: 600);   // hero moments (score ring, onboarding)
+  static const ambient = Duration(seconds: 3);            // slow looping ambient motion (float/breathe)
+
+  // Signature easing — one curve family used everywhere for consistency.
+  static const enter = Curves.easeOutCubic;
+  static const exit = Curves.easeInCubic;
+  static const emphasized = Curves.easeOutBack; // small overshoot, used sparingly (press/success)
+
+  // Stagger interval between successive list/card entrances.
+  static const staggerStep = Duration(milliseconds: 60);
+}
+
+/// Typography faces (ADR-0034: Sora display + Inter body — Google Fonts, open license, distinct
+/// from Apple Health/WHOOP/Oura's system/proprietary faces). Loaded once and reused so
+/// [AppType]'s TextStyles below can attach a face without every call site importing google_fonts.
+abstract final class AppFonts {
+  static TextStyle get _displayBase => GoogleFonts.sora();
+  static TextStyle get _bodyBase => GoogleFonts.inter();
+
+  static TextStyle display(TextStyle base) => _displayBase.merge(base);
+  static TextStyle body(TextStyle base) => _bodyBase.merge(base);
 }
 
 abstract final class AppSpacing {

@@ -1,4 +1,6 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// History semantic search screen — lets users search past scans by natural language.
@@ -76,7 +78,7 @@ class _HistorySearchScreenState extends State<HistorySearchScreen> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(AppSpacing.m),
-              child: CircularProgressIndicator(),
+              child: AppLoader(),
             )
           else if (_error != null)
             Padding(
@@ -108,9 +110,9 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.history, size: 48, color: AppColors.subtle),
+          Icon(Icons.history, size: 48, color: context.colors.subtle),
           const SizedBox(height: AppSpacing.s),
-          Text('Search your scan history', style: AppType.bodyMedium.copyWith(color: AppColors.subtle)),
+          Text('Search your scan history', style: AppType.bodyMedium.copyWith(color: context.colors.subtle)),
         ],
       ),
     );
@@ -152,11 +154,11 @@ class _HistoryResultCard extends StatelessWidget {
           children: [
             Text(
               '${band.toUpperCase()}${category != null ? ' · $category' : ''}',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
             Text(
               'Scanned: ${scannedAt.length >= 10 ? scannedAt.substring(0, 10) : scannedAt}',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
           ],
         ),
@@ -164,7 +166,7 @@ class _HistoryResultCard extends StatelessWidget {
           message: 'Relevance: ${(similarity * 100).toStringAsFixed(0)}%',
           child: Text(
             '${(similarity * 100).toStringAsFixed(0)}%',
-            style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+            style: AppType.bodySmall.copyWith(color: context.colors.subtle),
           ),
         ),
       ),

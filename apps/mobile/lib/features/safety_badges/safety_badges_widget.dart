@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Safety badge strip shown prominently on the product screen.
@@ -81,38 +82,38 @@ class _FailSafeBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.s),
       padding: const EdgeInsets.all(AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.error.withAlpha(20),
+        color: context.colors.error.withAlpha(20),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.error),
+        border: Border.all(color: context.colors.error),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_rounded, color: AppColors.error, size: 20),
+          Icon(Icons.warning_rounded, color: context.colors.error, size: 20),
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Allergen information may be incomplete',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.error,
+                    color: context.colors.error,
                   ),
                 ),
                 if (reason != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     reason!,
-                    style: const TextStyle(fontSize: 12, color: AppColors.error),
+                    style: AppType.bodySmall.copyWith(color: context.colors.error),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.xs),
-                const Text(
+                Text(
                   'Check the physical label carefully before consuming if you have food allergies.',
-                  style: TextStyle(fontSize: 12, color: AppColors.error),
+                  style: AppType.bodySmall.copyWith(color: context.colors.error),
                 ),
               ],
             ),
@@ -136,7 +137,7 @@ class _AllergenBadge extends StatelessWidget {
     final displayName    = match['displayName'] as String? ?? 'Allergen';
     final matchType      = match['matchType'] as String? ?? 'declared';
     final unsuppressible = match['unsuppressible'] == true;
-    final color          = matchType == 'declared' ? AppColors.scoreBad : AppColors.warning;
+    final color          = matchType == 'declared' ? AppColors.scoreBad : context.colors.warning;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s),
@@ -171,7 +172,7 @@ class _AllergenBadge extends StatelessWidget {
                 ),
                 Text(
                   _badgeSubtitle(matchType),
-                  style: TextStyle(fontSize: 12, color: color),
+                  style: AppType.bodySmall.copyWith(color: color),
                 ),
               ],
             ),
@@ -219,7 +220,7 @@ class _ChildWarningBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final severity = warning['severity'] as String? ?? 'caution';
     final message  = warning['message'] as String? ?? '';
-    final color    = severity == 'warning' ? AppColors.scorePoor : AppColors.warning;
+    final color    = severity == 'warning' ? AppColors.scorePoor : context.colors.warning;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s),
@@ -235,7 +236,7 @@ class _ChildWarningBadge extends StatelessWidget {
           Icon(Icons.child_care_outlined, color: color, size: 18),
           const SizedBox(width: AppSpacing.s),
           Expanded(
-            child: Text(message, style: TextStyle(fontSize: 12, color: color)),
+            child: Text(message, style: AppType.bodySmall.copyWith(color: color)),
           ),
         ],
       ),

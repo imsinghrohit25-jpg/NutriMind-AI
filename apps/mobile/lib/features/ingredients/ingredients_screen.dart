@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Ingredient intelligence screen — shows parsed ingredient list with:
@@ -92,7 +93,7 @@ class _IngredientTileState extends State<_IngredientTile> {
                     children: [
                       Text(name, style: AppType.bodyMedium),
                       if (pct != null)
-                        Text(pct, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+                        Text(pct, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
                     ],
                   ),
                 ),
@@ -104,7 +105,7 @@ class _IngredientTileState extends State<_IngredientTile> {
                   Icon(
                     _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 18,
-                    color: AppColors.subtle,
+                    color: context.colors.subtle,
                   ),
               ],
             ),
@@ -155,19 +156,19 @@ class _AdditiveCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: AppSpacing.s),
       padding: const EdgeInsets.all(AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: context.colors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Text(insNumber, style: AppType.labelMedium.copyWith(color: AppColors.primary)),
+            Text(insNumber, style: AppType.labelMedium.copyWith(color: context.colors.primary)),
             const SizedBox(width: AppSpacing.s),
             Text(
               _categoryLabel(category),
-              style: AppType.labelSmall.copyWith(color: AppColors.subtle),
+              style: AppType.labelSmall.copyWith(color: context.colors.subtle),
             ),
             const Spacer(),
             _Chip(
@@ -182,7 +183,7 @@ class _AdditiveCard extends StatelessWidget {
             Text(
               citation,
               style: AppType.bodySmall.copyWith(
-                color: AppColors.subtle,
+                color: context.colors.subtle,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -190,7 +191,7 @@ class _AdditiveCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             'This is general information, not medical advice.',
-            style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+            style: AppType.bodySmall.copyWith(color: context.colors.subtle),
           ),
         ],
       ),

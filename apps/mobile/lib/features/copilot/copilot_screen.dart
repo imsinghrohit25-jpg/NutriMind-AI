@@ -1,5 +1,7 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -90,7 +92,7 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: AppMotion.standard,
           curve: Curves.easeOut,
         );
       }
@@ -193,7 +195,7 @@ class _MessageBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: _bubbleColor(message.role),
+              color: _bubbleColor(context, message.role),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -211,11 +213,11 @@ class _MessageBubble extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                 ],
                 if (message.role == 'error')
-                  const Icon(Icons.wifi_off_outlined, size: 14, color: AppColors.subtle),
+                  Icon(Icons.wifi_off_outlined, size: 14, color: context.colors.subtle),
                 Text(
                   message.text,
                   style: AppType.bodySmall.copyWith(
-                    color: isUser ? AppColors.surface : AppColors.onSurface,
+                    color: isUser ? context.colors.surface : context.colors.onSurface,
                   ),
                 ),
                 if (message.redirectNote != null) ...[
@@ -237,12 +239,12 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  Color _bubbleColor(String role) {
+  Color _bubbleColor(BuildContext context, String role) {
     switch (role) {
-      case 'user':     return AppColors.primary;
+      case 'user':     return context.colors.primary;
       case 'refusal':  return AppColors.scorePoor.withAlpha(20);
-      case 'error':    return AppColors.surfaceVariant;
-      default:         return AppColors.surfaceVariant;
+      case 'error':    return context.colors.surfaceVariant;
+      default:         return context.colors.surfaceVariant;
     }
   }
 }
@@ -276,13 +278,13 @@ class _CitationChipsState extends State<_CitationChips> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(15),
+                  color: context.colors.primary.withAlpha(15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withAlpha(60)),
+                  border: Border.all(color: context.colors.primary.withAlpha(60)),
                 ),
                 child: Text(
                   '[${i + 1}] ${c['source'] ?? ''}',
-                  style: AppType.labelSmall.copyWith(color: AppColors.primary),
+                  style: AppType.labelSmall.copyWith(color: context.colors.primary),
                 ),
               ),
             );
@@ -293,9 +295,9 @@ class _CitationChipsState extends State<_CitationChips> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.s),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.divider),
+              border: Border.all(color: context.colors.divider),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +308,7 @@ class _CitationChipsState extends State<_CitationChips> {
                 ),
                 Text(
                   '${widget.citations[_expanded!]['source']} (${widget.citations[_expanded!]['year']})',
-                  style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                  style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                 ),
               ],
             ),
@@ -330,14 +332,14 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.auto_awesome_outlined, size: 48, color: AppColors.primary),
+            Icon(Icons.auto_awesome_outlined, size: 48, color: context.colors.primary),
             const SizedBox(height: AppSpacing.m),
             const Text('Health Copilot', style: AppType.titleLarge),
             const SizedBox(height: AppSpacing.s),
             Text(
               'Ask me about nutrition, food labels, or healthy eating.\n'
               'I cite WHO, ICMR-NIN, and FSSAI guidelines.',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
               textAlign: TextAlign.center,
             ),
           ],
@@ -355,14 +357,14 @@ class _ProductContextBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-      color: AppColors.primary.withAlpha(15),
+      color: context.colors.primary.withAlpha(15),
       child: Row(children: [
-        const Icon(Icons.qr_code_scanner, size: 14, color: AppColors.primary),
+        Icon(Icons.qr_code_scanner, size: 14, color: context.colors.primary),
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Text(
             'Asking about: ${(this.context)['productName'] ?? 'scanned product'}',
-            style: AppType.labelSmall.copyWith(color: AppColors.primary),
+            style: AppType.labelSmall.copyWith(color: context.colors.primary),
           ),
         ),
       ]),
@@ -377,11 +379,11 @@ class _DisclaimerBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-      color: AppColors.surfaceVariant,
-      child: const Text(
+      color: context.colors.surfaceVariant,
+      child: Text(
         'General nutrition information only — not medical advice. '
         'Consult a registered dietitian or doctor for personalised guidance.',
-        style: TextStyle(fontSize: 10, color: AppColors.subtle),
+        style: AppType.labelSmall.copyWith(color: context.colors.subtle),
         textAlign: TextAlign.center,
       ),
     );
@@ -423,11 +425,11 @@ class _InputBar extends StatelessWidget {
               ? const SizedBox(
                   width: 40,
                   height: 40,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AppLoader(size: 20, strokeWidth: 2),
                 )
               : IconButton(
                   icon: const Icon(Icons.send),
-                  color: AppColors.primary,
+                  color: context.colors.primary,
                   onPressed: onSend,
                 ),
         ]),

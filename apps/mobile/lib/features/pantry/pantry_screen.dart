@@ -1,9 +1,11 @@
 // Pantry Intelligence screen — list items, expiry alerts, scan receipt.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -121,7 +123,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> with SingleTickerPr
         ),
         actions: [
           if (_scanning)
-            const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+            const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2)))
           else
             IconButton(
               icon: const Icon(Icons.receipt_long),
@@ -132,7 +134,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> with SingleTickerPr
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
               : TabBarView(
@@ -157,7 +159,7 @@ class _ItemsTab extends StatelessWidget {
       return Center(child: Text(
         'No pantry items yet.\nScan a receipt or add manually.',
         textAlign: TextAlign.center,
-        style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+        style: AppType.bodySmall.copyWith(color: context.colors.subtle),
       ));
     }
     return ListView.separated(
@@ -187,7 +189,7 @@ class _PantryItemTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         Icons.inventory_2_outlined,
-        color: expired ? Colors.red : warning ? Colors.orange : AppColors.primary,
+        color: expired ? Colors.red : warning ? Colors.orange : context.colors.primary,
       ),
       title: Text(name),
       subtitle: Text(
@@ -195,7 +197,7 @@ class _PantryItemTile extends StatelessWidget {
             ? '$qty $unit · Expires $expiry'
             : '$qty $unit',
         style: AppType.bodySmall.copyWith(
-          color: expired ? Colors.red : warning ? Colors.orange : AppColors.subtle,
+          color: expired ? Colors.red : warning ? Colors.orange : context.colors.subtle,
         ),
       ),
       trailing: IconButton(
@@ -216,7 +218,7 @@ class _AlertsTab extends StatelessWidget {
     if (alerts.isEmpty) {
       return Center(child: Text(
         'No expiry alerts within 7 days.',
-        style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+        style: AppType.bodySmall.copyWith(color: context.colors.subtle),
       ));
     }
     return ListView.builder(
@@ -247,7 +249,7 @@ class _AlertsTab extends StatelessWidget {
               color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(severity, style: TextStyle(color: color, fontSize: 11)),
+            child: Text(severity, style: AppType.labelSmall.copyWith(color: color)),
           ),
         );
       },
@@ -326,7 +328,7 @@ class _AddItemDialogState extends State<_AddItemDialog> {
             onTap: _pickDate,
             child: InputDecorator(
               decoration: const InputDecoration(labelText: 'Expiry date (optional)'),
-              child: Text(_expiryDate ?? 'Tap to select', style: const TextStyle(fontSize: 14)),
+              child: Text(_expiryDate ?? 'Tap to select', style: AppType.bodyMedium),
             ),
           ),
         ],

@@ -20,8 +20,8 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: _apiBase,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 15), // design-governance:ignore: network timeout, not an animation
+        receiveTimeout: const Duration(seconds: 30), // design-governance:ignore: network timeout, not an animation
         headers: {HttpHeaders.contentTypeHeader: ContentType.json.mimeType},
       ),
     );
@@ -36,6 +36,9 @@ class ApiClient {
 
   Future<Response<T>> post<T>(String path, {dynamic data}) =>
       _dio.post<T>(path, data: data);
+
+  Future<Response<T>> patch<T>(String path, {dynamic data}) =>
+      _dio.patch<T>(path, data: data);
 
   Future<Response<T>> delete<T>(String path) =>
       _dio.delete<T>(path);

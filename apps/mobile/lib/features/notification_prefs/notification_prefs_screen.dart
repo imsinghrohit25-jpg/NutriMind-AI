@@ -1,4 +1,6 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 
 /// Notification preferences screen — per-user opt-in/out for push notification types.
@@ -50,7 +52,7 @@ class _NotificationPrefsScreenState extends State<NotificationPrefsScreen> {
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2))
                 : const Text('Save'),
           ),
         ],
@@ -106,7 +108,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.m, AppSpacing.m, AppSpacing.m, AppSpacing.xs),
-      child: Text(title.toUpperCase(), style: AppType.bodySmall.copyWith(color: AppColors.subtle, letterSpacing: 1.2)),
+      child: Text(title.toUpperCase(), style: AppType.bodySmall.copyWith(color: context.colors.subtle, letterSpacing: 1.2)),
     );
   }
 }
@@ -131,17 +133,17 @@ class _PrefTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: locked ? AppColors.subtle : null),
+      leading: Icon(icon, color: locked ? context.colors.subtle : null),
       title: Row(
         children: [
           Text(title, style: AppType.bodyMedium),
           if (locked) ...[
             const SizedBox(width: AppSpacing.xs),
-            const Icon(Icons.lock, size: 14, color: AppColors.subtle),
+            Icon(Icons.lock, size: 14, color: context.colors.subtle),
           ],
         ],
       ),
-      subtitle: Text(subtitle, style: AppType.bodySmall.copyWith(color: AppColors.subtle)),
+      subtitle: Text(subtitle, style: AppType.bodySmall.copyWith(color: context.colors.subtle)),
       trailing: Switch(
         value: value,
         onChanged: onChanged,

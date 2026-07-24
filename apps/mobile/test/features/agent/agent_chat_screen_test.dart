@@ -1,9 +1,16 @@
 // Widget tests for the Phase 13 (`global.p13.multi_agent_system`) presentational component.
 // Self-contained — AgentChatView receives its turns via constructor params, so these don't need
 // a live ApiClient/SSE connection (same rationale as country_selection_screen_test.dart).
+//
+// Premium redesign Phase 4: the screen now uses flutter_animate (`.animate().fadeIn()`) for
+// entrance choreography, which schedules its first frame via a timer — an extra `tester.pump()`
+// after `pumpWidget` flushes that before the test ends (otherwise flutter_test's
+// "Timer still pending" invariant check fails). The bare `CircularProgressIndicator` pending/busy
+// indicators were replaced with the design system's `TypingIndicator` (ADR-0040).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nutrimind/core/design_system/components/typing_indicator.dart';
 import 'package:nutrimind/features/agent/agent_chat_models.dart';
 import 'package:nutrimind/features/agent/agent_chat_screen.dart';
 
@@ -20,6 +27,7 @@ void main() {
         onToggleOcrField: (_, __) {},
         onConfirmFoodLog: (_) {},
       )));
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('NutriMind Assistant'), findsOneWidget);
     });
 
@@ -36,10 +44,11 @@ void main() {
         onToggleOcrField: (_, __) {},
         onConfirmFoodLog: (_) {},
       )));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.textContaining('Routing to: Nutrition Agent'), findsOneWidget);
       expect(find.textContaining('checking nutrition.compute'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.byType(TypingIndicator), findsWidgets);
     });
 
     testWidgets('shows the guard rejection reason distinctly, not the raw blocked text', (tester) async {
@@ -53,6 +62,7 @@ void main() {
         onToggleOcrField: (_, __) {},
         onConfirmFoodLog: (_) {},
       )));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.textContaining('Allergen re-check blocked'), findsOneWidget);
     });
@@ -68,8 +78,9 @@ void main() {
         onToggleOcrField: (_, __) {},
         onConfirmFoodLog: (_) {},
       )));
+      await tester.pump(const Duration(milliseconds: 400));
 
-      expect(find.text('Parle-G: 450kcal per 100g.'), findsOneWidget);
+      expect(find.textContaining('Parle-G: 450kcal per 100g.'), findsOneWidget);
     });
 
     testWidgets('renders OCR low-confidence fields as tappable confirmation chips', (tester) async {
@@ -86,6 +97,7 @@ void main() {
         onToggleOcrField: (_, field) => toggledField = field,
         onConfirmFoodLog: (_) {},
       )));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.text('Tomato.quantity'), findsOneWidget);
       await tester.tap(find.text('Tomato.quantity'));
@@ -112,6 +124,7 @@ void main() {
         onToggleOcrField: (_, __) {},
         onConfirmFoodLog: (t) => confirmedTurn = t,
       )));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.textContaining('roti'), findsWidgets);
       await tester.tap(find.text('Confirm'));
@@ -127,11 +140,48 @@ void main() {
         onToggleOcrField: (_, __) {},
         onConfirmFoodLog: (_) {},
       )));
+      await tester.pump(const Duration(milliseconds: 400));
 
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.enabled, isFalse);
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.byType(TypingIndicator), findsWidgets);
       expect(find.byIcon(Icons.send), findsNothing);
+    });
+
+    testWidgets('shows a Retry chip on error and re-dispatches the same turn when tapped', (tester) async {
+      final turn = AgentTurn('what should I eat')..errorMessage = 'Could not reach the assistant — please try again.';
+
+      AgentTurn? retriedTurn;
+      await tester.pumpWidget(_wrap(AgentChatView(
+        turns: [turn],
+        controller: TextEditingController(),
+        busy: false,
+        onSend: () {},
+        onToggleOcrField: (_, __) {},
+        onConfirmFoodLog: (_) {},
+        onRetry: (t) => retriedTurn = t,
+      )));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      expect(retriedTurn, turn);
+    });
+
+    testWidgets('omits the Retry chip when onRetry is not provided', (tester) async {
+      final turn = AgentTurn('what should I eat')..errorMessage = 'Could not reach the assistant — please try again.';
+
+      await tester.pumpWidget(_wrap(AgentChatView(
+        turns: [turn],
+        controller: TextEditingController(),
+        busy: false,
+        onSend: () {},
+        onToggleOcrField: (_, __) {},
+        onConfirmFoodLog: (_) {},
+      )));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Retry'), findsNothing);
     });
   });
 }

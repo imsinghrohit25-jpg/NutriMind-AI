@@ -1837,7 +1837,7 @@ final localDbProvider = Provider<AppDatabase>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef LocalDbRef = ProviderRef<AppDatabase>;
-String _$onboardingStateHash() => r'b4ae52d17849da3f8bb313b1b59e626dd4d16d6e';
+String _$onboardingStateHash() => r'bac095b5decc7358434523c4109e69dff54f4b92';
 
 /// See also [onboardingState].
 @ProviderFor(onboardingState)
@@ -1855,5 +1855,57 @@ final onboardingStateProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef OnboardingStateRef = AutoDisposeFutureProviderRef<OnboardingState>;
+String _$recentScannedProductsHash() =>
+    r'65511d29b9f881c468effbe2bfa0cee4b9bd7650';
+
+/// See also [recentScannedProducts].
+@ProviderFor(recentScannedProducts)
+final recentScannedProductsProvider =
+    AutoDisposeFutureProvider<List<LocalProduct>>.internal(
+  recentScannedProducts,
+  name: r'recentScannedProductsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$recentScannedProductsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef RecentScannedProductsRef
+    = AutoDisposeFutureProviderRef<List<LocalProduct>>;
+String _$scansTodayHash() => r'e2a4a75d6442a45682937e7ec131d59aa9066a72';
+
+/// See also [scansToday].
+@ProviderFor(scansToday)
+final scansTodayProvider = AutoDisposeFutureProvider<int>.internal(
+  scansToday,
+  name: r'scansTodayProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$scansTodayHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef ScansTodayRef = AutoDisposeFutureProviderRef<int>;
+String _$appIntroSeenHash() => r'5c3339f39ec2bcaae752f3c69f5825e9d771b8e5';
+
+/// See also [appIntroSeen].
+@ProviderFor(appIntroSeen)
+final appIntroSeenProvider = AutoDisposeFutureProvider<bool>.internal(
+  appIntroSeen,
+  name: r'appIntroSeenProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$appIntroSeenHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AppIntroSeenRef = AutoDisposeFutureProviderRef<bool>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

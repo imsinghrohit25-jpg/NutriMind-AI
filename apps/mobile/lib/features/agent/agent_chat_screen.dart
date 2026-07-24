@@ -1,8 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system/components/glass_card.dart';
+import '../../core/design_system/components/gradient_scaffold.dart';
+import '../../core/design_system/components/nutrimind_logo.dart';
+import '../../core/design_system/components/typing_indicator.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/sse_event.dart';
@@ -52,10 +59,27 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
     final turn = AgentTurn(message);
     setState(() => _turns.add(turn));
     _controller.clear();
-    _scrollToBottom();
+    _dispatch(turn);
+  }
 
+  /// Re-sends a previously failed turn's exact same message through the exact same real SSE
+  /// call — no new endpoint, no changed payload. Resets the same `AgentTurn` in place (rather
+  /// than appending a duplicate bubble) so the retry replaces the error state inline.
+  void _retry(AgentTurn turn) {
+    if (_isBusy) return;
+    setState(() {
+      turn.errorMessage = null;
+      turn.finalText = null;
+      turn.progressLines.clear();
+      turn.lastHandoffState = {};
+    });
+    _dispatch(turn);
+  }
+
+  void _dispatch(AgentTurn turn) {
+    _scrollToBottom();
     final api = ref.read(apiClientProvider);
-    _sub = api.postSse('/v1/agent/chat', data: {'message': message}).listen(
+    _sub = api.postSse('/v1/agent/chat', data: {'message': turn.userMessage}).listen(
       (event) => _handleEvent(turn, event),
       onError: (Object e) {
         setState(() => turn.errorMessage = 'Could not reach the assistant — please try again.');
@@ -110,7 +134,7 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
+          duration: AppMotion.standard,
           curve: Curves.easeOut,
         );
       }
@@ -119,14 +143,30 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('NutriMind Assistant')),
+    return GradientScaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('NutriMind Assistant'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.m),
+            child: NutriMindLogo(
+              // Smaller than the empty-state hero — the glow's blurRadius scales with `size`
+              // (see nutrimind_logo.dart), and 36 bled visibly below the AppBar into the first
+              // chat bubble; 28 keeps the glow contained within the AppBar's own bounds.
+              size: 28,
+              state: _isBusy ? NutriMindMoodState.thinking : NutriMindMoodState.idle,
+            ),
+          ),
+        ],
+      ),
       body: AgentChatView(
         turns: _turns,
         controller: _controller,
         busy: _isBusy,
         scrollController: _scrollCtrl,
         onSend: _send,
+        onRetry: _retry,
         onToggleOcrField: (turn, field) => setState(() {
           turn.confirmedOcrFields.contains(field)
               ? turn.confirmedOcrFields.remove(field)
@@ -149,6 +189,7 @@ class AgentChatView extends StatelessWidget {
     required this.onSend,
     required this.onToggleOcrField,
     required this.onConfirmFoodLog,
+    this.onRetry,
     this.scrollController,
   });
 
@@ -158,6 +199,9 @@ class AgentChatView extends StatelessWidget {
   final VoidCallback onSend;
   final void Function(AgentTurn turn, String field) onToggleOcrField;
   final void Function(AgentTurn turn) onConfirmFoodLog;
+  /// Optional — omitted in widget tests that don't exercise retry (constructor-injected view,
+  /// same pattern as the other callbacks here).
+  final void Function(AgentTurn turn)? onRetry;
   final ScrollController? scrollController;
 
   @override
@@ -173,8 +217,10 @@ class AgentChatView extends StatelessWidget {
                   itemCount: turns.length,
                   itemBuilder: (_, i) => _TurnView(
                     turn: turns[i],
+                    index: i,
                     onToggleOcrField: (field) => onToggleOcrField(turns[i], field),
                     onConfirmFoodLog: () => onConfirmFoodLog(turns[i]),
+                    onRetry: onRetry == null ? null : () => onRetry!(turns[i]),
                   ),
                 ),
         ),
@@ -183,23 +229,39 @@ class AgentChatView extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.m),
             child: Row(children: [
               Expanded(
-                child: TextField(
-                  controller: controller,
-                  enabled: !busy,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask about food, meals, groceries…',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: GlassCard.static(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                  borderRadius: 24,
+                  child: TextField(
+                    controller: controller,
+                    enabled: !busy,
+                    decoration: const InputDecoration(
+                      hintText: 'Ask about food, meals, groceries…',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => onSend(),
+                    maxLines: null,
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
-                  maxLines: null,
                 ),
               ),
               const SizedBox(width: AppSpacing.s),
-              busy
-                  ? const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2))
-                  : IconButton(icon: const Icon(Icons.send), color: AppColors.primary, onPressed: onSend),
+              AnimatedSwitcher(
+                duration: AppMotion.micro,
+                child: busy
+                    ? const Padding(
+                        key: ValueKey('busy'),
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.s),
+                        child: TypingIndicator(dotSize: 6),
+                      )
+                    : IconButton(
+                        key: const ValueKey('send'),
+                        icon: const Icon(Icons.send),
+                        color: context.colors.primary,
+                        onPressed: onSend,
+                      ),
+              ),
             ]),
           ),
         ),
@@ -209,11 +271,19 @@ class AgentChatView extends StatelessWidget {
 }
 
 class _TurnView extends StatelessWidget {
-  const _TurnView({required this.turn, required this.onToggleOcrField, required this.onConfirmFoodLog});
+  const _TurnView({
+    required this.turn,
+    required this.index,
+    required this.onToggleOcrField,
+    required this.onConfirmFoodLog,
+    this.onRetry,
+  });
 
   final AgentTurn turn;
+  final int index;
   final void Function(String field) onToggleOcrField;
   final VoidCallback onConfirmFoodLog;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -227,44 +297,84 @@ class _TurnView extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.s, left: AppSpacing.xxxl),
               padding: const EdgeInsets.all(AppSpacing.m),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
-              child: Text(turn.userMessage, style: AppType.bodySmall.copyWith(color: AppColors.surface)),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [context.colors.primary, context.colors.primary.withAlpha(220)]),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(turn.userMessage, style: AppType.bodySmall.copyWith(color: context.colors.surface)),
             ),
           ),
           if (turn.progressLines.isNotEmpty && turn.isPending)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.s),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: turn.progressLines
-                    .map((line) => Text('· $line', style: AppType.labelSmall.copyWith(color: AppColors.subtle)))
-                    .toList(),
+              child: GlassCard.static(
+                padding: const EdgeInsets.all(AppSpacing.m),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: turn.progressLines
+                      .map((line) => Text('· $line', style: AppType.labelSmall.copyWith(color: context.colors.subtle)))
+                      .toList(),
+                ),
               ),
             ),
           if (turn.isPending)
             const Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.s),
-              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              padding: EdgeInsets.only(bottom: AppSpacing.s, left: AppSpacing.xs),
+              child: TypingIndicator(),
             ),
           if (turn.errorMessage != null)
             Container(
               padding: const EdgeInsets.all(AppSpacing.m),
               decoration: BoxDecoration(
-                color: AppColors.error.withAlpha(15),
+                color: context.colors.error.withAlpha(15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withAlpha(60)),
+                border: Border.all(color: context.colors.error.withAlpha(60)),
               ),
-              child: Row(children: [
-                const Icon(Icons.block_outlined, size: 16, color: AppColors.error),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(child: Text(turn.errorMessage!, style: AppType.bodySmall.copyWith(color: AppColors.error))),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(Icons.block_outlined, size: 16, color: context.colors.error),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(child: Text(turn.errorMessage!, style: AppType.bodySmall.copyWith(color: context.colors.error))),
+                  ]),
+                  if (onRetry != null) ...[
+                    const SizedBox(height: AppSpacing.s),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ActionChip(
+                        avatar: Icon(Icons.refresh, size: 16, color: context.colors.error),
+                        label: const Text('Retry'),
+                        labelStyle: AppType.labelSmall.copyWith(color: context.colors.error),
+                        backgroundColor: context.colors.error.withAlpha(20),
+                        onPressed: onRetry,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           if (turn.finalText != null && turn.finalText!.isNotEmpty)
-            Container(
+            GlassCard.static(
               padding: const EdgeInsets.all(AppSpacing.m),
-              decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12)),
-              child: Text(turn.finalText!, style: AppType.bodySmall.copyWith(color: AppColors.onSurface)),
+              child: MarkdownBody(
+                data: turn.finalText!,
+                styleSheet: MarkdownStyleSheet(
+                  p: AppType.bodySmall.copyWith(color: context.colors.onSurface),
+                  strong: AppType.bodySmall.copyWith(color: context.colors.onSurface, fontWeight: FontWeight.w700),
+                  em: AppType.bodySmall.copyWith(color: context.colors.onSurface, fontStyle: FontStyle.italic),
+                  listBullet: AppType.bodySmall.copyWith(color: context.colors.onSurface),
+                  h1: AppType.titleMedium,
+                  h2: AppType.titleSmall,
+                  h3: AppType.titleSmall,
+                  code: AppType.bodySmall.copyWith(
+                    color: context.colors.onSurface,
+                    fontFamily: 'monospace',
+                    backgroundColor: context.colors.divider,
+                  ),
+                ),
+                shrinkWrap: true,
+              ),
             ),
           if (turn.lowConfidenceOcrFields.isNotEmpty)
             _OcrConfirmationChips(turn: turn, onToggle: onToggleOcrField),
@@ -272,7 +382,7 @@ class _TurnView extends StatelessWidget {
             _FoodLogConfirmation(turn: turn, onConfirm: onConfirmFoodLog),
         ],
       ),
-    );
+    ).animate(delay: AppMotion.staggerStep).fadeIn(duration: AppMotion.standard);
   }
 }
 
@@ -292,7 +402,7 @@ class _OcrConfirmationChips extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Please confirm these fields:', style: AppType.labelSmall.copyWith(color: AppColors.subtle)),
+          Text('Please confirm these fields:', style: AppType.labelSmall.copyWith(color: context.colors.subtle)),
           const SizedBox(height: AppSpacing.xs),
           Wrap(
             spacing: AppSpacing.xs,
@@ -303,10 +413,10 @@ class _OcrConfirmationChips extends StatelessWidget {
                 avatar: Icon(
                   confirmed ? Icons.check_circle : Icons.help_outline,
                   size: 16,
-                  color: confirmed ? AppColors.success : AppColors.warning,
+                  color: confirmed ? context.colors.success : context.colors.warning,
                 ),
                 label: Text(field, style: AppType.labelSmall),
-                backgroundColor: confirmed ? AppColors.success.withAlpha(15) : AppColors.warning.withAlpha(15),
+                backgroundColor: confirmed ? context.colors.success.withAlpha(15) : context.colors.warning.withAlpha(15),
                 onPressed: () => onToggle(field),
               );
             }).toList(),
@@ -334,14 +444,14 @@ class _FoodLogConfirmation extends StatelessWidget {
       margin: const EdgeInsets.only(top: AppSpacing.s),
       padding: const EdgeInsets.all(AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.primary.withAlpha(12),
+        color: context.colors.primary.withAlpha(12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withAlpha(50)),
+        border: Border.all(color: context.colors.primary.withAlpha(50)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Confirm what you logged:', style: AppType.labelSmall.copyWith(color: AppColors.subtle)),
+          Text('Confirm what you logged:', style: AppType.labelSmall.copyWith(color: context.colors.subtle)),
           const SizedBox(height: AppSpacing.xs),
           Text(names, style: AppType.bodySmall),
           const SizedBox(height: AppSpacing.s),
@@ -366,18 +476,18 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.auto_awesome_outlined, size: 48, color: AppColors.primary),
-            const SizedBox(height: AppSpacing.m),
+            const NutriMindLogo(size: 72, state: NutriMindMoodState.idle),
+            const SizedBox(height: AppSpacing.l),
             const Text('NutriMind Assistant', style: AppType.titleLarge),
             const SizedBox(height: AppSpacing.s),
             Text(
               'Ask about nutrition, meal plans, groceries, restaurants, or your health trends.',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
               textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(duration: AppMotion.standard);
   }
 }

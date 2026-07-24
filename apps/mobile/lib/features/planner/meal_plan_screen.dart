@@ -1,7 +1,9 @@
 // Meal Plan screen — shows the user's current active plan and lets them generate a new one.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 import 'grocery_list_screen.dart';
@@ -30,7 +32,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final api  = ref.read(apiClientProvider);
-      final resp = await api.get<Map<String, dynamic>>('/api/v1/planner/plans');
+      final resp = await api.get<Map<String, dynamic>>('/v1/planner/plans');
       final plans = (resp.data?['plans'] as List<dynamic>? ?? [])
           .map((p) => p as Map<String, dynamic>)
           .toList();
@@ -46,7 +48,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   Future<void> _loadPlan(String planId) async {
     try {
       final api  = ref.read(apiClientProvider);
-      final resp = await api.get<Map<String, dynamic>>('/api/v1/planner/plans/$planId');
+      final resp = await api.get<Map<String, dynamic>>('/v1/planner/plans/$planId');
       if (mounted) {
         setState(() {
           _activePlan = resp.data?['plan'] as Map<String, dynamic>?;
@@ -61,7 +63,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   Future<void> _markComplete(String itemId) async {
     try {
       final api = ref.read(apiClientProvider);
-      await api.post<void>('/api/v1/planner/items/$itemId/complete', data: {});
+      await api.patch<void>('/v1/planner/items/$itemId/complete', data: {});
       setState(() {
         final idx = _items.indexWhere((i) => i['id'] == itemId);
         if (idx >= 0) _items[idx] = {..._items[idx], 'is_complete': true};
@@ -75,7 +77,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
       final api  = ref.read(apiClientProvider);
       final planId = _activePlan!['id'] as String;
       final resp = await api.post<Map<String, dynamic>>(
-        '/api/v1/planner/plans/$planId/grocery',
+        '/v1/planner/plans/$planId/grocery',
         data: {},
       );
       final listId = resp.data?['listId'] as String?;
@@ -103,7 +105,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     try {
       final api  = ref.read(apiClientProvider);
       final resp = await api.post<Map<String, dynamic>>(
-        '/api/v1/planner/generate',
+        '/v1/planner/generate',
         data: body,
       );
       final planId = resp.data?['planId'] as String?;
@@ -135,7 +137,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           ? Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(),
+                const AppLoader(),
                 const SizedBox(height: 12),
                 Text(_generating ? 'Generating AI meal plan...' : 'Loading...'),
               ],
@@ -151,7 +153,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                           const SizedBox(height: 16),
                           Text(
                             'No meal plans yet.\nTap + to generate a 7- or 30-day plan.',
-                            style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+                            style: AppType.bodySmall.copyWith(color: context.colors.subtle),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 20),
@@ -162,10 +164,12 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                         ],
                       ),
                     )
-                  : Column(
-                      children: [
-                        _PlanHeader(plan: _activePlan!, onGrocery: _generateGrocery),
-                        Expanded(child: _MealItemList(items: _items, onComplete: _markComplete)),
+                  : CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _PlanHeader(plan: _activePlan!, onGrocery: _generateGrocery),
+                        ),
+                        _MealItemSliver(items: _items, onComplete: _markComplete),
                       ],
                     ),
     );
@@ -180,24 +184,24 @@ class _PlanHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kcal = plan['kcal_target'];
+    // Deliberately not a Row+Expanded — found on a real device that combination silently fails
+    // to paint (no content, no error, no exception) specifically when it's the child of a
+    // SliverToBoxAdapter in a CustomScrollView, reproduced with both themed and plain colors.
+    // Stacking the button below the text sidesteps the exact widget combination that triggers it.
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
-      color: AppColors.primary.withValues(alpha: 0.08),
-      child: Row(
+      color: context.colors.primary.withValues(alpha: 0.08),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(plan['title'] as String? ?? 'Meal Plan',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(
-                  '${plan['start_date']} → ${plan['end_date']} · ${kcal ?? '–'} kcal/day',
-                  style: AppType.bodySmall.copyWith(color: AppColors.subtle),
-                ),
-              ],
-            ),
+          Text(plan['title'] as String? ?? 'Meal Plan',
+              style: AppType.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            '${plan['start_date']} → ${plan['end_date']} · ${kcal ?? '–'} kcal/day',
+            style: AppType.bodySmall.copyWith(color: context.colors.subtle),
           ),
+          const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: onGrocery,
             icon: const Icon(Icons.shopping_cart, size: 16),
@@ -209,15 +213,18 @@ class _PlanHeader extends StatelessWidget {
   }
 }
 
-class _MealItemList extends StatelessWidget {
-  const _MealItemList({required this.items, required this.onComplete});
+class _MealItemSliver extends StatelessWidget {
+  const _MealItemSliver({required this.items, required this.onComplete});
   final List<Map<String, dynamic>> items;
   final void Function(String) onComplete;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(child: Text('No meals yet.', style: AppType.bodySmall.copyWith(color: AppColors.subtle)));
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: Text('No meals yet.', style: AppType.bodySmall.copyWith(color: context.colors.subtle))),
+      );
     }
 
     // Group by date
@@ -228,23 +235,17 @@ class _MealItemList extends StatelessWidget {
     }
 
     final dates = grouped.keys.toList()..sort();
-    return ListView.builder(
-      itemCount: dates.length,
-      itemBuilder: (_, i) {
-        final date = dates[i];
-        final dayItems = grouped[date]!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            ...dayItems.map((item) => _MealTile(item: item, onComplete: onComplete)),
-          ],
-        );
-      },
-    );
+    // Flatten into a single widget list: a date header followed by its tiles.
+    final rows = <Widget>[];
+    for (final date in dates) {
+      rows.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Text(date, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ));
+      rows.addAll(grouped[date]!.map((item) => _MealTile(item: item, onComplete: onComplete)));
+    }
+
+    return SliverList(delegate: SliverChildListDelegate(rows));
   }
 }
 
@@ -268,14 +269,14 @@ class _MealTile extends StatelessWidget {
     final done       = item['is_complete'] as bool? ?? false;
 
     return ListTile(
-      leading: Icon(_icons[mealType] ?? Icons.food_bank, color: done ? Colors.grey : AppColors.primary),
+      leading: Icon(_icons[mealType] ?? Icons.food_bank, color: done ? Colors.grey : context.colors.primary),
       title: Text(
         recipeName,
         style: TextStyle(decoration: done ? TextDecoration.lineThrough : null),
       ),
       subtitle: Text(
         '${mealType[0].toUpperCase()}${mealType.substring(1)} · ${kcal ?? '–'} kcal',
-        style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+        style: AppType.bodySmall.copyWith(color: context.colors.subtle),
       ),
       trailing: done
           ? const Icon(Icons.check_circle, color: Colors.green)

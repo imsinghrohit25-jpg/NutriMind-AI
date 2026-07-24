@@ -1,12 +1,14 @@
 // Fitbit OAuth 2.0 PKCE connect flow.
 // Launches system browser → redirects back via deep link → exchanges code server-side.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../../core/network/api_client.dart';
 
@@ -138,10 +140,10 @@ class _FitbitConnectScreenState extends ConsumerState<FitbitConnectScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Fitbit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('Fitbit', style: AppType.headlineMedium.copyWith(fontWeight: FontWeight.bold)),
                     Text(
                       _connected ? 'Connected' : 'Not connected',
-                      style: TextStyle(color: _connected ? Colors.green : AppColors.subtle),
+                      style: TextStyle(color: _connected ? Colors.green : context.colors.subtle),
                     ),
                   ],
                 ),
@@ -156,7 +158,7 @@ class _FitbitConnectScreenState extends ConsumerState<FitbitConnectScreen> {
             Text(
               'Data is fetched server-side using OAuth 2.0 PKCE. '
               'You can revoke access at any time.',
-              style: AppType.bodySmall.copyWith(color: AppColors.subtle),
+              style: AppType.bodySmall.copyWith(color: context.colors.subtle),
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
@@ -169,7 +171,7 @@ class _FitbitConnectScreenState extends ConsumerState<FitbitConnectScreen> {
                 icon: _connecting
                     ? const SizedBox(
                         width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoader(size: 20, strokeWidth: 2),
                       )
                     : const Icon(Icons.link),
                 label: const Text('Connect Fitbit'),

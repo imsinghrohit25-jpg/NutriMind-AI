@@ -21,6 +21,7 @@ import packRoutes from './packs.js';
 import onboardingRoutes from './onboarding.js';
 import memoryRoutes from './memory.js';
 import agentRoutes from './agent.js';
+import diseaseRoutes from './disease.js';
 
 export async function registerV1Routes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(healthRoutes, { prefix: '/v1' });
@@ -59,4 +60,6 @@ export async function registerV1Routes(fastify: FastifyInstance): Promise<void> 
   await fastify.register(memoryRoutes, { prefix: '/v1' });
   // Phase 13 (`global.p13.multi_agent_system`)
   await fastify.register(agentRoutes, { prefix: '/v1' });
+  // Disease-aware nutrition intelligence (10-condition expansion, production audit 2026-07)
+  await fastify.register(diseaseRoutes, { prefix: '/v1' });
 }

@@ -37,7 +37,12 @@ export async function explainWithFallback(input: ExplainInput): Promise<string> 
       ],
     });
     return response.content || input.templateFallback;
-  } catch {
+  } catch (e) {
+    // Deliberately not silent: a gateway failure here (provider outage, rate limit, etc.) is
+    // masked from the user by design — they still get the correct templateFallback answer — but
+    // masking it from logs too made a real, live Gemini rate-limit look identical to "no gateway
+    // configured" from the outside. Found while verifying this exact path on a real device.
+    console.error('[explainWithFallback] gateway.complete failed, using template fallback:', e);
     return input.templateFallback;
   }
 }

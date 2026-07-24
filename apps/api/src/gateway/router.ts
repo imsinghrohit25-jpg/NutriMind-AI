@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { LLMProvider, RoutingConfig, ModelTarget } from './provider.js';
 import type {
   LLMRequest,
@@ -24,6 +25,7 @@ import { OpenAICompatAdapter } from './adapters/openai-compat.js';
 import { SemanticCache } from './semantic-cache.js';
 import { GatewayBackpressure } from './backpressure.js';
 import { classifyModelTier, isT0Eligible, renderT0Template } from './model-tier.js';
+import { redactLLMRequest } from './pii-redaction.js';
 
 export interface GatewayRouterOptions {
   semanticCache?: SemanticCache;
@@ -34,6 +36,20 @@ export interface GatewayRouterOptions {
    *  and jobs/registry.ts's ai-cost-budget-check job for what flips it. Omitted = never active,
    *  i.e. byte-identical to pre-Phase-12 behavior. */
   killSwitch?: () => Promise<boolean> | boolean;
+}
+
+/** Walks up from this module's own directory looking for `relativePath` — see loadConfig()'s own
+ *  comment for why (local-dev-only cwd gap). Throws the original ENOENT-style error by simply
+ *  letting readFileSync fail naturally if nothing is found anywhere up the tree. */
+function findUpwards(relativePath: string): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (;;) {
+    const candidate = join(dir, relativePath);
+    if (existsSync(candidate)) return candidate;
+    const parentDir = dirname(dir);
+    if (parentDir === dir) return relativePath; // give up; let readFileSync raise the real error
+    dir = parentDir;
+  }
 }
 
 export class GatewayRouter {
@@ -51,16 +67,24 @@ export class GatewayRouter {
     }
   }
 
+  // Same cwd-relative gap as apps/api/src/load-env.ts's own header explains (found in the same
+  // Gemini/Vision integration session): local dev always runs with cwd = apps/api, but
+  // LLM_ROUTING_CONFIG's default ('config/routing.json') lives at the repo root — so the plain
+  // cwd-relative resolve() below silently ENOENTs there. Tries the cwd-relative path FIRST
+  // (unchanged — this is exactly what already works in production, where the Dockerfile's
+  // WORKDIR is the repo root and `config` is copied alongside it); only if that's not found does
+  // it walk upward from this module's own directory looking for the same relative path.
   static loadConfig(configPath: string): RoutingConfig {
-    const abs = resolve(process.cwd(), configPath);
+    const cwdRelative = resolve(process.cwd(), configPath);
+    const abs = existsSync(cwdRelative) ? cwdRelative : findUpwards(configPath);
     return JSON.parse(readFileSync(abs, 'utf8')) as RoutingConfig;
   }
 
-  async complete(request: LLMRequest): Promise<LLMResponse> {
+  async complete(rawRequest: LLMRequest): Promise<LLMResponse> {
     // T0: fixed-form template, no provider call, no spend, no cache lookups needed at all.
-    if (isT0Eligible(request.intentTag)) {
+    if (isT0Eligible(rawRequest.intentTag)) {
       const response: LLMResponse = {
-        content: renderT0Template(request.intentTag!),
+        content: renderT0Template(rawRequest.intentTag!),
         provider: 't0-template',
         model: 'deterministic-template',
         promptTokens: 0,
@@ -68,11 +92,17 @@ export class GatewayRouter {
         costUsd: 0,
         latencyMs: 0,
         cached: false,
-        traceId: request.traceId,
+        traceId: rawRequest.traceId,
       };
-      await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+      await this.costLog.logFromLLMResponse(response, rawRequest.tier, rawRequest.userId);
       return response;
     }
+
+    // Real PII redaction (previously nonexistent at the gateway level — see pii-redaction.ts's
+    // own header comment) — applied once, here, before the cache, semantic cache, or ANY
+    // provider ever sees the request. Automatic for every provider (Gemini included) by
+    // construction: no adapter reads the raw, unredacted request.
+    const request = redactLLMRequest(rawRequest);
 
     const backpressureSlot = this.opts.backpressure?.acquire(request.userId);
     try {
@@ -158,18 +188,21 @@ export class GatewayRouter {
    * honest, not a shortcut: streaming exists to reveal a slow LLM call's progress, and none of
    * these three paths make one.
    */
-  async *completeStream(request: LLMRequest): AsyncGenerator<string, LLMResponse, void> {
-    if (isT0Eligible(request.intentTag)) {
-      const content = renderT0Template(request.intentTag!);
+  async *completeStream(rawRequest: LLMRequest): AsyncGenerator<string, LLMResponse, void> {
+    if (isT0Eligible(rawRequest.intentTag)) {
+      const content = renderT0Template(rawRequest.intentTag!);
       yield content;
       const response: LLMResponse = {
         content, provider: 't0-template', model: 'deterministic-template',
         promptTokens: 0, completionTokens: 0, costUsd: 0, latencyMs: 0, cached: false,
-        traceId: request.traceId,
+        traceId: rawRequest.traceId,
       };
-      await this.costLog.logFromLLMResponse(response, request.tier, request.userId);
+      await this.costLog.logFromLLMResponse(response, rawRequest.tier, rawRequest.userId);
       return response;
     }
+
+    // Same real gateway-level PII redaction as complete() — see its own comment above.
+    const request = redactLLMRequest(rawRequest);
 
     const backpressureSlot = this.opts.backpressure?.acquire(request.userId);
     try {
