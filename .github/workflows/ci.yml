@@ -294,9 +294,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: npm audit (no high/critical)
-        working-directory: apps/api
-        run: npm audit --audit-level=high
+      # Allowlist-aware audit gate: still fails on any high/critical advisory EXCEPT the ones
+      # explicitly documented in scripts/check-npm-audit.mjs (assessed, no non-breaking fix, not on
+      # the request path). A bare `npm audit --audit-level=high` cannot express that distinction.
+      - name: npm audit (no high/critical, with documented allowlist)
+        run: node scripts/check-npm-audit.mjs --dir apps/api --level high
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
