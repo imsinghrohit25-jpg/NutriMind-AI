@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 
 /// Wraps a Dart deferred-loaded library screen (`import '...' deferred as x;`) — shows a
@@ -41,7 +42,7 @@ class _DeferredRouteState extends State<DeferredRoute> {
         }
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: AppLoader()),
           );
         }
         return widget.builder(context);

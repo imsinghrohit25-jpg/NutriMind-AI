@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
@@ -77,7 +78,7 @@ class _HistorySearchScreenState extends State<HistorySearchScreen> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(AppSpacing.m),
-              child: CircularProgressIndicator(),
+              child: AppLoader(),
             )
           else if (_error != null)
             Padding(

@@ -1,5 +1,6 @@
 // Meal Plan screen — shows the user's current active plan and lets them generate a new one.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -136,7 +137,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           ? Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(),
+                const AppLoader(),
                 const SizedBox(height: 12),
                 Text(_generating ? 'Generating AI meal plan...' : 'Loading...'),
               ],

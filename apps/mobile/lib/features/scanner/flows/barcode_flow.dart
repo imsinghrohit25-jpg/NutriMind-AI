@@ -1,3 +1,4 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -37,7 +38,7 @@ class BarcodeFlowResult extends ConsumerWidget {
           ),
         );
       });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: AppLoader()));
     }
 
     if (result.notFound) {

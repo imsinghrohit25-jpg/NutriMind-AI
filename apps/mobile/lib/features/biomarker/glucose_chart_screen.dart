@@ -1,6 +1,7 @@
 // CGM glucose chart — visualises Dexcom/Libre readings with time-in-range bands.
 // Chart rendered using CustomPainter (no external chart library dependency).
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -102,7 +103,7 @@ class _GlucoseChartScreenState extends ConsumerState<GlucoseChartScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
               : _readings.isEmpty

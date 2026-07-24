@@ -1,3 +1,4 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -383,7 +384,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       body: Stack(
         children: [
           if (_initialising)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: AppLoader())
           else if (_error != null)
             Center(child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),

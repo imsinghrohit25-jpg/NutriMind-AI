@@ -1,6 +1,7 @@
 // Garmin Connect OAuth 2.0 flow.
 // Garmin partner credential required (see BLOCKER in garmin.ts).
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -151,7 +152,7 @@ class _GarminConnectScreenState extends ConsumerState<GarminConnectScreen> {
                 icon: _connecting
                     ? const SizedBox(
                         width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoader(size: 20, strokeWidth: 2),
                       )
                     : const Icon(Icons.link),
                 label: const Text('Connect Garmin'),

@@ -1,5 +1,6 @@
 // Pantry Intelligence screen — list items, expiry alerts, scan receipt.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -122,7 +123,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> with SingleTickerPr
         ),
         actions: [
           if (_scanning)
-            const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+            const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2)))
           else
             IconButton(
               icon: const Icon(Icons.receipt_long),
@@ -133,7 +134,7 @@ class _PantryScreenState extends ConsumerState<PantryScreen> with SingleTickerPr
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
               : TabBarView(

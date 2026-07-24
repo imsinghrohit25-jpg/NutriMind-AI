@@ -53,13 +53,13 @@ class _AuthScaffoldState extends State<AuthScaffold> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _entranceController = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _entranceController = AnimationController(vsync: this, duration: AppMotion.cinematic);
     _entranceFade = CurvedAnimation(parent: _entranceController, curve: Curves.easeOut);
     _entranceSlide = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
         .animate(CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic));
     _entranceController.forward();
 
-    _floatController = AnimationController(vsync: this, duration: const Duration(seconds: 3))
+    _floatController = AnimationController(vsync: this, duration: AppMotion.ambient)
       ..repeat(reverse: true);
     _floatOffset = Tween<double>(begin: -8, end: 8)
         .animate(CurvedAnimation(parent: _floatController, curve: Curves.easeInOut));
@@ -178,7 +178,7 @@ class FoodIllustration extends StatelessWidget {
         ],
       ),
       alignment: Alignment.center,
-      child: const Text('🥗🍎🥑', style: TextStyle(fontSize: 34)),
+      child: const Text('🥗🍎🥑', style: AppType.displayLarge),
     );
   }
 }
@@ -343,7 +343,7 @@ class GoogleGlyph extends StatelessWidget {
       height: 22,
       decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Text('G', style: TextStyle(color: context.colors.primaryDark, fontWeight: FontWeight.w800, fontSize: 14)),
+      child: Text('G', style: AppType.titleSmall.copyWith(color: context.colors.primaryDark, fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -376,7 +376,7 @@ class StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? context.colors.accentLight : const Color(0xFF7FE0A0);
+    final color = isError ? context.colors.accentLight : context.colors.success;
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.m),
       child: Container(

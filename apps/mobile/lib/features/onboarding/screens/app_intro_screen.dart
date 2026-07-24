@@ -41,21 +41,21 @@ const _slides = <_IntroSlide>[
     title: 'Scan Any Product, Instantly',
     body: 'Point your camera at a barcode or nutrition label — NutriMind resolves it against '
         'IFCT, USDA, and global food databases in seconds.',
-    colors: [Color(0xFF0D4422), Color(0xFF1B6B3A), Color(0xFF4C9E6B)],
+    colors: [AppColors.primaryDark, AppColors.primary, AppColors.primaryLight],
   ),
   _IntroSlide(
     icon: Icons.psychology_rounded,
     title: 'AI That Understands You',
     body: 'A personalized nutrition assistant that factors in your goals, conditions, and '
         'preferences — every answer grounded in real, computed data.',
-    colors: [Color(0xFF1B3A6B), Color(0xFF2E5A9E), Color(0xFF5B8FD1)],
+    colors: [Color(0xFF1B3A6B), Color(0xFF2E5A9E), Color(0xFF5B8FD1)], // design-governance:ignore: decorative intro-slide gradient art
   ),
   _IntroSlide(
     icon: Icons.family_restroom_rounded,
     title: "Your Family's Health, Together",
     body: 'Track allergens and preferences for everyone in your household — with a hard safety '
         'gate that never lets a known allergen slip through.',
-    colors: [Color(0xFF6B3A1B), Color(0xFF9E5A2E), Color(0xFFD18F5B)],
+    colors: [Color(0xFF6B3A1B), Color(0xFF9E5A2E), Color(0xFFD18F5B)], // design-governance:ignore: decorative intro-slide gradient art
   ),
 ];
 
@@ -214,7 +214,7 @@ class _AppIntroScreenState extends ConsumerState<AppIntroScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                                 ),
                                 onPressed: _finish,
-                                child: const Text('Get Started', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                                child: Text('Get Started', style: AppType.titleMedium.copyWith(fontWeight: FontWeight.w700)),
                               ),
                             )
                           : SizedBox(
@@ -231,7 +231,7 @@ class _AppIntroScreenState extends ConsumerState<AppIntroScreen> {
                                   duration: AppMotion.standard,
                                   curve: AppMotion.enter,
                                 ),
-                                child: const Text('Next', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                                child: Text('Next', style: AppType.titleMedium.copyWith(fontWeight: FontWeight.w600)),
                               ),
                             ),
                     ),

@@ -1,6 +1,7 @@
 // Family Nutrition Dashboard — shows all members' daily nutrition summary
 // and a shared real-time shopping list.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -200,7 +201,7 @@ class _FamilyDashboardScreenState extends ConsumerState<FamilyDashboardScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : _error != null
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
               : _groups.isEmpty

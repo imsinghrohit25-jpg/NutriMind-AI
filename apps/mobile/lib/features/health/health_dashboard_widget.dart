@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -64,7 +65,7 @@ class _HealthDashboardWidgetState extends ConsumerState<HealthDashboardWidget> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
+      return const SizedBox(height: 120, child: Center(child: AppLoader()));
     }
 
     if (_metrics.isEmpty) return const SizedBox.shrink();

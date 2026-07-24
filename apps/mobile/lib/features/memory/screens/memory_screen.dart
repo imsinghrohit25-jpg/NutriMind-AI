@@ -1,3 +1,4 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrimind_ai_agent_layer/nutrimind_ai_agent_layer.dart';
@@ -56,7 +57,7 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           if (snapshot.hasError) {
             return MemoryTransparencyView(facts: const [], error: snapshot.error.toString(), onDelete: _delete);

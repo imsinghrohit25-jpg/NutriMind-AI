@@ -1,3 +1,4 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrimind_country_engine/nutrimind_country_engine.dart';
@@ -101,7 +102,7 @@ class _CountrySelectionScreenState extends ConsumerState<CountrySelectionScreen>
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: AppLoader());
             }
             if (snapshot.hasError || !snapshot.hasData) {
               _log.warning('Local country resolution failed unexpectedly', snapshot.error);

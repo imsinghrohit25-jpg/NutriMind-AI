@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nutrimind/core/design_system/components/app_loader.dart';
 import 'package:nutrimind/core/router/deferred_route.dart';
 
 void main() {
@@ -17,7 +18,7 @@ void main() {
       ),
     ));
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(AppLoader), findsOneWidget);
     expect(find.text('Loaded Screen'), findsNothing);
 
     // Let the pending timer finish so it doesn't leak into the next test.
@@ -34,7 +35,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Loaded Screen'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(AppLoader), findsNothing);
   });
 
   testWidgets('shows an error message when loadLibrary() fails, not a blank/crashed screen', (tester) async {

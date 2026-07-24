@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -424,7 +425,7 @@ class _InputBar extends StatelessWidget {
               ? const SizedBox(
                   width: 40,
                   height: 40,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: AppLoader(size: 20, strokeWidth: 2),
                 )
               : IconButton(
                   icon: const Icon(Icons.send),

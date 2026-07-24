@@ -110,6 +110,8 @@ dev_dependencies:
   build_runner: ^2.4.13
   drift_dev: ^2.18.0
   riverpod_generator: ^2.4.4
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 flutter:
   uses-material-design: true
@@ -117,3 +119,24 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
+# ── Brand assets generation (Phase 5) ────────────────────────────────────────
+# Source art produced by tool/generate_icon.py (deep-forest squircle + saffron-veined leaf).
+# Regenerate platform icons:  dart run flutter_launcher_icons
+# Regenerate native splash:    dart run flutter_native_splash:create
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#0D4422"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#0B120D"
+  image: assets/icon/app_icon_foreground.png
+  android_12:
+    color: "#0B120D"
+    image: assets/icon/app_icon_foreground.png
+  color_dark: "#0B120D"
+  image_dark: assets/icon/app_icon_foreground.png

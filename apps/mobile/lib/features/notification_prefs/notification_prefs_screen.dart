@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
@@ -51,7 +52,7 @@ class _NotificationPrefsScreenState extends State<NotificationPrefsScreen> {
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2))
                 : const Text('Save'),
           ),
         ],

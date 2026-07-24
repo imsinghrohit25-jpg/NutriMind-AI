@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -99,7 +100,7 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Health Data Consent')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: AppLoader())
           : ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: _kMetrics.length,

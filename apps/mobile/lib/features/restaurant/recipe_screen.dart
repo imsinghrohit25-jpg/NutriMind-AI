@@ -1,5 +1,6 @@
 // AI Recipe Generator screen.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -127,7 +128,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
             FilledButton.icon(
               onPressed: _generating ? null : _generate,
               icon: _generating
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(width: 16, height: 16, child: AppLoader(size: 20, strokeWidth: 2))
                   : const Icon(Icons.auto_awesome),
               label: const Text('Generate Recipe'),
               style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 48)),

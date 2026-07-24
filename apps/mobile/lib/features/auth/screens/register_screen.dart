@@ -61,7 +61,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with TickerProv
   @override
   void initState() {
     super.initState();
-    _shakeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _shakeController = AnimationController(vsync: this, duration: AppMotion.cinematic);
   }
 
   @override
@@ -383,7 +383,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> with TickerProv
                 ),
               ),
               AnimatedSize(
-                duration: const Duration(milliseconds: 250),
+                duration: AppMotion.standard,
                 child: _error != null
                     ? ShakeTransition(controller: _shakeController, child: StatusBanner(message: _error!, isError: true))
                     : (_info != null ? StatusBanner(message: _info!, isError: false) : const SizedBox.shrink()),

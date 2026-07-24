@@ -1,6 +1,7 @@
 // Fitbit OAuth 2.0 PKCE connect flow.
 // Launches system browser → redirects back via deep link → exchanges code server-side.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
@@ -170,7 +171,7 @@ class _FitbitConnectScreenState extends ConsumerState<FitbitConnectScreen> {
                 icon: _connecting
                     ? const SizedBox(
                         width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoader(size: 20, strokeWidth: 2),
                       )
                     : const Icon(Icons.link),
                 label: const Text('Connect Fitbit'),

@@ -1,3 +1,4 @@
+import '../../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,7 +25,7 @@ class HouseholdScreen extends ConsumerWidget {
         ],
       ),
       body: membersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppLoader()),
         error: (e, _) => Center(child: Text('Error: $e', style: AppType.bodyMedium)),
         data: (members) => members.isEmpty
             ? _EmptyState(onAdd: () => _showAddMemberSheet(context, ref))

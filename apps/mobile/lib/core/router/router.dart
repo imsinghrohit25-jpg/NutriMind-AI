@@ -24,9 +24,13 @@ import '../../features/memory/screens/memory_screen.dart';
 import '../../features/agent/agent_chat_screen.dart';
 import '../../features/voice/voice_log_screen.dart';
 import '../../features/planner/meal_plan_screen.dart';
+import '../design_system/components/app_loader.dart';
+import '../design_system/components/nutrimind_logo.dart';
 import '../design_system/gallery/design_system_gallery_screen.dart';
+import '../design_system/tokens.dart';
 import 'deferred_route.dart';
 import 'routes.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 part 'router.g.dart';
 
@@ -203,34 +207,85 @@ class _SplashScreenState extends State<_SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Fixed brand gradient — a splash is a branded moment, intentionally the same deep-forest
+    // backdrop in both light and dark mode, with white foreground.
     return Scaffold(
-      body: Center(
-        child: _timedOut
-            ? Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.wifi_off, size: 40),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Taking longer than expected to start up.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () {
-                        setState(() => _timedOut = false);
-                        _timer = Timer(const Duration(seconds: 8), () { // design-governance:ignore: redirect safety timeout, not an animation
-                          if (mounted) setState(() => _timedOut = true);
-                        });
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-            : const CircularProgressIndicator(),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.primaryDark, AppColors.primary, AppColors.primaryDark],
+          ),
+        ),
+        child: Center(child: _timedOut ? _buildTimeout() : _buildBrand()),
+      ),
+    );
+  }
+
+  Widget _buildBrand() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const NutriMindLogo(size: 108, state: NutriMindMoodState.thinking)
+            .animate()
+            .scale(
+              begin: const Offset(0.7, 0.7),
+              end: const Offset(1, 1),
+              duration: AppMotion.cinematic,
+              curve: AppMotion.emphasized,
+            )
+            .fadeIn(duration: AppMotion.standard),
+        const SizedBox(height: AppSpacing.xl),
+        Text(
+          'NutriMind',
+          style: AppFonts.display(AppType.displaySmall).copyWith(color: Colors.white),
+        )
+            .animate()
+            .fadeIn(delay: AppMotion.staggerStep * 2, duration: AppMotion.standard)
+            .slideY(begin: 0.25, end: 0, curve: AppMotion.enter, duration: AppMotion.standard),
+        const SizedBox(height: AppSpacing.s),
+        Text(
+          'AI nutrition, grounded in real food science',
+          textAlign: TextAlign.center,
+          style: AppFonts.body(AppType.bodySmall).copyWith(color: Colors.white70),
+        ).animate().fadeIn(delay: AppMotion.staggerStep * 4, duration: AppMotion.standard),
+        const SizedBox(height: AppSpacing.xxxl),
+        const AppLoader(size: 26, strokeWidth: 2.5, color: Colors.white)
+            .animate()
+            .fadeIn(delay: AppMotion.staggerStep * 6, duration: AppMotion.standard),
+      ],
+    );
+  }
+
+  Widget _buildTimeout() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wifi_off, size: 40, color: Colors.white),
+          const SizedBox(height: AppSpacing.l),
+          Text(
+            'Taking longer than expected to start up.',
+            textAlign: TextAlign.center,
+            style: AppFonts.body(AppType.bodyMedium).copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: AppSpacing.l),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppColors.primaryDark,
+            ),
+            onPressed: () {
+              setState(() => _timedOut = false);
+              _timer = Timer(const Duration(seconds: 8), () { // design-governance:ignore: redirect safety timeout, not an animation
+                if (mounted) setState(() => _timedOut = true);
+              });
+            },
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }

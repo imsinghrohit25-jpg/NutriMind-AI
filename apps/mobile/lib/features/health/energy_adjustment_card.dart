@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -63,7 +64,7 @@ class _EnergyAdjustmentCardState extends ConsumerState<EnergyAdjustmentCard> {
       return const Card(
         child: SizedBox(
           height: 80,
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: AppLoader()),
         ),
       );
     }

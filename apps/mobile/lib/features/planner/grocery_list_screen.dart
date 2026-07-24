@@ -1,5 +1,6 @@
 // Grocery List screen — shows categorised grocery items with purchase toggle.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/app_palette.dart';
@@ -63,7 +64,7 @@ class _GroceryListScreenState extends ConsumerState<GroceryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_loading) return const Scaffold(body: Center(child: AppLoader()));
     if (_error != null) return Scaffold(body: Center(child: Text(_error!)));
 
     final grouped = <String, List<Map<String, dynamic>>>{};

@@ -119,6 +119,7 @@ abstract final class AppMotion {
   static const micro = Duration(milliseconds: 150);       // press states, toggles
   static const standard = Duration(milliseconds: 300);    // page elements, card entrances
   static const cinematic = Duration(milliseconds: 600);   // hero moments (score ring, onboarding)
+  static const ambient = Duration(seconds: 3);            // slow looping ambient motion (float/breathe)
 
   // Signature easing — one curve family used everywhere for consistency.
   static const enter = Curves.easeOutCubic;

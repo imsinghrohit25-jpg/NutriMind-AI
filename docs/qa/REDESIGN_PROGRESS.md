@@ -287,11 +287,18 @@ Verified:
   ≥3:1 in both palettes; palette resolves correctly per theme.
 - Gate: `flutter analyze` 0; `flutter test` 49/49; governance 0. No backend touched.
 
-### Increments remaining (not yet started)
-- **Loader sweep** — 37 raw `CircularProgressIndicator`s → a branded `AppLoader` (the 11 on-button
-  `color: Colors.white` spinners are already correct/theme-agnostic and stay).
-- **Production app icon + splash** (needs a source asset — same "no design-tool" constraint as the
-  Phase-0 Rive gap; can be rendered from the coded `NutriMindLogo`).
-- **WCAG AA contrast audit** of both palettes.
+### Increment 3 — COMPLETE (branded loader, app icon, splash), ADR-0043, verified 2026-07-24
+- Branded `AppLoader` (gradient sweep arc, animation-policy-aware) replaces 31 neutral
+  `CircularProgressIndicator`s; 9 on-button white spinners + 1 determinate score gauge stay. 4 tests.
+- Production app icon via `tool/generate_icon.py` (Pillow) + `flutter_launcher_icons` (Android
+  adaptive + iOS). Premium splash: `flutter_native_splash` (native) + animated in-app `_SplashScreen`
+  (NutriMindLogo entrance + wordmark stagger).
+- Governance completion: fixed 12 pre-existing violations exposed when the Jul-13 auth files became
+  tracked (added `AppMotion.ambient` tier; typography→AppType; brand hex→AppColors; decorative
+  intro gradients carry ignore directives).
+- Gate: `flutter analyze` 0; `flutter test` 53/53; governance 0 (85 files). No backend touched.
+
+**Phase 5 COMPLETE — the premium redesign (Phases 0–5) is done.** (WCAG AA contrast was
+machine-verified in increment 2's `app_palette_test.dart`.)
 
 Nothing further needed from Phases 0-4.

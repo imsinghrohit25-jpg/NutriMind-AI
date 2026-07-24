@@ -6,6 +6,7 @@
 // must accept before anything is treated as logged — this screen mirrors both states instead of
 // always showing whatever was parsed.
 
+import '../../core/design_system/components/app_loader.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -209,7 +210,7 @@ class _VoiceLogScreenState extends ConsumerState<VoiceLogScreen> {
               const SizedBox(height: 16),
             ],
 
-            if (_processing) const CircularProgressIndicator(),
+            if (_processing) const AppLoader(),
 
             // Ambiguous — the Voice Agent asked ONE clarifying question rather than guessing.
             if (_ambiguous && _responseText != null) ...[

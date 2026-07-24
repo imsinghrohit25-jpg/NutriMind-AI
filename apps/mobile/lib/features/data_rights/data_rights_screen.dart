@@ -1,3 +1,4 @@
+import '../../core/design_system/components/app_loader.dart';
 import 'package:flutter/material.dart';
 import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
@@ -100,7 +101,7 @@ class _DataRightsScreenState extends State<DataRightsScreen> {
             title: const Text('Export my data'),
             subtitle: const Text('Download a JSON file with all your scans, meals, and profile.'),
             trailing: _exporting
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2))
                 : const Icon(Icons.chevron_right),
             onTap: _exporting ? null : _export,
           ),
@@ -115,7 +116,7 @@ class _DataRightsScreenState extends State<DataRightsScreen> {
             ),
             subtitle: const Text('Permanently removes all your data from NutriMind servers.'),
             trailing: _deleting
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(width: 20, height: 20, child: AppLoader(size: 20, strokeWidth: 2))
                 : const Icon(Icons.chevron_right, color: AppColors.scorePoor),
             onTap: _deleting ? null : _confirmDelete,
           ),
