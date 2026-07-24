@@ -119,7 +119,16 @@ class AppDatabase extends _$AppDatabase {
   // onboarding — found by signing in as a freshly-registered user right after another
   // account had already completed it on the same emulator.
   String _scopedKey(String key) {
-    final uid = Supabase.instance.client.auth.currentUser?.id;
+    // `Supabase.instance` throws if accessed before `Supabase.initialize()` has run (e.g. a
+    // unit/integration test that exercises the DB directly without booting the app). Guard it and
+    // fall back to the unscoped key rather than crash — production always initializes Supabase in
+    // main() before any flag access, so real users still get the per-account-scoped key.
+    String? uid;
+    try {
+      uid = Supabase.instance.client.auth.currentUser?.id;
+    } catch (_) {
+      uid = null;
+    }
     return uid == null ? key : '$uid:$key';
   }
 
