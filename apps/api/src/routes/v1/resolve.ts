@@ -15,6 +15,7 @@ import { resolveBarcode, resolveByName } from '../../resolution/country-waterfal
 import { enqueueProductEmbedding } from '../../embeddings/product-pipeline.js';
 import { getBoss } from '../../jobs/boss.js';
 import { recordEventBestEffort } from '../../memory/events.js';
+import { upsertScanHistoryEmbedding } from '../../memory/semantic-search.js';
 import { buildNutritionCitation } from '../../nutrition/citation.js';
 import { evaluateDiseaseRules, type DiseaseRuleEvaluation } from '../../engines/disease/index.js';
 import { computeHealthScore, type HealthScoreResult } from '../../engines/score/engine.js';
@@ -158,6 +159,31 @@ export function buildSafety(profile: ProfileSlice | null, product: CanonicalProd
   };
 }
 
+/** Best-effort: index a resolved+scored product into the scan-history semantic search
+ *  (scan_history_embeddings) so the user can later find it by natural-language query. Fire-and-
+ *  forget — never blocks or fails the resolve. Only for authenticated resolves of a persisted,
+ *  scored product, and only when an embeddings gateway is configured. */
+function indexScanHistoryBestEffort(
+  fastify: FastifyInstance,
+  userId: string | undefined,
+  product: CanonicalProduct | null,
+  healthScore: HealthScoreResult | null,
+): void {
+  if (!userId || !product?.id || !healthScore || !fastify.gateway) return;
+  void upsertScanHistoryEmbedding(fastify.supabase, fastify.gateway, {
+    userId,
+    productId: product.id,
+    productName: product.name,
+    category: product.category,
+    healthScore: healthScore.score,
+    band: healthScore.band,
+  }).catch((e) => {
+    // Best-effort index — an embeddings-provider outage must never affect the scan result. Logged
+    // (not swallowed silently) so a persistent indexing failure is visible in ops.
+    console.warn(`[history-index] skipped for ${product.id}: ${e instanceof Error ? e.message : e}`);
+  });
+}
+
 const BarcodeBodySchema = z.object({
   barcode: z.string().min(6).max(30).regex(/^[\d\-]+$/, 'barcode must contain only digits'),
 });
@@ -228,6 +254,7 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
     const diseaseGuidance = buildDiseaseGuidance(profile, result.product);
     const healthScore = buildHealthScore(result.product);
     const safety = buildSafety(profile, result.product);
+    indexScanHistoryBestEffort(fastify, userId, result.product, healthScore);
 
     return reply.send(
       ok({
@@ -270,6 +297,7 @@ export default async function resolveRoutes(fastify: FastifyInstance): Promise<v
     const diseaseGuidance = buildDiseaseGuidance(nameProfile, result.product);
     const healthScore = buildHealthScore(result.product);
     const safety = buildSafety(nameProfile, result.product);
+    indexScanHistoryBestEffort(fastify, nameUserId, result.product, healthScore);
 
     return reply.send(ok({
       found: true,
