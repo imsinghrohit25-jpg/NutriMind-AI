@@ -1,7 +1,20 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing — loaded from android/key.properties when present (gitignored; injected on the
+// release machine / CI release lane). When ABSENT (local dev, PR CI, emulator integration) the
+// release build falls back to debug signing, byte-identical to the previous behaviour, so
+// `flutter run --release` and the emulator build keep working unchanged.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -27,11 +40,28 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            // Populated only when key.properties exists; otherwise this config is created but unused
+            // (the release buildType falls back to debug below), so no-keystore builds never touch it.
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Real release keystore when android/key.properties is present; otherwise debug signing
+            // so dev / PR CI / emulator-integration builds are unchanged (no keystore in those envs).
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             // R8 (minifyEnabled, on by default for release) fails hard on unresolved MLKit
             // script-recognizer references without this — see proguard-rules.pro's own header
             // for why (found by actually running a release build).

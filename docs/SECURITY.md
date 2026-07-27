@@ -1,7 +1,13 @@
 # NutriMind AI — Security Hardening (MASVS Checklist)
 
-**Standard:** OWASP MASVS v2.1.0  
-**Status:** Phase 11 — checklist complete; items marked ✅ implemented, ⚠️ planned for Phase 12 CI.
+**Standard:** OWASP MASVS v2.1.0
+**Status:** Re-verified 2026-07-27 (Phase 3C). ✅ = implemented & verified · ⚠️ = partial / not yet
+implemented (release-blocking items called out in "Mobile hardening — release blockers" below).
+
+> **Phase 3C accuracy pass:** several rows previously marked ✅ were found unimplemented on
+> verification and have been corrected to ⚠️ with the real state — a security checklist that
+> overstates coverage is itself a risk. Backend controls verified present; the outstanding gaps are
+> all mobile-native and require on-device verification (tracked in Phase 3D release engineering).
 
 ---
 
@@ -9,10 +15,10 @@
 
 | ID         | Requirement                                  | Status | Implementation |
 |------------|----------------------------------------------|--------|----------------|
-| STORAGE-1  | Sensitive data not stored in plaintext        | ✅     | Supabase JWT stored via `flutter_secure_storage` (Keychain/Keystore backed) |
-| STORAGE-2  | No sensitive data in SharedPreferences/NSUserDefaults | ✅ | Only non-sensitive flags (consent, onboarding state) in `shared_preferences` |
-| STORAGE-3  | No sensitive data in logs                    | ✅     | Logger strips JWT/API keys; `SUPABASE_SERVICE_ROLE_KEY` never in mobile |
-| STORAGE-4  | No sensitive data in backups                 | ✅     | `android:allowBackup="false"` in manifest; iOS excluded via `NSFileProtectionComplete` |
+| STORAGE-1  | Sensitive data not stored in plaintext        | ⚠️     | **Gap:** `Supabase.initialize()` uses the default session store (`shared_preferences`), not `flutter_secure_storage` (a dependency, currently unused). The JWT is not Keychain/Keystore-backed. Fix: wire a `SecureLocalStorage` adapter into `FlutterAuthClientOptions`. **Release blocker.** |
+| STORAGE-2  | No sensitive data in SharedPreferences/NSUserDefaults | ⚠️ | Non-sensitive flags are fine, but the Supabase session/JWT currently lands here via STORAGE-1's default store — closed once STORAGE-1 is fixed. |
+| STORAGE-3  | No sensitive data in logs                    | ⚠️     | Backend redaction verified (`telemetry/redaction.ts`). **Gap:** `main.dart` initialises Supabase with `debug: true`, which logs session/PKCE detail — disable for release. |
+| STORAGE-4  | No sensitive data in backups                 | ✅     | `android:allowBackup="false"` + `fullBackupContent="false"` set in `AndroidManifest.xml` (Phase 3C). iOS: exclude via `NSFileProtectionComplete` at release. |
 
 ## MASVS-CRYPTO
 
@@ -33,9 +39,9 @@
 
 | ID         | Requirement                              | Status | Implementation |
 |------------|------------------------------------------|--------|----------------|
-| NETWORK-1  | TLS enforced for all connections          | ✅     | HTTPS only; HTTP disabled in `AndroidManifest.xml` `usesCleartextTraffic="false"` |
-| NETWORK-2  | Certificate pinning                      | ✅     | See ADR-0009-cert-pinning.md; pins for `*.supabase.co` and `api.nutrimind.app` |
-| NETWORK-3  | No sensitive data in URL parameters       | ✅     | User IDs in JWT, not query strings |
+| NETWORK-1  | TLS enforced for all connections          | ⚠️     | Prod traffic is HTTPS. **Gap:** `usesCleartextTraffic="false"` is NOT set (dev builds talk to a local HTTP API). Fix at release via a `networkSecurityConfig` that blocks cleartext in release while permitting `localhost` in debug. |
+| NETWORK-2  | Certificate pinning                      | ⚠️     | ADR-0009 documents the design, but no pinning is implemented in the client (`dio` is present but unpinned). **Release blocker** for high-assurance builds. |
+| NETWORK-3  | No sensitive data in URL parameters       | ✅     | User IDs in JWT, not query strings (verified — resolve/scan routes take IDs from the auth context). |
 
 ## MASVS-PLATFORM
 
@@ -49,17 +55,17 @@
 
 | ID       | Requirement                              | Status | Implementation |
 |----------|------------------------------------------|--------|----------------|
-| CODE-1   | Prompt injection hardening               | ✅     | `apps/api/src/security/prompt-injection.ts` — all user text → LLM is sanitised; 15 injection tests passing |
-| CODE-2   | Dependency audit                         | ⚠️     | Phase 12: `npm audit` + `flutter pub audit` in CI |
+| CODE-1   | Prompt injection hardening               | ✅     | `security/prompt-injection.ts` (14 sanitiser tests) is now WIRED into the copilot user→LLM path (`orchestrator.ts`, Phase 3C) with a wiring test. Follow-up: also route label-OCR-feedback / voice-NLU user text through `sanitiseForLLM` (lower-risk surfaces, currently unwired). |
+| CODE-2   | Dependency audit                         | ✅     | CI job "Dependency audit": `scripts/check-npm-audit.mjs` (allowlist-aware, high/critical) + Flutter pub audit — gates every PR. |
 | CODE-3   | No eval / dynamic code execution         | ✅     | No `eval()` / `Function()` / `dart:mirrors` usage |
 
 ## MASVS-RESILIENCE
 
 | ID            | Requirement                              | Status | Implementation |
 |---------------|------------------------------------------|--------|----------------|
-| RESILIENCE-1  | Root/jailbreak detection                 | ✅     | See ADR-0010-root-jailbreak.md; health screens show warning banner |
-| RESILIENCE-2  | Anti-tampering (release build only)      | ⚠️     | Phase 12: ProGuard/R8 obfuscation enabled in release build |
-| RESILIENCE-3  | Screenshot protection on health screens  | ✅     | `FLAG_SECURE` set on Android for score/health screens; iOS `allowScreenCapture: false` |
+| RESILIENCE-1  | Root/jailbreak detection                 | ⚠️     | ADR-0010 documents the design, but no detection is implemented in the client. Fix: add a root/jailbreak check + health-screen warning banner. |
+| RESILIENCE-2  | Anti-tampering (release build only)      | ✅     | R8 `minifyEnabled` (on by default for release) + `proguard-rules.pro` present in `android/app`. |
+| RESILIENCE-3  | Screenshot protection on health screens  | ⚠️     | Not implemented — no `FLAG_SECURE` in the app. Fix: set `FLAG_SECURE` on score/copilot/health routes (Android) + `allowScreenCapture=false` (iOS). **Release blocker** for health-data screens. |
 
 ---
 
@@ -83,12 +89,30 @@ iOS: `view.isUserInteractionEnabled` screenshots blocked via `allowScreenCapture
 
 ## Data Rights & Privacy
 
-- Full export: `POST /v1/data-rights/export` — JSON of all PII
-- Full deletion: `POST /v1/data-rights/delete` — hard delete + server-side verification query (gate: row count = 0 after delete)
-- Rectification: `PATCH /v1/data-rights/rectify`; restriction: `POST /v1/data-rights/restrict` (Phase 8, ADR-0021)
-- Consent (regime-aware): `GET /v1/privacy/regime`, `GET|POST /v1/privacy/consent`, `POST /v1/privacy/consent/withdraw` (Phase 8, ADR-0021)
+Actual routes in `apps/api/src/routes/v1/data-rights.ts` (verified Phase 3C):
+- Rights catalogue: `GET /v1/data-rights/rights`
+- Full export: `POST /v1/data-rights/export` — JSON of all PII (engine-computed & audit fields excluded)
+- Full deletion: `POST /v1/data-rights/delete` — hard delete across all owned tables, then a per-table
+  server-side verification count; returns `DELETION_UNVERIFIED` (500) if any row remains, and finally
+  `auth.admin.deleteUser`. **DPDP erasure verified working (Phase 3C).**
+- Processing restriction: `GET /v1/data-rights/restrict`
 - Regulation compliance: Digital Personal Data Protection Act 2023 (India), GDPR (EU users) — see [GDPR_DPDP_CONSENT.md](GDPR_DPDP_CONSENT.md)
 - Retention: scan history purged after 365 days (pg-boss cron job)
+
+---
+
+## Mobile hardening — release blockers (Phase 3C findings)
+
+These MASVS controls are documented/designed but **not implemented in the client**, and require
+on-device verification (Phase 3D release engineering) — they must not ship as ✅ until then:
+
+1. **Secure token storage (STORAGE-1)** — move the Supabase session off `shared_preferences` onto
+   `flutter_secure_storage` (already a dependency) via a `SecureLocalStorage` adapter.
+2. **Screenshot protection (RESILIENCE-3)** — `FLAG_SECURE` on health/score/copilot screens.
+3. **Certificate pinning (NETWORK-2)** — pin `*.supabase.co` / API host in the `dio` client.
+4. **Cleartext-traffic lockdown (NETWORK-1)** — release `networkSecurityConfig` blocking cleartext.
+5. **Root/jailbreak detection (RESILIENCE-1)** — detection + health-screen warning banner.
+6. Disable Supabase `debug: true` logging in release (STORAGE-3).
 
 ---
 
