@@ -37,10 +37,8 @@
     "timeoutMs": 120000
   },
   "embeddings": {
-    "primary": { "provider": "openai", "model": "text-embedding-3-small" },
-    "fallbacks": [
-      { "provider": "gemini", "model": "gemini-embedding-001" }
-    ],
+    "primary": { "provider": "gemini", "model": "gemini-embedding-001" },
+    "fallbacks": [],
     "maxRetries": 3,
     "timeoutMs": 10000
   }
