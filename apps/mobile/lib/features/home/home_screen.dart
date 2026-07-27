@@ -20,6 +20,8 @@ import '../../core/offline/local_db.dart';
 import '../../core/router/routes.dart';
 import '../../features/auth/auth_state.dart';
 import '../disease_chips/disease_guidance_provider.dart';
+import '../history_search/history_search_provider.dart';
+import '../history_search/history_search_screen.dart';
 import '../meals/daily_dashboard.dart';
 import '../meals/meal_log_screen.dart';
 import '../meals/meals_providers.dart';
@@ -307,6 +309,20 @@ class HomeScreen extends ConsumerWidget {
                 subtitle: 'Review and manage your AI memory',
                 onTap: () => context.push(AppRoutes.memory),
                 index: 8,
+              ),
+              const SizedBox(height: AppSpacing.l),
+
+              // Semantic scan-history search — natural-language search over past scans, backed by
+              // the existing /v1/history/search (embed → match_scan_history RPC) + HistorySearchScreen.
+              _HomeCard(
+                icon: Icons.manage_search_outlined,
+                color: context.colors.accent,
+                title: 'Search history',
+                subtitle: 'Find past scans, e.g. "high sodium snacks"',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => HistorySearchScreen(onSearch: (q) => searchScanHistory(ref, q)),
+                )),
+                index: 9,
               ),
               ],
             ),
