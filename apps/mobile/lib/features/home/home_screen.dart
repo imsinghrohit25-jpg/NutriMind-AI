@@ -19,6 +19,7 @@ import '../../core/design_system/tokens.dart';
 import '../../core/offline/local_db.dart';
 import '../../core/router/routes.dart';
 import '../../features/auth/auth_state.dart';
+import '../disease_chips/disease_guidance_provider.dart';
 import '../product/product_screen.dart';
 
 /// Time-of-day-aware greeting — real wall-clock data, not a canned string.
@@ -39,6 +40,7 @@ class HomeScreen extends ConsumerWidget {
     final recentProductsAsync = ref.watch(recentScannedProductsProvider);
     final scansTodayAsync = ref.watch(scansTodayProvider);
     final scansToday = scansTodayAsync.valueOrNull ?? 0;
+    final diseaseGuidanceAsync = ref.watch(diseaseGuidanceProvider);
 
     return GradientScaffold(
       appBar: AppBar(
@@ -74,11 +76,24 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: RefreshIndicator(
+          // Pull-to-refresh re-reads the on-device cache + re-fetches condition guidance. Reuses
+          // the existing providers — no new data source.
+          onRefresh: () async {
+            ref.invalidate(recentScannedProductsProvider);
+            ref.invalidate(scansTodayProvider);
+            ref.invalidate(diseaseGuidanceProvider);
+            await Future.wait([
+              ref.read(recentScannedProductsProvider.future),
+              ref.read(scansTodayProvider.future),
+            ]);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Row(
                 children: [
                   Expanded(
@@ -112,6 +127,30 @@ class HomeScreen extends ConsumerWidget {
                     ? _EmptyScanState(onScan: () => context.push(AppRoutes.scanner))
                     : _LastScannedCard(product: products.first, scansToday: scansToday),
               ).animate().fadeIn(duration: AppMotion.standard, delay: AppMotion.staggerStep),
+
+              // Recently-scanned strip — surfaces the other products the recentProducts provider
+              // already fetches (the card above shows only the latest). Pure reuse, no new query.
+              recentProductsAsync.maybeWhen(
+                data: (products) => products.length > 1
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.l),
+                        child: _RecentScansStrip(products: products.skip(1).toList()),
+                      )
+                    : const SizedBox.shrink(),
+                orElse: () => const SizedBox.shrink(),
+              ),
+
+              // Condition-aware guidance — the signed-in user's stored health conditions, from the
+              // existing deterministic /v1/disease/guidance engine. Hidden when there are none.
+              diseaseGuidanceAsync.maybeWhen(
+                data: (g) => g.isEmpty
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.l),
+                        child: _HealthConditionCard(guidance: g),
+                      ),
+                orElse: () => const SizedBox.shrink(),
+              ),
 
               const SizedBox(height: AppSpacing.xxxl),
 
@@ -189,7 +228,20 @@ class HomeScreen extends ConsumerWidget {
                 onTap: () => context.push(AppRoutes.mealPlan),
                 index: 5,
               ),
-            ],
+              const SizedBox(height: AppSpacing.l),
+
+              // "What NutriMind knows about me" — Phase 11's AI memory transparency screen was
+              // fully built and routed (AppRoutes.memory) but had no entry point in the UI.
+              _HomeCard(
+                icon: Icons.psychology_alt_outlined,
+                color: context.colors.primaryLight,
+                title: 'What NutriMind knows',
+                subtitle: 'Review and manage your AI memory',
+                onTap: () => context.push(AppRoutes.memory),
+                index: 6,
+              ),
+              ],
+            ),
           ),
         ),
       ),
@@ -342,5 +394,116 @@ class _HomeCard extends StatelessWidget {
     ).animate(delay: AppMotion.staggerStep * index)
         .fadeIn(duration: AppMotion.standard)
         .slideY(begin: 0.08, end: 0, duration: AppMotion.standard, curve: AppMotion.enter);
+  }
+}
+
+/// Horizontal strip of the recently-scanned products the [recentScannedProductsProvider] already
+/// fetches (beyond the single latest shown above). Each tile reuses the same cached [LocalProduct]
+/// data and opens the existing [ProductScreen] — no new query, no new screen.
+class _RecentScansStrip extends StatelessWidget {
+  const _RecentScansStrip({required this.products});
+  final List<LocalProduct> products;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Recently scanned', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colors.subtle)),
+        const SizedBox(height: AppSpacing.s),
+        SizedBox(
+          height: 84,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: products.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s),
+            itemBuilder: (context, i) {
+              final p = products[i];
+              return GestureDetector(
+                onTap: () {
+                  final json = jsonDecode(p.jsonPayload) as Map<String, dynamic>;
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => ProductScreen(productJson: json),
+                  ));
+                },
+                child: GlassCard.static(
+                  padding: const EdgeInsets.all(AppSpacing.m),
+                  child: SizedBox(
+                    width: 148,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          p.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (p.energyKcal != null)
+                          Text(
+                            '${p.energyKcal!.toStringAsFixed(0)} kcal',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colors.subtle),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact summary of the signed-in user's health-condition guidance (deterministic engine output
+/// from `/v1/disease/guidance`, reused via [diseaseGuidanceProvider]). Informational only, mirroring
+/// the output-policy wording the on-product [DiseaseChipsWidget] already uses.
+class _HealthConditionCard extends StatelessWidget {
+  const _HealthConditionCard({required this.guidance});
+  final DiseaseGuidance guidance;
+
+  @override
+  Widget build(BuildContext context) {
+    final first = guidance.blocks.first;
+    final avoid = (first['avoidFoods'] as List?)?.whereType<String>().toList() ?? const <String>[];
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.health_and_safety_outlined, color: context.colors.info, size: 20),
+            const SizedBox(width: AppSpacing.s),
+            Text('Your health conditions', style: Theme.of(context).textTheme.titleMedium),
+          ]),
+          const SizedBox(height: AppSpacing.m),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              for (final b in guidance.blocks)
+                StatChip(
+                  label: (b['label'] as String?) ?? (b['condition'] as String? ?? 'condition'),
+                  color: context.colors.info,
+                ),
+            ],
+          ),
+          if (avoid.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              'Commonly limit: ${avoid.take(3).join(', ')}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colors.subtle),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.s),
+          Text(
+            'General nutrition information, not medical advice.',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colors.subtle),
+          ),
+        ],
+      ),
+    );
   }
 }
