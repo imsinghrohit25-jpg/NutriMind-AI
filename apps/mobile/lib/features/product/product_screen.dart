@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design_system/components/glass_card.dart';
 import '../../core/design_system/components/gradient_scaffold.dart';
@@ -9,6 +10,7 @@ import '../../core/design_system/haptic_service.dart';
 import '../../core/design_system/app_palette.dart';
 import '../../core/design_system/tokens.dart';
 import '../disease_chips/disease_chips_widget.dart';
+import '../meals/meals_providers.dart';
 import '../safety_badges/safety_badges_widget.dart';
 import '../score/score_screen.dart';
 
@@ -58,6 +60,11 @@ class ProductScreen extends StatelessWidget {
     final confidence   = (nutrition?['confidence'] as num?)?.toDouble();
 
     return GradientScaffold(
+      // Log this product to the food diary — reuses the already-resolved nutrition; the server
+      // computes the serving nutrition from the chosen portion (POST /v1/meals).
+      floatingActionButton: nutrition == null
+          ? null
+          : _LogMealFab(name: name, source: source, nutrition: nutrition, productId: productJson['id'] as String?),
       appBar: AppBar(
         title: const Text('Product details'),
         backgroundColor: Colors.transparent,
@@ -445,6 +452,150 @@ class _DisclaimerFooter extends StatelessWidget {
         'Values are per 100g from third-party databases and may vary by batch or preparation. '
         'Consult a qualified dietitian for personalised guidance.',
         style: AppType.bodySmall,
+      ),
+    );
+  }
+}
+
+/// "Add to diary" FAB — logs this already-resolved product to the food diary. The chosen portion
+/// is sent to POST /v1/meals, where the server scales the per-100g nutrition to the serving.
+class _LogMealFab extends ConsumerWidget {
+  const _LogMealFab({required this.name, required this.source, required this.nutrition, this.productId});
+  final String name;
+  final String source;
+  final Map<String, dynamic> nutrition;
+  final String? productId;
+
+  static bool _looksLikeUuid(String? s) => s != null && RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(s);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FloatingActionButton.extended(
+      onPressed: () => _open(context, ref),
+      icon: const Icon(Icons.add),
+      label: const Text('Add to diary'),
+    );
+  }
+
+  Future<void> _open(BuildContext context, WidgetRef ref) async {
+    HapticService.selection(context: context);
+    final choice = await showModalBottomSheet<_LogMealChoice>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _LogMealSheet(foodName: name),
+    );
+    if (choice == null) return;
+    try {
+      await logMeal(
+        ref,
+        mealType: choice.mealType,
+        foodName: name,
+        productId: _looksLikeUuid(productId) ? productId : null,
+        quantityG: choice.grams,
+        nutritionPer100g: {
+          'energyKcal': nutrition['energyKcal'],
+          'proteinG': nutrition['proteinG'],
+          'fatTotalG': nutrition['fatTotalG'],
+          'carbohydratesG': nutrition['carbohydratesG'],
+          'sugarsG': nutrition['sugarsG'],
+          'dietaryFiberG': nutrition['dietaryFiberG'],
+          'sodiumMg': nutrition['sodiumMg'],
+        },
+        nutritionSource: source.isEmpty ? null : source,
+        isEstimated: (nutrition['isEstimated'] as bool?) ?? false,
+      );
+      HapticService.success();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to your food diary')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not log — check your connection and try again')),
+        );
+      }
+    }
+  }
+}
+
+class _LogMealChoice {
+  const _LogMealChoice(this.mealType, this.grams);
+  final String mealType;
+  final double grams;
+}
+
+class _LogMealSheet extends StatefulWidget {
+  const _LogMealSheet({required this.foodName});
+  final String foodName;
+
+  @override
+  State<_LogMealSheet> createState() => _LogMealSheetState();
+}
+
+class _LogMealSheetState extends State<_LogMealSheet> {
+  static const _mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+  String _mealType = 'snack';
+  final _grams = TextEditingController(text: '100');
+
+  @override
+  void dispose() {
+    _grams.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: GlassCard(
+        borderRadius: AppSpacing.sheetRadius,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add to today’s diary', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 2),
+            Text(widget.foodName, style: AppType.bodySmall.copyWith(color: context.colors.subtle), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: AppSpacing.l),
+            Text('Meal', style: AppType.labelMedium.copyWith(color: context.colors.subtle)),
+            const SizedBox(height: AppSpacing.s),
+            Wrap(
+              spacing: AppSpacing.s,
+              children: [
+                for (final t in _mealTypes)
+                  ChoiceChip(
+                    label: Text(t[0].toUpperCase() + t.substring(1)),
+                    selected: _mealType == t,
+                    onSelected: (_) => setState(() => _mealType = t),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.l),
+            Text('Portion (grams)', style: AppType.labelMedium.copyWith(color: context.colors.subtle)),
+            const SizedBox(height: AppSpacing.s),
+            TextField(
+              controller: _grams,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(suffixText: 'g'),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  final g = double.tryParse(_grams.text.trim());
+                  if (g == null || g <= 0) return;
+                  Navigator.of(context).pop(_LogMealChoice(_mealType, g));
+                },
+                child: const Text('Add to diary'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

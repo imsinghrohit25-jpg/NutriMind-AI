@@ -6,30 +6,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { renderWeeklyReport, RenderedReport } from './report-renderer.js';
 import { sendPush } from '../../push/fcm.js';
 import { computeDailyBudget } from '../../engines/personalization/budgets.js';
-import { computeEnergyTarget, type UserProfile, type Sex, type ActivityLevel } from '../../engines/personalization/targets.js';
+import { computeEnergyTarget, type UserProfile } from '../../engines/personalization/targets.js';
 import { aggregateDay, MealEntry, DailyNutritionTotal } from '../../engines/meals/aggregate.js';
 import { analyseGaps } from '../../engines/meals/gap-analysis.js';
+import {
+  mealLogRowToEntry,
+  DB_SEX_TO_ENGINE,
+  DB_ACTIVITY_TO_ENGINE,
+} from '../../engines/meals/meal-log-mapping.js';
 
-// Wire-format maps, DB (users_profiles CHECK constraints, migration 0002) -> engine types.
-// Not a bare cast: 'prefer_not_to_say' has no engine equivalent (falls back to the same
-// conservative 'other' BMR formula already used for it), and the DB's 5-level activity scale
-// is offset by one name from the engine's 5-level scale ('very_active' in the DB is the
-// engine's 'active' tier; DB's top tier is 'extra_active', mapping to the engine's 'very_active')
-// — the exact bug class documented in ADR-0024/ADR-0025 (CountryProfile, ai_personalization).
-const DB_SEX_TO_ENGINE: Record<string, Sex> = {
-  male: 'male',
-  female: 'female',
-  other: 'other',
-  prefer_not_to_say: 'other',
-};
-
-const DB_ACTIVITY_TO_ENGINE: Record<string, ActivityLevel> = {
-  sedentary: 'sedentary',
-  lightly_active: 'light',
-  moderately_active: 'moderate',
-  very_active: 'active',
-  extra_active: 'very_active',
-};
+// DB→engine profile maps are the single source of truth in engines/meals/meal-log-mapping.ts
+// (reused by the /v1/meals routes too) — imported above rather than redefined here.
 
 export interface WeeklyReportJobData {
   userId:     string;
@@ -72,24 +59,7 @@ export async function runWeeklyReportJob(
   for (const row of mealRows) {
     const day = (row.logged_at as string).slice(0, 10);
     if (!dayMap.has(day)) dayMap.set(day, []);
-    dayMap.get(day)!.push({
-      mealId:      row.id as string,
-      productName: row.food_name as string,
-      servingG:    100,
-      loggedAt:    row.logged_at as string,
-      nutrition: {
-        energyKcal:     row.energy_kcal as number | null,
-        proteinG:       row.protein_g as number | null,
-        fatTotalG:      row.fat_total_g as number | null,
-        fatSaturatedG:  null,
-        fatTransG:      null,
-        carbohydratesG: row.carbohydrates_g as number | null,
-        sugarsG:        row.sugars_g as number | null,
-        sugarsAddedG:   null,
-        dietaryFiberG:  row.dietary_fiber_g as number | null,
-        sodiumMg:       row.sodium_mg as number | null,
-      },
-    });
+    dayMap.get(day)!.push(mealLogRowToEntry(row as Record<string, unknown>));
   }
 
   // 3. Fetch user profile and compute this week's budget from it (users_profiles has no stored

@@ -20,6 +20,9 @@ import '../../core/offline/local_db.dart';
 import '../../core/router/routes.dart';
 import '../../features/auth/auth_state.dart';
 import '../disease_chips/disease_guidance_provider.dart';
+import '../meals/daily_dashboard.dart';
+import '../meals/meal_log_screen.dart';
+import '../meals/meals_providers.dart';
 import '../product/product_screen.dart';
 
 /// Time-of-day-aware greeting — real wall-clock data, not a canned string.
@@ -41,6 +44,7 @@ class HomeScreen extends ConsumerWidget {
     final scansTodayAsync = ref.watch(scansTodayProvider);
     final scansToday = scansTodayAsync.valueOrNull ?? 0;
     final diseaseGuidanceAsync = ref.watch(diseaseGuidanceProvider);
+    final mealDayAsync = ref.watch(mealDayReportProvider);
 
     return GradientScaffold(
       appBar: AppBar(
@@ -83,6 +87,7 @@ class HomeScreen extends ConsumerWidget {
             ref.invalidate(recentScannedProductsProvider);
             ref.invalidate(scansTodayProvider);
             ref.invalidate(diseaseGuidanceProvider);
+            ref.invalidate(mealDayReportProvider);
             await Future.wait([
               ref.read(recentScannedProductsProvider.future),
               ref.read(scansTodayProvider.future),
@@ -149,6 +154,24 @@ class HomeScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(top: AppSpacing.l),
                         child: _HealthConditionCard(guidance: g),
                       ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+
+              // Today's nutrition — real logged-meal totals vs the user's personalised budget
+              // (engine-computed via /v1/meals/day). Honest empty state; never fabricated numbers.
+              mealDayAsync.maybeWhen(
+                data: (report) => Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.l),
+                  child: _TodayNutritionCard(
+                    report: report,
+                    onOpen: () {
+                      final route = report.gapReport != null
+                          ? MaterialPageRoute<void>(builder: (_) => DailyDashboard(gapReport: report.gapReport!))
+                          : MaterialPageRoute<void>(builder: (_) => MealLogScreen(entries: report.entries, total: report.total));
+                      Navigator.of(context).push(route);
+                    },
+                  ),
+                ),
                 orElse: () => const SizedBox.shrink(),
               ),
 
@@ -230,6 +253,26 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.l),
 
+              // Food diary — the meal-log screen, fed by the same /v1/meals/day report the summary
+              // card above uses (read from the provider on tap; no second fetch).
+              _HomeCard(
+                icon: Icons.restaurant_menu,
+                color: AppColors.scoreGood,
+                title: "Today's meals",
+                subtitle: 'Your food diary and nutrition totals',
+                onTap: () {
+                  final report = ref.read(mealDayReportProvider).valueOrNull;
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => MealLogScreen(
+                      entries: report?.entries ?? const [],
+                      total: report?.total,
+                    ),
+                  ));
+                },
+                index: 6,
+              ),
+              const SizedBox(height: AppSpacing.l),
+
               // "What NutriMind knows about me" — Phase 11's AI memory transparency screen was
               // fully built and routed (AppRoutes.memory) but had no entry point in the UI.
               _HomeCard(
@@ -238,7 +281,7 @@ class HomeScreen extends ConsumerWidget {
                 title: 'What NutriMind knows',
                 subtitle: 'Review and manage your AI memory',
                 onTap: () => context.push(AppRoutes.memory),
-                index: 6,
+                index: 7,
               ),
               ],
             ),
@@ -503,6 +546,76 @@ class _HealthConditionCard extends StatelessWidget {
             style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colors.subtle),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Today's logged-meal calories vs the user's personalised budget (real /v1/meals/day data).
+/// Ring maxes at the computed budget when available, else the standard 2000-kcal reference (the
+/// same honest fallback ADR-0038 uses). Empty = nothing logged, shown as a real 0, not a fake total.
+class _TodayNutritionCard extends StatelessWidget {
+  const _TodayNutritionCard({required this.report, required this.onOpen});
+  final MealDayReport report;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final consumed = report.consumedKcal;
+    final budget = report.budgetKcal;
+    final statusColor = switch (report.overallStatus) {
+      'over' => context.colors.warning,
+      'under' => context.colors.info,
+      _ => AppColors.scoreGood,
+    };
+    return GlassCard(
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(20),
+        child: Row(
+          children: [
+            AnimatedNutrientRing(
+              value: consumed,
+              maxValue: budget ?? 2000,
+              color: statusColor,
+              size: 72,
+              strokeWidth: 8,
+              label: 'kcal',
+            ),
+            const SizedBox(width: AppSpacing.l),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Today's nutrition", style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colors.subtle)),
+                  Text(
+                    report.isEmpty ? 'No meals logged yet' : '${consumed.toStringAsFixed(0)} kcal logged',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.s),
+                  if (report.isEmpty)
+                    Text(
+                      'Scan a product and add it to your diary',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colors.subtle),
+                    )
+                  else if (budget != null)
+                    Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
+                      StatChip(
+                        label: switch (report.overallStatus) {
+                          'over' => 'over budget',
+                          'under' => 'under budget',
+                          _ => 'on track',
+                        },
+                        color: statusColor,
+                      ),
+                      StatChip(label: 'of ${budget.toStringAsFixed(0)} kcal', color: context.colors.subtle),
+                    ]),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: context.colors.subtle),
+          ],
+        ),
       ),
     );
   }
