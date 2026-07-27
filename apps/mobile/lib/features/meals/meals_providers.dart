@@ -54,6 +54,32 @@ final mealDayReportProvider = FutureProvider.autoDispose<MealDayReport>((ref) as
   return MealDayReport.fromBody(resp.data ?? const <String, dynamic>{});
 });
 
+/// The current week's rendered report from `GET /v1/meals/weekly` (the same compute the weekly
+/// push-notification job uses). [report] maps 1:1 onto the existing WeeklyReportScreen; [available]
+/// is false when nothing was logged this week (honest empty state, no fabricated report).
+class WeeklyReport {
+  const WeeklyReport({required this.available, required this.report, required this.weekStart});
+
+  final bool available;
+  final Map<String, dynamic>? report;
+  final String weekStart;
+
+  factory WeeklyReport.fromBody(Map<String, dynamic> body) {
+    final data = body['data'] is Map<String, dynamic> ? body['data'] as Map<String, dynamic> : body;
+    return WeeklyReport(
+      available: data['available'] == true,
+      report: data['report'] as Map<String, dynamic>?,
+      weekStart: data['weekStart'] as String? ?? '',
+    );
+  }
+}
+
+final weeklyReportProvider = FutureProvider.autoDispose<WeeklyReport>((ref) async {
+  final client = ref.read(apiClientProvider);
+  final resp = await client.get<Map<String, dynamic>>('/v1/meals/weekly');
+  return WeeklyReport.fromBody(resp.data ?? const <String, dynamic>{});
+});
+
 /// Logs one meal via `POST /v1/meals`. The server computes serving nutrition from [nutritionPer100g]
 /// (the caller's already-resolved product/scan nutrition) — never fabricated. Invalidates the
 /// day report so the diary + Home summary refresh.

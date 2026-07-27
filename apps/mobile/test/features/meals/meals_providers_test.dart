@@ -53,4 +53,30 @@ void main() {
       expect(MealDayReport.fromBody({'data': 'nope'}).isEmpty, isTrue);
     });
   });
+
+  group('WeeklyReport.fromBody', () {
+    test('parses an available report', () {
+      final w = WeeklyReport.fromBody({
+        'data': {
+          'available': true,
+          'weekStart': '2026-07-20',
+          'report': {'headline': 'Good week', 'topWins': ['Fibre'], 'topConcerns': ['Sodium'], 'weekStart': '2026-07-20'},
+        },
+      });
+      expect(w.available, isTrue);
+      expect(w.weekStart, '2026-07-20');
+      expect(w.report!['headline'], 'Good week');
+    });
+
+    test('available:false with a null report (nothing logged)', () {
+      final w = WeeklyReport.fromBody({'data': {'available': false, 'weekStart': '2026-07-20', 'report': null}});
+      expect(w.available, isFalse);
+      expect(w.report, isNull);
+    });
+
+    test('never throws on a malformed body', () {
+      expect(WeeklyReport.fromBody(const {}).available, isFalse);
+      expect(WeeklyReport.fromBody({'data': 'nope'}).available, isFalse);
+    });
+  });
 }

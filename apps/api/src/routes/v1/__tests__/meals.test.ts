@@ -29,15 +29,11 @@ async function buildApp(opts: MockOpts): Promise<FastifyInstance> {
             opts.onInsert?.(payload);
             return { select: () => ({ single: () => Promise.resolve({ data: { id: 'meal-1' }, error: null }) }) };
           },
-          select: () => ({
-            eq: () => ({
-              gte: () => ({
-                lte: () => ({
-                  order: () => Promise.resolve({ data: opts.dayRows ?? [], error: null }),
-                }),
-              }),
-            }),
-          }),
+          select: () => {
+            const ordered = { order: () => Promise.resolve({ data: opts.dayRows ?? [], error: null }) };
+            // /meals/day uses .lte (inclusive day end); /meals/weekly uses .lt (exclusive week end).
+            return { eq: () => ({ gte: () => ({ lte: () => ordered, lt: () => ordered }) }) };
+          },
           delete: () => ({
             eq: () => ({
               eq: () => Promise.resolve({ error: opts.deleteError ?? null }),
@@ -137,6 +133,38 @@ describe('GET /v1/meals/day', () => {
     expect(data.total.energyKcal).toBe(0);
     expect(data.entries).toHaveLength(0);
     expect(data.gapReport).toBeNull();
+    await app.close();
+  });
+});
+
+describe('GET /v1/meals/weekly', () => {
+  const week = [
+    { id: 'a', food_name: 'Idli', logged_at: '2026-07-20T03:00:00Z', energy_kcal: 400, protein_g: 10, carbohydrates_g: 60, sodium_mg: 900, dietary_fiber_g: 3 },
+    { id: 'b', food_name: 'Dal', logged_at: '2026-07-21T07:00:00Z', energy_kcal: 500, protein_g: 20, carbohydrates_g: 40, sodium_mg: 1200, dietary_fiber_g: 8 },
+  ];
+
+  it('returns a rendered weekly report for a week with meals + a complete profile', async () => {
+    const app = await buildApp({ dayRows: week, profile: COMPLETE_PROFILE });
+    const resp = await app.inject({ method: 'GET', url: '/v1/meals/weekly?weekStart=2026-07-20' });
+    expect(resp.statusCode).toBe(200);
+    const data = JSON.parse(resp.body).data;
+    expect(data.available).toBe(true);
+    expect(data.weekStart).toBe('2026-07-20');
+    expect(typeof data.report.headline).toBe('string');
+    expect(data.report.weekStart).toBe('2026-07-20'); // WeeklyReportScreen reads this off `report`
+    expect(Array.isArray(data.report.topWins)).toBe(true);
+    expect(Array.isArray(data.report.topConcerns)).toBe(true);
+    expect(data.gapReport).not.toBeNull();
+    await app.close();
+  });
+
+  it('available:false (no fabricated report) when nothing is logged that week', async () => {
+    const app = await buildApp({ dayRows: [], profile: COMPLETE_PROFILE });
+    const resp = await app.inject({ method: 'GET', url: '/v1/meals/weekly' });
+    expect(resp.statusCode).toBe(200);
+    const data = JSON.parse(resp.body).data;
+    expect(data.available).toBe(false);
+    expect(data.report).toBeNull();
     await app.close();
   });
 });

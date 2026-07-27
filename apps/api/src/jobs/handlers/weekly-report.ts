@@ -5,18 +5,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { renderWeeklyReport, RenderedReport } from './report-renderer.js';
 import { sendPush } from '../../push/fcm.js';
-import { computeDailyBudget } from '../../engines/personalization/budgets.js';
-import { computeEnergyTarget, type UserProfile } from '../../engines/personalization/targets.js';
 import { aggregateDay, MealEntry, DailyNutritionTotal } from '../../engines/meals/aggregate.js';
-import { analyseGaps } from '../../engines/meals/gap-analysis.js';
-import {
-  mealLogRowToEntry,
-  DB_SEX_TO_ENGINE,
-  DB_ACTIVITY_TO_ENGINE,
-} from '../../engines/meals/meal-log-mapping.js';
-
-// DB→engine profile maps are the single source of truth in engines/meals/meal-log-mapping.ts
-// (reused by the /v1/meals routes too) — imported above rather than redefined here.
+import { analyseGaps, type DailyGapReport } from '../../engines/meals/gap-analysis.js';
+import { mealLogRowToEntry, resolveUserDailyBudget } from '../../engines/meals/meal-log-mapping.js';
 
 export interface WeeklyReportJobData {
   userId:     string;
@@ -30,79 +21,15 @@ export async function runWeeklyReportJob(
 ): Promise<void> {
   const { userId, weekStart, memberName } = data;
 
-  // 1. Fetch 7 days of meal entries
-  const weekEnd = addDays(weekStart, 7);
-  const { data: mealRows, error } = await supabase
-    .from('meal_logs')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('logged_at', weekStart)
-    .lt('logged_at', weekEnd)
-    .order('logged_at', { ascending: true });
-
-  if (error) {
-    console.error(`[weekly-report] Failed to fetch meals for ${userId}:`, error.message);
+  // 1-7. Fetch → aggregate → weekly average → budget → gap → render, via the shared pipeline that
+  // GET /v1/meals/weekly also uses (computeWeeklyReport below). Null = nothing logged this week or
+  // a profile too incomplete to compute a budget → skip the push, same as before.
+  const result = await computeWeeklyReport(supabase, userId, weekStart, memberName);
+  if (!result) {
+    console.log(`[weekly-report] Nothing to report for ${userId} week ${weekStart} (no meals or incomplete profile)`);
     return;
   }
-
-  if (!mealRows || mealRows.length === 0) {
-    console.log(`[weekly-report] No meals logged for ${userId} in week ${weekStart}`);
-    return;
-  }
-
-  // 2. Aggregate each day and compute daily budgets
-  // meal_logs stores already-resolved absolute nutrition for the logged serving (see migration
-  // 0006's "Serving nutrition (computed by engine)" comment) — not per-100g density. aggregateDay
-  // scales by servingG/100, so servingG:100 makes that scaling a no-op and the absolute values
-  // pass through unchanged, rather than duplicating aggregateDay's summation logic here.
-  const dayMap = new Map<string, MealEntry[]>();
-  for (const row of mealRows) {
-    const day = (row.logged_at as string).slice(0, 10);
-    if (!dayMap.has(day)) dayMap.set(day, []);
-    dayMap.get(day)!.push(mealLogRowToEntry(row as Record<string, unknown>));
-  }
-
-  // 3. Fetch user profile and compute this week's budget from it (users_profiles has no stored
-  // budget column — TDEE/macros are engine outputs, derived fresh here, same as any other caller).
-  const { data: profileRow } = await supabase
-    .from('users_profiles')
-    .select('weight_kg, height_cm, age_years, biological_sex, activity_level')
-    .eq('id', userId)
-    .single();
-
-  if (
-    !profileRow ||
-    profileRow.weight_kg == null || profileRow.height_cm == null ||
-    profileRow.age_years == null || !profileRow.biological_sex || !profileRow.activity_level
-  ) {
-    console.warn(`[weekly-report] Incomplete profile for ${userId}, skipping`);
-    return;
-  }
-
-  const profile: UserProfile = {
-    weightKg:      profileRow.weight_kg as number,
-    heightCm:      profileRow.height_cm as number,
-    ageYears:      profileRow.age_years as number,
-    sex:           DB_SEX_TO_ENGINE[profileRow.biological_sex as string] ?? 'other',
-    activityLevel: DB_ACTIVITY_TO_ENGINE[profileRow.activity_level as string] ?? 'sedentary',
-  };
-  const energy = computeEnergyTarget(profile);
-  const budget = computeDailyBudget(profile, energy);
-
-  // 4. Build daily totals and gap reports
-  const dailyTotals: DailyNutritionTotal[] = [];
-  for (const [day, entries] of dayMap) {
-    dailyTotals.push(aggregateDay(entries, day));
-  }
-
-  // 5. Compute 7-day averages
-  const weeklyAvg = averageTotals(dailyTotals);
-
-  // 6. Gap analysis on weekly average
-  const gapReport = analyseGaps(weeklyAvg, budget, memberName);
-
-  // 7. Render report
-  const report = renderWeeklyReport(weekStart, memberName, weeklyAvg, gapReport);
+  const report = result.rendered;
 
   // 8. Fetch FCM token
   const { data: tokenRow } = await supabase
@@ -120,6 +47,60 @@ export async function runWeeklyReportJob(
   }
 
   console.log(`[weekly-report] Sent report for ${userId} week ${weekStart}`);
+}
+
+export interface WeeklyReportResult {
+  weekStart: string;
+  weekEnd: string;
+  memberName: string;
+  weeklyAvg: DailyNutritionTotal;
+  gapReport: DailyGapReport;
+  rendered: RenderedReport;
+  daysLogged: number;
+}
+
+/**
+ * The shared weekly-report compute pipeline: 7 days of `meal_logs` → per-day aggregate → weekly
+ * average → gap analysis vs the user's budget → rendered report. Used by BOTH the pg-boss job
+ * (which then pushes it) and `GET /v1/meals/weekly` (which returns it) — one implementation, no
+ * duplication. Returns null when the user logged nothing in the week or has too incomplete a
+ * profile to compute a budget.
+ */
+export async function computeWeeklyReport(
+  supabase: SupabaseClient,
+  userId: string,
+  weekStart: string,
+  memberName: string,
+): Promise<WeeklyReportResult | null> {
+  const weekEnd = addDays(weekStart, 7);
+  const { data: mealRows, error } = await supabase
+    .from('meal_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('logged_at', weekStart)
+    .lt('logged_at', weekEnd)
+    .order('logged_at', { ascending: true });
+  if (error || !mealRows || mealRows.length === 0) return null;
+
+  // meal_logs stores absolute serving nutrition; mealLogRowToEntry's servingG:100 makes
+  // aggregateDay's scaling a no-op (values pass through) — the same convention every caller uses.
+  const dayMap = new Map<string, MealEntry[]>();
+  for (const row of mealRows) {
+    const day = (row.logged_at as string).slice(0, 10);
+    if (!dayMap.has(day)) dayMap.set(day, []);
+    dayMap.get(day)!.push(mealLogRowToEntry(row as Record<string, unknown>));
+  }
+
+  const budget = await resolveUserDailyBudget(supabase, userId);
+  if (!budget) return null;
+
+  const dailyTotals: DailyNutritionTotal[] = [];
+  for (const [day, entries] of dayMap) dailyTotals.push(aggregateDay(entries, day));
+  const weeklyAvg = averageTotals(dailyTotals);
+  const gapReport = analyseGaps(weeklyAvg, budget, memberName);
+  const rendered = renderWeeklyReport(weekStart, memberName, weeklyAvg, gapReport);
+
+  return { weekStart, weekEnd, memberName, weeklyAvg, gapReport, rendered, daysLogged: dayMap.size };
 }
 
 function addDays(dateStr: string, days: number): string {
