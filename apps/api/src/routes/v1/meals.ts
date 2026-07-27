@@ -14,6 +14,7 @@ import { requireAuth } from '../../plugins/auth.js';
 import { aggregateDay } from '../../engines/meals/aggregate.js';
 import { analyseGaps } from '../../engines/meals/gap-analysis.js';
 import { mealLogRowToEntry, resolveUserDailyBudget } from '../../engines/meals/meal-log-mapping.js';
+import { computeWeeklyReport } from '../../jobs/handlers/weekly-report.js';
 
 const Per100gSchema = z.object({
   energyKcal: z.number().nullable().optional(),
@@ -51,6 +52,13 @@ function dayBounds(date: string): { start: string; end: string } {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Monday (UTC) of the week containing `now` — the in-progress week, for the live weekly view. */
+function currentWeekStart(now: Date = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
 
 export default async function mealsRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post<{ Body: unknown }>('/meals', async (request, reply) => {
@@ -116,6 +124,34 @@ export default async function mealsRoutes(fastify: FastifyInstance): Promise<voi
     const gapReport = budget ? analyseGaps(total, budget, 'You') : null;
 
     return reply.send(ok({ date, entries, total, gapReport }));
+  });
+
+  // GET /v1/meals/weekly?weekStart=YYYY-MM-DD — the rendered weekly report (7-day averages, top
+  // wins/concerns) for the requested week, defaulting to the current in-progress week. Reuses the
+  // exact compute the pg-boss weekly-report job uses; `report` maps 1:1 onto WeeklyReportScreen.
+  fastify.get<{ Querystring: { weekStart?: string } }>('/meals/weekly', async (request, reply) => {
+    requireAuth(request);
+    const weekStart = request.query.weekStart && ISO_DATE.test(request.query.weekStart)
+      ? request.query.weekStart
+      : currentWeekStart();
+
+    const result = await computeWeeklyReport(fastify.supabase, request.user.id, weekStart, 'You');
+    if (!result) {
+      // No meals logged this week (or an incomplete profile) — an honest "nothing yet", not a
+      // fabricated report.
+      return reply.send(ok({ weekStart, available: false, report: null }));
+    }
+    return reply.send(ok({
+      weekStart: result.weekStart,
+      weekEnd: result.weekEnd,
+      available: true,
+      daysLogged: result.daysLogged,
+      // WeeklyReportScreen reads headline / topWins / topConcerns / fibreSummary / sodiumSummary /
+      // weekStart directly off `report`.
+      report: { ...result.rendered, weekStart: result.weekStart },
+      gapReport: result.gapReport,
+      weeklyAvg: result.weeklyAvg,
+    }));
   });
 
   fastify.delete<{ Params: { id: string } }>('/meals/:id', async (request, reply) => {

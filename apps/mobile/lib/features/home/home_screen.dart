@@ -23,6 +23,7 @@ import '../disease_chips/disease_guidance_provider.dart';
 import '../meals/daily_dashboard.dart';
 import '../meals/meal_log_screen.dart';
 import '../meals/meals_providers.dart';
+import '../reports/weekly_report_screen.dart';
 import '../product/product_screen.dart';
 
 /// Time-of-day-aware greeting — real wall-clock data, not a canned string.
@@ -273,6 +274,30 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.l),
 
+              // Weekly report — the same rendered report the weekly push job produces, fetched
+              // on demand (GET /v1/meals/weekly) and shown in the existing WeeklyReportScreen.
+              _HomeCard(
+                icon: Icons.insights_outlined,
+                color: context.colors.info,
+                title: 'Weekly report',
+                subtitle: 'Your 7-day nutrition wins and concerns',
+                onTap: () async {
+                  final wr = await ref.read(weeklyReportProvider.future);
+                  if (!context.mounted) return;
+                  if (wr.available && wr.report != null) {
+                    Navigator.of(context).push(MaterialPageRoute<void>(
+                      builder: (_) => WeeklyReportScreen(report: wr.report!),
+                    ));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Log meals this week to see your weekly report')),
+                    );
+                  }
+                },
+                index: 7,
+              ),
+              const SizedBox(height: AppSpacing.l),
+
               // "What NutriMind knows about me" — Phase 11's AI memory transparency screen was
               // fully built and routed (AppRoutes.memory) but had no entry point in the UI.
               _HomeCard(
@@ -281,7 +306,7 @@ class HomeScreen extends ConsumerWidget {
                 title: 'What NutriMind knows',
                 subtitle: 'Review and manage your AI memory',
                 onTap: () => context.push(AppRoutes.memory),
-                index: 7,
+                index: 8,
               ),
               ],
             ),
