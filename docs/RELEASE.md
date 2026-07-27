@@ -45,6 +45,25 @@ git push origin v1.0.0
 #    - Grafana → API error rate, LLM cost
 ```
 
+## Android release signing (required before store upload)
+
+The release build (`apps/mobile/android/app/build.gradle.kts`) signs with a real keystore when
+`apps/mobile/android/key.properties` is present, and **falls back to debug signing when it is absent**
+(so local/dev/CI/emulator builds are unaffected). A Play-Store-uploadable AAB REQUIRES the keystore —
+provision it on the release machine / CI release lane (never commit it; `key.properties` and `*.jks`
+are gitignored):
+
+```properties
+# apps/mobile/android/key.properties  (DO NOT COMMIT)
+storeFile=/absolute/path/to/upload-keystore.jks
+storePassword=<store password>
+keyAlias=upload
+keyPassword=<key password>
+```
+
+Generate the upload keystore once with:
+`keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
+
 ## Rollback
 
 ### API rollback
