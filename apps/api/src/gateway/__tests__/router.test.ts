@@ -3,6 +3,7 @@ import { GatewayRouter } from '../router.js';
 import { GatewayCache } from '../cache.js';
 import { SemanticCache } from '../semantic-cache.js';
 import { GatewayBackpressure, GatewayOverloadedError } from '../backpressure.js';
+import { RateLimitError, ContextLengthError } from '../errors.js';
 import type { LLMProvider } from '../provider.js';
 import type { LLMRequest, LLMResponse, EmbeddingRequest, EmbeddingResponse } from '@nutrimind/shared';
 
@@ -360,6 +361,46 @@ describe('GatewayRouter', () => {
     const seenRequest = (providerA.complete as ReturnType<typeof vi.fn>).mock.calls[0]![0] as LLMRequest;
     expect(seenRequest.messages[0]!.content).toBe('my email is [redacted-email] and phone is [redacted-phone]');
     expect(seenRequest.systemPrompt).toBe('user PAN: [redacted-pan]');
+  });
+
+  describe('maxRetries same-provider retry (Phase 3B resilience)', () => {
+    // ROUTING_CONFIG.parse_assist.maxRetries === 2 → up to 2 attempts on the primary before failover.
+    const freshRouter = (providers: Map<string, LLMProvider>) =>
+      new GatewayRouter(providers, ROUTING_CONFIG as never, costLogger as never, new GatewayCache());
+
+    it('retries the same provider on a transient error, then recovers without failing over', async () => {
+      let calls = 0;
+      const flaky = makeMockProvider('mock-a', {
+        complete: vi.fn(async (req: LLMRequest, model: string): Promise<LLMResponse> => {
+          calls++;
+          if (calls === 1) throw new RateLimitError('mock-a');
+          return { content: 'ok', provider: 'mock-a', model, promptTokens: 1, completionTokens: 1, costUsd: 0, latencyMs: 1, cached: false, traceId: req.traceId };
+        }),
+      });
+      const res = await freshRouter(new Map([['mock-a', flaky], ['mock-b', providerB]])).complete(BASE_REQUEST);
+      expect(calls).toBe(2);
+      expect(res.provider).toBe('mock-a'); // recovered on same provider — no failover
+    });
+
+    it('does NOT retry a non-retryable error; fails over to the next provider immediately', async () => {
+      let aCalls = 0;
+      const providerA2 = makeMockProvider('mock-a', {
+        complete: vi.fn(async (): Promise<LLMResponse> => { aCalls++; throw new ContextLengthError('mock-a'); }),
+      });
+      const res = await freshRouter(new Map([['mock-a', providerA2], ['mock-b', providerB]])).complete(BASE_REQUEST);
+      expect(aCalls).toBe(1); // no same-provider retry on non-retryable error
+      expect(res.provider).toBe('mock-b');
+    });
+
+    it('exhausts maxRetries on a persistently transient provider, then fails over', async () => {
+      let aCalls = 0;
+      const providerA2 = makeMockProvider('mock-a', {
+        complete: vi.fn(async (): Promise<LLMResponse> => { aCalls++; throw new RateLimitError('mock-a'); }),
+      });
+      const res = await freshRouter(new Map([['mock-a', providerA2], ['mock-b', providerB]])).complete(BASE_REQUEST);
+      expect(aCalls).toBe(2); // maxRetries=2 attempts, then failover
+      expect(res.provider).toBe('mock-b');
+    });
   });
 
   describe('getUncoveredTiers (Phase 3A provider-coverage guard)', () => {

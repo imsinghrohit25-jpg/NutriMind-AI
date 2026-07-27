@@ -84,3 +84,34 @@ groups:
         annotations:
           summary: "API p95 latency over 1.5s for 10m"
           description: "p95(http_server_duration) has exceeded 1500ms for 10 minutes. Design target from the Phase 12 addendum's load-test acceptance gate (barcode resolve p95 < 1.5s at burst) — this is the closest available signal until route-level labels exist."
+
+  # Phase 3B — AI provider availability. Uses `nutrimind_http_errors_total`, the counter emitted by
+  # apps/api/src/plugins/error-handler.ts (labelled by static error `code`, never PII). `LLM_UNAVAILABLE`
+  # is the code the handler emits when the gateway exhausts every provider in a tier's chain
+  # (AllProvidersFailedError → 503) — i.e. the exact failure mode the Phase 3A report_generation gap
+  # and any single-provider outage would produce. Same Alertmanager caveat as the file header applies.
+  - name: nutrimind-llm-availability
+    rules:
+      - alert: LLMProvidersExhaustedFast
+        # Every configured provider in a tier failed, sustained. Page: AI features are down.
+        expr: |
+          sum(rate(nutrimind_http_errors_total{code="LLM_UNAVAILABLE"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: page
+          subsystem: ai-gateway
+        annotations:
+          summary: "AI gateway exhausting all providers (LLM_UNAVAILABLE >3/min for 5m)"
+          description: "The gateway is returning 503 LLM_UNAVAILABLE at a sustained rate — every provider in the affected tier's fallback chain is failing (outage, expired/absent keys, or a tier with no live provider). Check gateway circuit-breaker state, provider keys, and the boot-time uncovered-tier warning."
+
+      - alert: LLMProvidersExhaustedSlow
+        # Lower-rate trickle of total provider exhaustion — ticket, not page.
+        expr: |
+          sum(rate(nutrimind_http_errors_total{code="LLM_UNAVAILABLE"}[30m])) > 0.005
+        for: 30m
+        labels:
+          severity: ticket
+          subsystem: ai-gateway
+        annotations:
+          summary: "AI gateway intermittently exhausting all providers (LLM_UNAVAILABLE, 30m)"
+          description: "A steady trickle of 503 LLM_UNAVAILABLE responses over 30 minutes indicates intermittent total provider-chain failure. Investigate provider health / rate limits before it escalates."

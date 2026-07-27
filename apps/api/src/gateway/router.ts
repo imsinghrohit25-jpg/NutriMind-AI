@@ -13,6 +13,7 @@ import { CircuitBreaker } from './circuit-breaker.js';
 import { GatewayCache } from './cache.js';
 import { CostLogger } from './cost-log.js';
 import {
+  GatewayError,
   AllProvidersFailedError,
   ProviderUnavailableError,
   OutputPolicyViolationError,
@@ -145,10 +146,12 @@ export class GatewayRouter {
         }
 
         try {
-          const response = await Promise.race([
-            breaker.call(() => provider.complete(request, target.model)),
-            this.rejectAfter(policy.timeoutMs, target.provider),
-          ]);
+          const response = await this.withProviderRetries(policy.maxRetries, () =>
+            Promise.race([
+              breaker.call(() => provider.complete(request, target.model)),
+              this.rejectAfter(policy.timeoutMs, target.provider),
+            ]),
+          );
 
           const policyResult = checkOutputPolicy(response.content);
           if (!policyResult.ok) {
@@ -306,6 +309,35 @@ export class GatewayRouter {
     }
   }
 
+  /** Phase 3B — honour each tier policy's `maxRetries` (previously declared but unused) as bounded
+   *  SAME-provider retries before failing over. Deliberately narrow: retries only transient adapter
+   *  errors (rate limits / retryable upstream 5xx), NOT timeouts (ProviderUnavailableError from
+   *  rejectAfter — re-running a slow, billable LLM call rarely helps and blows the latency/cost
+   *  budget; cross-provider fallback handles those) and NOT non-retryable errors (context-length,
+   *  policy). maxRetries<=1 or a first-attempt success is byte-identical to the prior behaviour. */
+  private isProviderRetryable(err: unknown): boolean {
+    return err instanceof GatewayError && err.retryable && !(err instanceof ProviderUnavailableError);
+  }
+
+  private async withProviderRetries<T>(maxRetries: number, attempt: () => Promise<T>): Promise<T> {
+    const maxAttempts = Math.max(1, maxRetries);
+    let lastErr: unknown;
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        return await attempt();
+      } catch (err) {
+        lastErr = err;
+        if (i === maxAttempts - 1 || !this.isProviderRetryable(err)) throw err;
+        const backoffMs = Math.min(100 * 2 ** i, 1000);
+        await new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, backoffMs);
+          t.unref?.();
+        });
+      }
+    }
+    throw lastErr;
+  }
+
   private async embedText(text: string, userId?: string): Promise<number[]> {
     const resp = await this.embed({ input: text, traceId: crypto.randomUUID(), userId });
     return resp.embeddings[0] ?? [];
@@ -329,10 +361,12 @@ export class GatewayRouter {
       }
 
       try {
-        const response = await Promise.race([
-          breaker.call(() => provider.embed!(request, target.model)),
-          this.rejectAfter(policy.timeoutMs, target.provider),
-        ]);
+        const response = await this.withProviderRetries(policy.maxRetries, () =>
+          Promise.race([
+            breaker.call(() => provider.embed!(request, target.model)),
+            this.rejectAfter(policy.timeoutMs, target.provider),
+          ]),
+        );
 
         await this.costLog.logFromEmbeddingResponse(
           response,
