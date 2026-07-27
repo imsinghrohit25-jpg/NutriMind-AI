@@ -292,18 +292,42 @@ describe('provider conformance suite — every LLMProvider adapter', () => {
       expect(result.value.provider).toBe('gemini');
     });
 
-    it('embed() returns real embedding vectors', async () => {
+    it('embed() calls the REST batch endpoint with outputDimensionality=1536 and L2-normalises', async () => {
       const { GeminiAdapter } = await import('../gemini.js');
-      const GenAI = await import('@google/generative-ai') as unknown as {
-        __instances: { model: { embedContent: ReturnType<typeof vi.fn> } }[];
-      };
       const adapter = new GeminiAdapter('fake-key');
-      const instance = GenAI.__instances.at(-1)!;
-      instance.model.embedContent.mockResolvedValue({ embedding: { values: [0.4, 0.5] } });
 
-      const response = await adapter.embed!({ input: 'hello', traceId: 'trace-embed' }, 'embed-x');
-      expect(response.embeddings).toEqual([[0.4, 0.5]]);
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ embeddings: [{ values: [3, 4] }] }), // norm 5 → [0.6, 0.8]
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const response = await adapter.embed!({ input: 'hello', traceId: 'trace-embed' }, 'gemini-embedding-001');
+
+      // vectors are L2-normalised (Gemini doesn't normalise reduced dimensionalities for us)
+      expect(response.embeddings).toEqual([[0.6, 0.8]]);
       expect(response.provider).toBe('gemini');
+
+      const [url, init] = fetchMock.mock.calls[0]!;
+      expect(url).toContain('/models/gemini-embedding-001:batchEmbedContents');
+      expect((init as { headers: Record<string, string> }).headers['x-goog-api-key']).toBe('fake-key');
+      const body = JSON.parse((init as { body: string }).body);
+      expect(body.requests[0].outputDimensionality).toBe(1536);
+      expect(body.requests[0].content.parts[0].text).toBe('hello');
+
+      vi.unstubAllGlobals();
+    });
+
+    it('embed() maps a 429 to RateLimitError', async () => {
+      const { GeminiAdapter } = await import('../gemini.js');
+      const adapter = new GeminiAdapter('fake-key');
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429, text: async () => 'RESOURCE_EXHAUSTED' }));
+
+      await expect(
+        adapter.embed!({ input: 'hello', traceId: 'trace-embed' }, 'gemini-embedding-001'),
+      ).rejects.toThrow(RateLimitError);
+
+      vi.unstubAllGlobals();
     });
   });
 
