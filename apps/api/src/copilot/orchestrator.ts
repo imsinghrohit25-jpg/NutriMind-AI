@@ -12,6 +12,7 @@ import { verifyGrounding } from './grounding-verifier.js';
 import { streamCopilotResponse } from './streaming.js';
 import { appendTurn, buildHistoryMessages } from './memory.js';
 import { hybridRetrieve, fetchChunks } from '../knowledge/retrieval/hybrid.js';
+import { sanitiseForLLM } from '../security/prompt-injection.js';
 
 export interface CopilotRequest {
   userId:      string;
@@ -93,13 +94,18 @@ export async function runCopilot(
     `KNOWLEDGE BASE CHUNKS (use ONLY these for numerical claims):\n\n${contextText}` +
     productContextText;
 
-  // 4. Build message history
+  // 4. Build message history.
+  // Prompt-injection hardening (MASVS CODE-1): neutralise instruction-override attempts in the raw
+  // user text before it becomes an LLM `user` turn. Guardrails (step 1) and retrieval (step 2)
+  // deliberately run on the RAW query — the former must see the true intent to refuse, the latter
+  // embeds it for search — but nothing that the LLM follows as instructions goes in unsanitised.
+  const sanitisedQuery = sanitiseForLLM(req.query);
   const history = buildHistoryMessages(req.userId);
-  appendTurn(req.userId, 'user', req.query);
+  appendTurn(req.userId, 'user', sanitisedQuery);
 
   const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
     ...history,
-    { role: 'user', content: req.query },
+    { role: 'user', content: sanitisedQuery },
   ];
 
   // 5. Stream LLM response

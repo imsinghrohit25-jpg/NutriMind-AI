@@ -6,7 +6,9 @@
     <application
         android:label="nutrimind"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"><!-- MASVS STORAGE-4: exclude health data / auth session from cloud+ADB backups -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
