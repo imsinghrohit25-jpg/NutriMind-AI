@@ -355,6 +355,20 @@ export class GatewayRouter {
     );
   }
 
+  /** Phase 3A hardening — returns each routing tier that has NO live provider (i.e. not one of its
+   *  primary/fast/fallback targets was constructed with a key), so a mis-scoped provider config is
+   *  caught at boot instead of silently `AllProvidersFailed`-ing at first request. Pure read over the
+   *  same `providers` map and `config` this router already holds — no new state, no side effects. */
+  getUncoveredTiers(): string[] {
+    const uncovered: string[] = [];
+    for (const [tier, policy] of Object.entries(this.config)) {
+      const targets = [policy.primary, ...(policy.fast ? [policy.fast] : []), ...policy.fallbacks];
+      const hasLiveProvider = targets.some((t) => this.providers.has(t.provider));
+      if (!hasLiveProvider) uncovered.push(tier);
+    }
+    return uncovered;
+  }
+
   getCircuitBreakerStates(): Record<string, string> {
     const states: Record<string, string> = {};
     for (const [name, breaker] of this.breakers) {

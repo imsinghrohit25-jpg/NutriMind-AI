@@ -361,4 +361,51 @@ describe('GatewayRouter', () => {
     expect(seenRequest.messages[0]!.content).toBe('my email is [redacted-email] and phone is [redacted-phone]');
     expect(seenRequest.systemPrompt).toBe('user PAN: [redacted-pan]');
   });
+
+  describe('getUncoveredTiers (Phase 3A provider-coverage guard)', () => {
+    it('returns no uncovered tiers when every tier has a live provider', () => {
+      // mock-a covers parse_assist.primary; mock-embed covers embeddings.primary
+      const providers = new Map<string, LLMProvider>([
+        ['mock-a', makeMockProvider('mock-a')],
+        ['mock-embed', makeMockProvider('mock-embed')],
+      ]);
+      const r = new GatewayRouter(providers, ROUTING_CONFIG as never, costLogger as never, cache);
+      expect(r.getUncoveredTiers()).toEqual([]);
+    });
+
+    it('flags a tier when none of its primary/fast/fallback providers are constructed', () => {
+      // only mock-embed is live → parse_assist (needs mock-a or mock-b) is uncovered
+      const providers = new Map<string, LLMProvider>([['mock-embed', makeMockProvider('mock-embed')]]);
+      const r = new GatewayRouter(providers, ROUTING_CONFIG as never, costLogger as never, cache);
+      expect(r.getUncoveredTiers()).toEqual(['parse_assist']);
+    });
+
+    it('a fallback-only match still counts a tier as covered', () => {
+      // mock-b is only parse_assist.fallbacks[0]; that alone must cover the tier
+      const providers = new Map<string, LLMProvider>([
+        ['mock-b', makeMockProvider('mock-b')],
+        ['mock-embed', makeMockProvider('mock-embed')],
+      ]);
+      const r = new GatewayRouter(providers, ROUTING_CONFIG as never, costLogger as never, cache);
+      expect(r.getUncoveredTiers()).toEqual([]);
+    });
+  });
+
+  describe('production routing.json integrity (Phase 3A report_generation gap guard)', () => {
+    it('every tier includes a gemini target so a Gemini-only deployment covers all tiers', () => {
+      // Gemini is the guaranteed-available provider in this deployment; the report_generation gap
+      // was exactly a tier (report_generation) whose chain lacked gemini. Assert it can't regress.
+      const config = GatewayRouter.loadConfig('config/routing.json');
+      const missingGemini: string[] = [];
+      for (const [tier, policy] of Object.entries(config)) {
+        const providers = [
+          policy.primary,
+          ...(policy.fast ? [policy.fast] : []),
+          ...policy.fallbacks,
+        ].map((t) => t.provider);
+        if (!providers.includes('gemini')) missingGemini.push(tier);
+      }
+      expect(missingGemini).toEqual([]);
+    });
+  });
 });

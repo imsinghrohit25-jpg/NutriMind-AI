@@ -111,6 +111,20 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   }
   fastify.decorate('gateway', gateway);
+
+  // Phase 3A — provider-coverage guard: surface any routing tier with no live provider at boot
+  // (structured warn, not a hard fail, to preserve backward-compatible startup). Feeds monitoring
+  // so a Gemini-only / single-provider deployment is flagged before a tier ever AllProvidersFails.
+  if (gateway) {
+    const uncoveredTiers = gateway.getUncoveredTiers();
+    if (uncoveredTiers.length > 0) {
+      fastify.log.warn(
+        { uncoveredTiers },
+        `[gateway] ${uncoveredTiers.length} routing tier(s) have no live provider for the configured API keys — requests to these tiers will fail`,
+      );
+    }
+  }
+
   fastify.decorate('googleVisionApiKey', env.GOOGLE_VISION_API_KEY ?? null);
 
   // Phase 3 — datasource clients

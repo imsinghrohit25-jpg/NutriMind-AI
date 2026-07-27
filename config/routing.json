@@ -31,7 +31,8 @@
     "primary": { "provider": "anthropic", "model": "claude-sonnet-4-6" },
     "fast": { "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
     "fallbacks": [
-      { "provider": "openai", "model": "gpt-4o" }
+      { "provider": "openai", "model": "gpt-4o" },
+      { "provider": "gemini", "model": "gemini-pro-latest" }
     ],
     "maxRetries": 2,
     "timeoutMs": 120000
